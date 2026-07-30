@@ -26,23 +26,20 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, render_template_string, Response
 
-# Override Flask's JSON encoder to always use bytes + utf-8
-from flask.json.provider import DefaultJSONProvider
-class UTF8JSONProvider(DefaultJSONProvider):
-    def dumps(self, obj, **kwargs):
-        kwargs.setdefault('ensure_ascii', False)
-        return super().dumps(obj, **kwargs)
-
 def _safe_str(val):
-    """Convert any value to pure-ASCII string, replacing non-ASCII chars"""
-    s = str(val)
+    """Convert exception/value to pure-ASCII string, keeping it safe for logs and JSON"""
+    s = repr(val) if isinstance(val, BaseException) else str(val)
     return s.encode('ascii', errors='replace').decode('ascii')
 
 def json_utf8(data, status=200):
-    """Return JSON with pure ASCII-safe encoding to avoid latin-1 issues"""
-    # ensure_ascii=True escapes unicode to \uXXXX for pure ASCII output
+    """Return JSON using Flask's native response but with ensured ASCII safety"""
     payload = json.dumps(data, ensure_ascii=True, default=_safe_str)
     return Response(payload, status=status, content_type='application/json; charset=utf-8')
+
+# Logging helper: never pass raw exceptions to logger (they may contain unicode)
+def _log_safe(logger_fn, msg_prefix, exc):
+    safe = _safe_str(exc) if isinstance(exc, BaseException) else str(exc).encode('ascii', errors='replace').decode('ascii')
+    logger_fn(f"{msg_prefix}: {safe}")
 
 load_dotenv()
 
@@ -53,7 +50,6 @@ import os
 _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=_TEMPLATE_DIR)
 app.secret_key = os.urandom(24).hex()
-app.json = UTF8JSONProvider(app)
 
 # After-request: ensure all text responses declare utf-8
 @app.after_request
@@ -124,23 +120,9 @@ init_db()
 
 # Helper functions
 def _decode_shopify_response(resp):
-    """Safely decode Shopify API response handling encoding issues"""
-    # Try content first (raw bytes), fallback to text
-    raw = resp.content
-    for enc in ['utf-8', 'utf-8-sig', 'iso-8859-1', 'cp1252']:
-        try:
-            return json.loads(raw.decode(enc))
-        except (UnicodeDecodeError, UnicodeError):
-            continue
-        except json.JSONDecodeError:
-            # Decoding worked but not JSON - try next encoding
-            break
-    # Last resort: force utf-8 and replace bad chars
-    text = raw.decode('utf-8', errors='replace')
-    # Remove any remaining problematic characters
-    import re
-    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
-    return json.loads(text)
+    """Safely decode Shopify API response — set encoding then json() directly"""
+    resp.encoding = 'utf-8'
+    return resp.json()
 
 def fetch_shopify_orders(status="any", limit=50):
     try:
@@ -148,10 +130,10 @@ def fetch_shopify_orders(status="any", limit=50):
         resp = requests.get(url, headers=SHOPIFY_HEADERS_ORDERS, timeout=15)
         if resp.status_code == 200:
             return _decode_shopify_response(resp).get("orders", [])
-        logger.error(f"Shopify error {resp.status_code}")
+        _log_safe(logger.error, f"Shopify error {resp.status_code}", resp.text[:300])
         return []
     except Exception as e:
-        logger.error(f"Shopify fetch failed: {_safe_str(e)}")
+        _log_safe(logger.error, "Shopify fetch failed", e)
         return []
 
 def fetch_shopify_products(limit=50):
@@ -160,10 +142,10 @@ def fetch_shopify_products(limit=50):
         resp = requests.get(url, headers=SHOPIFY_HEADERS_CATALOG, timeout=15)
         if resp.status_code == 200:
             return _decode_shopify_response(resp).get("products", [])
-        logger.error(f"Shopify products error {resp.status_code}")
+        _log_safe(logger.error, f"Shopify products error {resp.status_code}", resp.text[:300])
         return []
     except Exception as e:
-        logger.error(f"Shopify products fetch failed: {_safe_str(e)}")
+        _log_safe(logger.error, "Shopify products fetch failed", e)
         return []
 
 def lookup_zr_tracking(phone):
@@ -184,7 +166,7 @@ def lookup_zr_tracking(phone):
             return parcels
         return []
     except Exception as e:
-        logger.error(f"ZR lookup failed for {phone}: {e}")
+        _log_safe(logger.error, f"ZR lookup failed for {phone}", e)
         return []
 
 # Meta Platform Messaging
@@ -210,7 +192,7 @@ def get_page_token():
                     _PAGE_TOKEN_EXPIRY = now + 3000
                     return _PAGE_TOKEN_CACHE
     except Exception as e:
-        logger.error(f"Failed to get page token: {e}")
+        _log_safe(logger.error, "Failed to get page token", e)
     return None
 
 def send_messenger_message(recipient_id, text):
@@ -222,7 +204,7 @@ def send_messenger_message(recipient_id, text):
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
         return resp.status_code == 200
     except Exception as e:
-        logger.error(f"Messenger error: {e}")
+        _log_safe(logger.error, "Messenger error", e)
         return False
 
 def send_whatsapp_message(to_number, text):
@@ -234,7 +216,7 @@ def send_whatsapp_message(to_number, text):
         resp = requests.post(url, json=payload, headers=headers, timeout=10)
         return resp.status_code in (200, 201)
     except Exception as e:
-        logger.error(f"WhatsApp error: {e}")
+        _log_safe(logger.error, "WhatsApp error", e)
         return False
 
 def send_instagram_message(recipient_id, text):
@@ -246,7 +228,7 @@ def send_instagram_message(recipient_id, text):
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
         return resp.status_code == 200
     except Exception as e:
-        logger.error(f"Instagram error: {e}")
+        _log_safe(logger.error, "Instagram error", e)
         return False
 
 # OpenClaw / Auto Reply
@@ -263,7 +245,7 @@ def get_atlas_response(msg, uid, platform="messenger"):
             if resp.status_code == 200:
                 return resp.json()['choices'][0]['message']['content']
         except Exception as e:
-            logger.error(f"OpenClaw error: {e}")
+            _log_safe(logger.error, "OpenClaw error", e)
     return get_auto_reply(msg)
 
 def get_auto_reply(msg):
@@ -294,7 +276,7 @@ def dashboard_page():
             html = f.read()
         return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
     except Exception as e:
-        logger.error(f'Dashboard template error: {e}')
+        _log_safe(logger.error, "Dashboard template error", e)
         return json_utf8({"error": _safe_str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
 
 @app.route('/dashboard/orders')
@@ -389,7 +371,7 @@ def api_dashboard_data():
             ]
         })
     except Exception as e:
-        logger.error(f"Dashboard data error: {e}")
+        _log_safe(logger.error, "Dashboard data error", e)
         return json_utf8({"error": _safe_str(e)}, 500)
 
 # Global error handler for encoding issues
@@ -500,7 +482,7 @@ def shopify_webhook():
             conn.commit()
             logger.info(f"Order saved: {order.get('name')}")
         except Exception as e:
-            logger.error(f"Order save error: {e}")
+            _log_safe(logger.error, "Order save error", e)
         conn.close()
 
     elif topic == 'orders/fulfilled':
