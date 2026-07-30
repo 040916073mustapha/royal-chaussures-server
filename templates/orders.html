@@ -55,7 +55,9 @@
                 var flc = fl === 'fulfilled' ? 'badge-delivered' : (fl === 'partial' ? 'badge-shipped' : 'badge-pending');
                 var c = o.customer || {};
                 var a = (o.shipping_address || o.billing_address || {});
-                return '<tr><td>' + (o.name || o.id) + '</td>' +
+                var oid = o.id || '';
+                return '<tr onclick="window.location.href=\'/dashboard/orders/' + oid + '\'" style="cursor:pointer;">' +
+                    '<td>' + (o.name || o.id) + '</td>' +
                     '<td>' + (c.first_name || '') + ' ' + (c.last_name || '') + '</td>' +
                     '<td>' + (a.phone || '-') + '</td>' +
                     '<td>' + (o.total_price || '0') + ' DZD</td>' +

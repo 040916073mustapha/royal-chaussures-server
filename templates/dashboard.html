@@ -193,7 +193,8 @@
                         var finClass = o.financial_status === 'paid' ? 'badge-paid' : 'badge-pending';
                         var fl = o.fulfillment || 'unfulfilled';
                         var fulClass = fl === 'fulfilled' ? 'badge-delivered' : (fl === 'partial' ? 'badge-shipped' : 'badge-pending');
-                        return '<tr>' +
+                        var oid = o.id || '';
+                        return '<tr onclick="window.location.href=\'/dashboard/orders/' + oid + '\'" style="cursor:pointer;">' +
                             '<td>' + (o.name || o.id) + '</td>' +
                             '<td>' + (o.customer || 'زائر') + '</td>' +
                             '<td>' + (o.total || '0') + ' DZD</td>' +

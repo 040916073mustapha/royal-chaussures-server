@@ -449,6 +449,156 @@ def api_agent_route_test():
         return json_utf8({"success": False, "error": _safe_str(e)}, 500)
 
 
+# ===================== ORDER DETAILS ENDPOINTS =====================
+
+@app.route('/dashboard/orders/<order_id>')
+def dashboard_order_detail(order_id):
+    """صفحة تفاصيل الطلب"""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'order_details.html'), 'r', encoding='utf-8') as f:
+            html = f.read()
+        return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        _log_safe(logger.error, "Order detail template error", e)
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/api/order-detail/<order_id>')
+def api_order_detail(order_id):
+    """API: إرجاع بيانات الطلب التفصيلية مع سجل المحادثات"""
+    try:
+        # 1. Fetch from Shopify
+        orders = fetch_shopify_orders(status="any", limit=250)
+        order = None
+        for o in orders:
+            if str(o.get("id")) == str(order_id) or o.get("name", "") == f"#{order_id}":
+                order = o
+                break
+
+        if not order:
+            return json_utf8({"success": False, "error": "Order not found"}, 404)
+
+        # 2. Fetch local DB chats
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM messages WHERE sender_id LIKE ? ORDER BY created_at DESC LIMIT 20",
+                  (f"%{order.get('customer',{}).get('phone','')}%",))
+        db_chats = [dict(row) for row in c.fetchall()]
+        conn.close()
+
+        return json_utf8({
+            "success": True,
+            "order": order,
+            "db_chats": db_chats,
+            "chats": []
+        })
+    except Exception as e:
+        _log_safe(logger.error, "Order detail API error", e)
+        return json_utf8({"success": False, "error": _safe_str(e)}, 500)
+
+
+@app.route('/api/orders/<order_id>/status', methods=['POST'])
+def api_order_update_status(order_id):
+    """تحديث حالة الطلب"""
+    try:
+        data = request.get_json()
+        status = data.get("status", "").strip()
+        if not status:
+            return json_utf8({"success": False, "error": "Status required"}, 400)
+
+        # Update local DB
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""UPDATE OR IGNORE orders
+                     SET fulfillment_status=?, updated_at=?
+                     WHERE order_id=?""",
+                  (status, datetime.utcnow().isoformat(), str(order_id)))
+        conn.commit()
+        logger.info(f"[OrderDetail] Updated order {order_id} status to {status}")
+
+        # Also try Shopify admin API
+        # (Would need write_orders scope on token)
+
+        return json_utf8({"success": True, "order_id": order_id, "status": status})
+    except Exception as e:
+        _log_safe(logger.error, "Order status update error", e)
+        return json_utf8({"success": False, "error": _safe_str(e)}, 500)
+
+
+@app.route('/api/whatsapp/send', methods=['POST'])
+def api_whatsapp_send():
+    """إرسال رسالة واتساب من Dashboard"""
+    try:
+        data = request.get_json()
+        to = data.get("to", "").strip()
+        text = data.get("text", "").strip()
+
+        if not to or not text:
+            return json_utf8({"success": False, "error": "Phone number and text required"}, 400)
+
+        # Format phone (ensure +213 prefix for Algeria)
+        clean_to = to.replace(" ", "").replace("-", "").replace("+", "")
+        if clean_to.startswith("213"):
+            formatted = clean_to
+        elif clean_to.startswith("0"):
+            formatted = "213" + clean_to[1:]
+        else:
+            formatted = "213" + clean_to
+
+        sent = send_whatsapp_message(formatted, text)
+
+        if sent:
+            logger.info(f"[WhatsApp Dashboard] Sent to {formatted}")
+            return json_utf8({"success": True, "to": formatted, "sent": True})
+        else:
+            return json_utf8({"success": False, "error": "WhatsApp send failed"}, 500)
+    except Exception as e:
+        _log_safe(logger.error, "WhatsApp send error", e)
+        return json_utf8({"success": False, "error": _safe_str(e)}, 500)
+
+
+@app.route('/api/agent/assign-order', methods=['POST'])
+def api_agent_assign_order():
+    """توجيه طلب معين لوكيل معين"""
+    try:
+        data = request.get_json()
+        order_id = data.get("order_id", "").strip()
+        agent_id = data.get("agent", "").strip()
+        note = data.get("note", "").strip()
+
+        if not order_id or not agent_id:
+            return json_utf8({"success": False, "error": "order_id and agent required"}, 400)
+
+        from agents.router import set_active_agent
+        if not set_active_agent(agent_id):
+            return json_utf8({"success": False, "error": f"Unknown agent: {agent_id}"}, 400)
+
+        logger.info(f"[AgentAssign] Order {order_id} -> Agent {agent_id}")
+
+        # Store in DB if we have an order_agents table
+        try:
+            conn = get_db()
+            c = conn.cursor()
+            c.execute("""CREATE TABLE IF NOT EXISTS order_agents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id TEXT,
+                agent_id TEXT,
+                note TEXT,
+                assigned_at TEXT DEFAULT (datetime('now'))
+            )""")
+            c.execute("INSERT INTO order_agents (order_id, agent_id, note) VALUES (?, ?, ?)",
+                      (str(order_id), agent_id, note[:200] if note else ""))
+            conn.commit()
+            conn.close()
+        except Exception as db_err:
+            _log_safe(logger.warning, "Agent assign DB error", db_err)
+
+        return json_utf8({"success": True, "order_id": order_id, "agent": agent_id})
+    except Exception as e:
+        _log_safe(logger.error, "Agent assign error", e)
+        return json_utf8({"success": False, "error": _safe_str(e)}, 500)
+
+
 # Global error handler for encoding issues
 @app.errorhandler(500)
 def handle_500(e):
