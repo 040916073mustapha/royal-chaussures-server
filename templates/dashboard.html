@@ -26,7 +26,6 @@
         table { width: 100%; border-collapse: collapse; }
         th { text-align: right; padding: 12px 16px; color: #667; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 600; }
         td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 14px; }
-        tr { transition: 0.2s; }
         tr:hover { background: rgba(233,69,96,0.03); }
         .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
         .badge-pending { background: rgba(255,193,7,0.15); color: #ffc107; }
@@ -35,69 +34,64 @@
         .badge-delivered { background: rgba(25,135,84,0.15); color: #198754; }
         .badge-cancelled { background: rgba(220,53,69,0.15); color: #dc3545; }
         .section-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #fff; }
-        .nav-links { display: flex; gap: 12px; margin-bottom: 24px; }
-        .nav-links a { padding: 8px 20px; border-radius: 10px; background: rgba(255,255,255,0.04); color: #999; text-decoration: none; font-size: 13px; transition: 0.2s; }
-        .nav-links a:hover, .nav-links a.active { background: rgba(233,69,96,0.1); color: #e94560; }
         .status-bar { display: flex; gap: 16px; margin-bottom: 24px; padding: 16px 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.04); flex-wrap: wrap; }
         .status-bar .item { font-size: 13px; color: #999; }
         .status-bar .item .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; }
         .dot.green { background: #198754; }
         .dot.yellow { background: #ffc107; }
         .dot.red { background: #dc3545; }
-        .server-url { font-size: 12px; color: #555; margin-top: 4px; }
-        .server-url code { color: #0dcaf0; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo">Royal Chaussures 👠<small>Cloud Server v3.0</small></div>
-        <a href="/dashboard" class="active">📊 لوحة التحكم</a>
-        <a href="/dashboard/orders">📦 الطلبات</a>
-        <a href="/dashboard/products">🛍️ المنتجات</a>
-        <a href="/dashboard/tracking">🔍 تتبع الشحنات</a>
-        <a href="/health">❤️ صحة السيرفر</a>
+        <div class="logo">Royal Chaussures &#x1F460;<small>Cloud Server v3.0</small></div>
+        <a href="/dashboard" class="active">&#x1F4CA; لوحة التحكم</a>
+        <a href="/dashboard/orders">&#x1F4E6; الطلبات</a>
+        <a href="/dashboard/products">&#x1F6CD;&#xFE0F; المنتجات</a>
+        <a href="/dashboard/tracking">&#x1F50D; تتبع الشحنات</a>
+        <a href="/health">&#x2764;&#xFE0F; صحة السيرفر</a>
         <div style="margin-top: 32px; font-size: 12px; color: #444;">
-            <div>🌐 <span id="serverUrl" style="color: #0dcaf0;">جاري التحميل...</span></div>
+            <div>&#x1F310; <span id="serverUrl" style="color: #0dcaf0;">جار التحميل...</span></div>
         </div>
     </div>
     
     <div class="main">
         <div class="header">
-            <h1>📊 لوحة التحكم</h1>
-            <div class="time" id="currentTime">جاري التحميل...</div>
+            <h1>&#x1F4CA; لوحة التحكم</h1>
+            <div class="time" id="currentTime">جار التحميل...</div>
         </div>
         
         <div class="cards">
             <div class="card highlight">
-                <div class="label">💰 إجمالي الإيرادات (اليوم)</div>
-                <div class="value" id="totalRevenue">جاري...</div>
-                <div class="sub">الطلبـات المدفوعة فقط</div>
+                <div class="label">&#x1F4B0; إجمالي الإيرادات</div>
+                <div class="value" id="totalRevenue">جار...</div>
+                <div class="sub">الطلبات المدفوعة فقط</div>
             </div>
             <div class="card">
-                <div class="label">📦 إجمالي الطلبات</div>
-                <div class="value" id="totalOrders">جاري...</div>
+                <div class="label">&#x1F4E6; إجمالي الطلبات</div>
+                <div class="value" id="totalOrders">جار...</div>
                 <div class="sub">جميع الطلبات</div>
             </div>
             <div class="card">
-                <div class="label">⏳ لم يتم شحنها</div>
-                <div class="value" id="unfulfilled">جاري...</div>
+                <div class="label">&#x23F3; لم يتم شحنها</div>
+                <div class="value" id="unfulfilled">جار...</div>
                 <div class="sub">في انتظار الشحن</div>
             </div>
             <div class="card">
-                <div class="label">👠 المنتجات</div>
-                <div class="value" id="totalProducts">جاري...</div>
+                <div class="label">&#x1F460; المنتجات</div>
+                <div class="value" id="totalProducts">جار...</div>
                 <div class="sub">في المتجر</div>
             </div>
         </div>
 
-        <div class="section-title">🔄 النظام</div>
+        <div class="section-title">&#x1F504; حالة النظام</div>
         <div class="status-bar" id="systemStatus">
             <div class="item"><span class="dot green"></span> Shopify: <span id="shopifyStatus">متصل</span></div>
             <div class="item"><span class="dot green"></span> قاعدة البيانات: <span id="dbStatus">متصل</span></div>
             <div class="item"><span class="dot yellow"></span> Webhook: <span id="webhookStatus">في انتظار الاتصال</span></div>
         </div>
 
-        <div class="section-title">📦 آخر الطلبات</div>
+        <div class="section-title">&#x1F4E6; آخر الطلبات</div>
         <table>
             <thead>
                 <tr>
@@ -109,7 +103,7 @@
                 </tr>
             </thead>
             <tbody id="ordersTable">
-                <tr><td colspan="5" style="text-align: center; color: #667; padding: 32px;">جاري تحميل الطلبات...</td></tr>
+                <tr><td colspan="5" style="text-align: center; color: #667; padding: 32px;">جار تحميل الطلبات...</td></tr>
             </tbody>
         </table>
     </div>
@@ -126,33 +120,39 @@
 
         async function loadDashboard() {
             try {
-                const res = await fetch('/dashboard');
+                const res = await fetch('/api/dashboard-data');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 document.getElementById('totalRevenue').textContent = data.total_revenue || '0 DZD';
                 document.getElementById('totalOrders').textContent = data.total_orders || '0';
                 document.getElementById('unfulfilled').textContent = data.unfulfilled_orders || '0';
                 document.getElementById('totalProducts').textContent = data.products_count || '0';
-                
+
+                document.getElementById('shopifyStatus').textContent = data.shopify_status || 'متصل';
+                document.getElementById('dbStatus').textContent = data.db_status || 'متصل';
+                document.getElementById('webhookStatus').textContent = data.webhook_status || 'في انتظار الاتصال';
+
                 const tbody = document.getElementById('ordersTable');
                 if (data.recent_orders && data.recent_orders.length > 0) {
-                    tbody.innerHTML = data.recent_orders.map(o => {
-                        const finClass = o.financial_status === 'paid' ? 'badge-paid' : 'badge-pending';
-                        const fulClass = !o.fulfillment || o.fulfillment === 'unfulfilled' ? 'badge-pending' : 
-                                        o.fulfillment === 'fulfilled' ? 'badge-delivered' : 'badge-shipped';
-                        return `<tr onclick="window.location='/dashboard/orders'">
-                            <td>${o.name || o.id}</td>
-                            <td>${o.customer || 'Guest'}</td>
-                            <td>${o.total || '0'} DZD</td>
-                            <td><span class="badge ${finClass}">${o.financial_status || 'pending'}</span></td>
-                            <td><span class="badge ${fulClass}">${o.fulfillment || 'unfulfilled'}</span></td>
-                        </tr>`;
+                    tbody.innerHTML = data.recent_orders.map(function(o) {
+                        var finClass = o.financial_status === 'paid' ? 'badge-paid' : 'badge-pending';
+                        var fl = o.fulfillment || 'unfulfilled';
+                        var fulClass = fl === 'fulfilled' ? 'badge-delivered' : (fl === 'partial' ? 'badge-shipped' : 'badge-pending');
+                        return '<tr>' +
+                            '<td>' + (o.name || o.id) + '</td>' +
+                            '<td>' + (o.customer || 'زائر') + '</td>' +
+                            '<td>' + (o.total || '0') + ' DZD</td>' +
+                            '<td><span class="badge ' + finClass + '">' + (o.financial_status || 'pending') + '</span></td>' +
+                            '<td><span class="badge ' + fulClass + '">' + fl + '</span></td>' +
+                        '</tr>';
                     }).join('');
                 } else {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #667; padding: 32px;">لا توجد طلبات</td></tr>';
                 }
             } catch(e) {
-                document.getElementById('totalOrders').textContent = '🔴';
-                document.getElementById('ordersTable').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #dc3545; padding: 32px;">⚠️ فشل الاتصال بالسيرفر</td></tr>';
+                console.error('Dashboard fetch error:', e);
+                document.getElementById('totalOrders').textContent = '\uD83D\uDD34';
+                document.getElementById('ordersTable').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #dc3545; padding: 32px;">\u26A0\uFE0F فشل الاتصال بالسيرفر</td></tr>';
             }
         }
         loadDashboard();

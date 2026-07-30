@@ -220,23 +220,21 @@ def get_atlas_response(msg, uid, platform="messenger"):
 
 def get_auto_reply(msg):
     m = msg.lower()
-    if any(w in m for w in ["Ù…Ø±Ø­Ø¨Ø§","Ø§Ù„Ø³Ù„Ø§Ù…","Ø³Ù„Ø§Ù…","ØµØ¨Ø§Ø­","Ù…Ø³Ø§Ø¡","hello","hi","bonjour"]):
-        return "Ù…Ø±Ø­Ø¨Ø§Ù‹ Ø¨Ùƒ ÙÙŠ Royal Chaussures! ðŸŽ€ ÙƒÙŠÙ Ù†Ù‚Ø¯Ø± Ù†Ø®Ø¯Ù…ÙƒØŸ ðŸ‘ âœ¨"
-    if any(w in m for w in ["Ø³Ø¹Ø±","ÙƒÙ…","Ø«Ù…Ù†","Ø¨ÙƒÙ…","prix","combien"]):
-        return "Ø£Ù‡Ù„Ø§Ù‹! ðŸ›ï¸ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± ØªØ®ØªÙ„Ù Ø­Ø³Ø¨ Ø§Ù„Ù…Ù†ØªØ¬. ØªÙ‚Ø¯Ø± ØªØªØµÙØ­ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© ÙƒØ§Ù…Ù„Ø© Ø¹Ù„Ù‰ Ù…ÙˆÙ‚Ø¹Ù†Ø§: https://royalchaussures.com"
-    if any(w in m for w in ["ØªÙˆØµÙŠÙ„","Ø´Ø­Ù†","ÙˆÙ‚Øª","Ù…Ø¯Ø©","delivery"]):
-        return "Ù†ÙˆÙØ± Ø§Ù„ØªÙˆØµÙŠÙ„ Ù„ÙƒÙ„ ÙˆÙ„Ø§ÙŠØ§Øª Ø§Ù„Ø¬Ø²Ø§Ø¦Ø± ðŸ“¦ Ø§Ù„ØªÙˆØµÙŠÙ„ ÙŠØ³ØªØºØ±Ù‚ Ù…Ù† 2 Ø¥Ù„Ù‰ 5 Ø£ÙŠØ§Ù… Ø¹Ù…Ù„ ðŸšš Ø´ÙƒØ±Ø§Ù‹ Ù„Ø«Ù‚ØªÙƒ! â¤ï¸"
-    if any(w in m for w in ["Ù…Ù‚Ø§Ø³","Ù‚ÙŠØ§Ø³","taille"]):
-        return "Ø§Ù„Ù…Ù‚Ø§Ø³Ø§Øª Ù…ØªÙˆÙØ±Ø© Ù…Ù† 36 Ø¥Ù„Ù‰ 42 ðŸ‘  Ù†Ø­Ù† Ù‡Ù†Ø§ Ù„Ù…Ø³Ø§Ø¹Ø¯ØªÙƒ ÙÙŠ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù…Ù‚Ø§Ø³ Ø§Ù„Ù…Ù†Ø§Ø³Ø¨! âœ¨"
-    if any(w in m for w in ["Ø§Ø³ØªØ±Ø¬Ø§Ø¹","ØªØ¨Ø¯ÙŠÙ„","Ø¥Ø±Ø¬Ø§Ø¹","Ù…Ø±Ø¬ÙˆØ¹","retour"]):
-        return "Ù†ÙˆÙØ± Ø®Ø¯Ù…Ø© Ø§Ù„Ø§Ø³ØªØ±Ø¬Ø§Ø¹ ÙˆØ§Ù„ØªØ¨Ø¯ÙŠÙ„ Ø®Ù„Ø§Ù„ 7 Ø£ÙŠØ§Ù… Ù…Ù† Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù… ðŸ“‹ Ù„Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ù…Ø¯ÙŠØ±: 0659832426 ðŸ“ž"
-    if any(w in m for w in ["Ù…Ø¯ÙŠØ±","Ø§Ù„Ù…Ø§Ù„Ùƒ","Ù…ØµØ·ÙÙ‰","Ù…Ø³Ø¤ÙˆÙ„"]):
-        return "ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø£Ø³ØªØ§Ø° Ù…ØµØ·ÙÙ‰ Ø¹Ù„Ù‰ Ø§Ù„Ø±Ù‚Ù… 0659832426 ðŸ“ž"
-    if any(w in m for w in ["Ø§ÙØªØªØ§Ø­","Ø³Ø§Ø¹Ø§Øª","Ø¹Ù†ÙˆØ§Ù†","Ù…ÙˆÙ‚Ø¹","adresse"]):
-        return "ðŸ“ Ø¥Ù…Ø§Ù…Ø©ØŒ ØµØ§Ù„Ø­ÙŠÙ† Ø¨Ø¬Ø§Ù†Ø¨ Ø§Ø¨ØªØ¯Ø§Ø¦ÙŠØ© Ø­Ø³Ø§Ù†ÙˆÙŠØŒ ØªÙ„Ù…Ø³Ø§Ù† ðŸ• 9:00 ØµØ¨Ø§Ø­Ø§Ù‹ Ø¥Ù„Ù‰ 20:00 Ù…Ø³Ø§Ø¡Ù‹"
-    return "Ù…Ø±Ø­Ø¨Ø§Ù‹ Ø¨Ùƒ ÙÙŠ Royal Chaussures! ðŸŽ€ Ø´ÙƒØ±Ø§Ù‹ Ù„ØªÙˆØ§ØµÙ„Ùƒ. Ø³ÙŠØªÙ… Ø§Ù„Ø±Ø¯ Ø¹Ù„ÙŠÙƒ ÙÙŠ Ø£Ù‚Ø±Ø¨ ÙˆÙ‚Øª. ðŸ‘ âœ¨ Ù„Ù„ØªØ­Ø¯Ø« Ù…Ø¹ Ø§Ù„Ù…Ø¯ÙŠØ±: 0659832426 ðŸ“ž"
-
-# Routes
+    if any(w in m for w in ["مرحبا","السلام","سلام","صباح","مساء","hello","hi","bonjour"]):
+        return "مرحباً بك في Royal Chaussures! 🎀 كيف نقدر نخدمك؟ 👠✨"
+    if any(w in m for w in ["سعر","كم","ثمن","بكم","prix","combien"]):
+        return "أهلاً! 🛍️ الأسعار تختلف حسب المنتج. تقدر تتصفح المجموعة كاملة على موقعنا: https://royalchaussures.com"
+    if any(w in m for w in ["توصيل","شحن","وقت","مدة","delivery"]):
+        return "نوفر التوصيل لكل ولايات الجزائر 📦 التوصيل يستغرق من 2 إلى 5 أيام عمل 🚚 شكراً لثقتك! ❤️"
+    if any(w in m for w in ["مقاس","قياس","taille"]):
+        return "المقاسات متوفرة من 36 إلى 42 👠 نحن هنا لمساعدتك في اختيار المقاس المناسب! ✨"
+    if any(w in m for w in ["استرجاع","تبديل","إرجاع","مرجوع","retour"]):
+        return "نوفر خدمة الاسترجاع والتبديل خلال 7 أيام من الاستلام 📋 للتواصل مع المدير: 0659832426 📞"
+    if any(w in m for w in ["مدير","المالك","مصطفى","مسؤول"]):
+        return "يمكنك التواصل مع الأستاذ مصطفى على الرقم 0659832426 📞"
+    if any(w in m for w in ["افتتاح","ساعات","عنوان","موقع","adresse"]):
+        return "📍 إمامة، صالحين بجانب ابتدائية حسانوي، تلمسان 🕐 9:00 صباحاً إلى 20:00 مساءً"
+    return "مرحباً بك في Royal Chaussures! 🎀 شكراً لتواصلك. سيتم الرد عليك في أقرب وقت. 👠✨ للتحدث مع المدير: 0659832426 📞"
 @app.route('/')
 def index():
     return jsonify({"status": "running", "service": "Royal Chaussures Cloud Server", "version": "3.0", "url": request.host_url.rstrip('/'), "build": "5bbeab857aad", "endpoints": {"dashboard":"/dashboard","orders":"/dashboard/orders","products":"/dashboard/products","tracking":"/dashboard/tracking","health":"/health","webhook":"/webhook"}})
@@ -287,6 +285,44 @@ def api_zr_lookup():
         return jsonify({"error": "Phone number required"}), 400
     parcels = lookup_zr_tracking(phone)
     return jsonify({"phone": phone, "parcels": parcels, "count": len(parcels)})
+
+
+@app.route('/api/dashboard-data')
+def api_dashboard_data():
+    try:
+        orders = fetch_shopify_orders(status="any", limit=20)
+        products = fetch_shopify_products(limit=10)
+        total_orders = len(orders)
+        unfulfilled = sum(1 for o in orders if o.get("fulfillment_status") != "fulfilled")
+        total_revenue = 0
+        for o in orders:
+            try:
+                total_revenue += float(o.get("total_price", 0))
+            except:
+                pass
+        return jsonify({
+            "total_orders": total_orders,
+            "unfulfilled_orders": unfulfilled,
+            "total_revenue": f"{total_revenue:.2f} DZD",
+            "products_count": len(products),
+            "shopify_status": "متصل",
+            "db_status": "متصل",
+            "webhook_status": "جاهز",
+            "recent_orders": [
+                {
+                    "id": o.get("id"),
+                    "name": o.get("name"),
+                    "customer": o.get("customer", {}).get("first_name", "Guest"),
+                    "total": o.get("total_price"),
+                    "financial_status": o.get("financial_status"),
+                    "fulfillment": o.get("fulfillment_status", "unfulfilled")
+                }
+                for o in orders[:10]
+            ]
+        })
+    except Exception as e:
+        logger.error(f"Dashboard data error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # Webhooks
 @app.route('/webhook', methods=['GET'])
