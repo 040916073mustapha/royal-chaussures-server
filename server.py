@@ -34,8 +34,9 @@ class UTF8JSONProvider(DefaultJSONProvider):
         return super().dumps(obj, **kwargs)
 
 def json_utf8(data, status=200):
-    """Return JSON as raw bytes with utf-8, bypassing latin-1 encoding"""
-    payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
+    """Return JSON with pure ASCII-safe encoding to avoid latin-1 issues"""
+    # Use ensure_ascii=True (escaping unicode) to guarantee pure ASCII response
+    payload = json.dumps(data, ensure_ascii=True, default=str)
     return Response(payload, status=status, content_type='application/json; charset=utf-8')
 
 load_dotenv()
