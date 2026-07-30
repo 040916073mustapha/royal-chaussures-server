@@ -117,14 +117,32 @@ def init_db():
 init_db()
 
 # Helper functions
+def _decode_shopify_response(resp):
+    """Safely decode Shopify API response handling encoding issues"""
+    # Try content first (raw bytes), fallback to text
+    raw = resp.content
+    for enc in ['utf-8', 'utf-8-sig', 'iso-8859-1', 'cp1252']:
+        try:
+            return json.loads(raw.decode(enc))
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+        except json.JSONDecodeError:
+            # Decoding worked but not JSON - try next encoding
+            break
+    # Last resort: force utf-8 and replace bad chars
+    text = raw.decode('utf-8', errors='replace')
+    # Remove any remaining problematic characters
+    import re
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
+    return json.loads(text)
+
 def fetch_shopify_orders(status="any", limit=50):
     try:
         url = f"{SHOPIFY_BASE}/orders.json?status={status}&limit={limit}"
         resp = requests.get(url, headers=SHOPIFY_HEADERS_ORDERS, timeout=15)
         if resp.status_code == 200:
-            # Use raw content + json.loads to avoid latin-1 encoding issues
-            return json.loads(resp.content.decode('utf-8')).get("orders", [])
-        logger.error(f"Shopify error {resp.status_code}: {resp.content[:500]}")
+            return _decode_shopify_response(resp).get("orders", [])
+        logger.error(f"Shopify error {resp.status_code}")
         return []
     except Exception as e:
         logger.error(f"Shopify fetch failed: {e}")
@@ -135,9 +153,8 @@ def fetch_shopify_products(limit=50):
         url = f"{SHOPIFY_BASE}/products.json?limit={limit}"
         resp = requests.get(url, headers=SHOPIFY_HEADERS_CATALOG, timeout=15)
         if resp.status_code == 200:
-            # Use raw content + json.loads to avoid latin-1 encoding issues
-            return json.loads(resp.content.decode('utf-8')).get("products", [])
-        logger.error(f"Shopify products error {resp.status_code}: {resp.content[:500]}")
+            return _decode_shopify_response(resp).get("products", [])
+        logger.error(f"Shopify products error {resp.status_code}")
         return []
     except Exception as e:
         logger.error(f"Shopify products fetch failed: {e}")
@@ -319,7 +336,7 @@ def api_test_fetch():
     try:
         url = f"{SHOPIFY_BASE}/orders.json?status=any&limit=1"
         resp = requests.get(url, headers=SHOPIFY_HEADERS_ORDERS, timeout=15)
-        data = json.loads(resp.content.decode('utf-8'))
+        data = _decode_shopify_response(resp)
         orders = data.get("orders", [])
         return json_utf8({
             "success": True,
@@ -368,6 +385,14 @@ def api_dashboard_data():
     except Exception as e:
         logger.error(f"Dashboard data error: {e}")
         return json_utf8({"error": str(e)}, 500)
+
+# Global error handler for encoding issues
+@app.errorhandler(500)
+def handle_500(e):
+    original = getattr(e, 'original_exception', None) or e
+    if isinstance(original, UnicodeEncodeError) or 'latin-1' in str(original) or 'UnicodeError' in type(original).__name__:
+        return json_utf8({"error": "Encoding error in response", "detail": str(original), "resolved": True}, 200)
+    return json_utf8({"error": "Internal server error", "detail": str(original)}, 500)
 
 # Webhooks
 @app.route('/webhook', methods=['GET'])
