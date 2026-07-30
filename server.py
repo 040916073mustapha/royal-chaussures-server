@@ -25,22 +25,18 @@ import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, render_template_string, Response
-from werkzeug.wrappers import Response as WerkzeugResponse
-# Patch: Force all JSON responses to use utf-8 to avoid latin-1 encoding errors
-_original_response_set_data = WerkzeugResponse.set_data
-def _patched_set_data(self, value):
-    if isinstance(value, bytes):
-        self.content_type = 'application/json; charset=utf-8'
-    return _original_response_set_data(self, value)
-WerkzeugResponse.set_data = _patched_set_data
+
+# Override Flask's JSON encoder to always use bytes + utf-8
+from flask.json.provider import DefaultJSONProvider
+class UTF8JSONProvider(DefaultJSONProvider):
+    def dumps(self, obj, **kwargs):
+        kwargs.setdefault('ensure_ascii', False)
+        return super().dumps(obj, **kwargs)
 
 def json_utf8(data, status=200):
-    """Return JSON response with explicit utf-8 encoding (bypasses latin-1 issue)"""
-    return Response(
-        json.dumps(data, ensure_ascii=False).encode('utf-8'),
-        status=status,
-        content_type='application/json; charset=utf-8'
-    )
+    """Return JSON as raw bytes with utf-8, bypassing latin-1 encoding"""
+    payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
+    return Response(payload, status=status, content_type='application/json; charset=utf-8')
 
 load_dotenv()
 
@@ -51,6 +47,15 @@ import os
 _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=_TEMPLATE_DIR)
 app.secret_key = os.urandom(24).hex()
+app.json = UTF8JSONProvider(app)
+
+# After-request: ensure all text responses declare utf-8
+@app.after_request
+def set_utf8_headers(response):
+    ct = response.content_type or ''
+    if 'charset' not in ct.lower() and (ct.startswith('text/') or ct.startswith('application/json')):
+        response.content_type = ct.split(';')[0] + '; charset=utf-8'
+    return response
 
 # Configuration
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "")
