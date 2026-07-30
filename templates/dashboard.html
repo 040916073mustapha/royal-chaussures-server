@@ -40,6 +40,30 @@
         .dot.green { background: #198754; }
         .dot.yellow { background: #ffc107; }
         .dot.red { background: #dc3545; }
+        /* AI Agent Section */
+        .agent-section { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+        .agent-section .title { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .agent-selector { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .agent-card { flex: 1; min-width: 200px; padding: 16px 20px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+        .agent-card:hover { background: rgba(255,255,255,0.06); }
+        .agent-card.active { border-color: #e94560; background: rgba(233,69,96,0.08); }
+        .agent-card .emoji { font-size: 28px; margin-bottom: 8px; }
+        .agent-card .name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .agent-card .desc { font-size: 12px; color: #667; }
+        .agent-card .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
+        .agent-card .active-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(233,69,96,0.2); color: #e94560; margin-top: 6px; }
+        .agent-chat { display: none; }
+        .agent-chat.show { display: block; }
+        .agent-route-test { margin-top: 12px; }
+        .agent-route-test input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e0e0e0; padding: 10px 16px; border-radius: 8px; width: 100%; max-width: 400px; font-size: 14px; outline: none; }
+        .agent-route-test input:focus { border-color: #e94560; }
+        .agent-route-test button { padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .agent-route-test .test-btn { background: #e94560; color: #fff; }
+        .agent-route-test .test-btn:hover { background: #d63850; }
+        .agent-result { margin-top: 12px; padding: 12px 16px; border-radius: 8px; background: rgba(255,255,255,0.03); font-size: 13px; display: none; }
+        .agent-result.show { display: block; }
+        .agent-result .detected { color: #0dcaf0; font-weight: 600; }
+        .agent-result .reply-text { margin-top: 8px; color: #ccc; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -81,6 +105,37 @@
                 <div class="label">&#x1F460; المنتجات</div>
                 <div class="value" id="totalProducts">جار...</div>
                 <div class="sub">في المتجر</div>
+            </div>
+        </div>
+
+        <!-- ======= AI AGENTS SECTION ======= -->
+        <div class="agent-section">
+            <div class="title">&#x1F916; AI Agents &#x1F4A1;</div>
+            <div class="agent-selector" id="agentSelector">
+                <div class="agent-card active" data-agent="customer_support" onclick="switchAgent('customer_support')">
+                    <div class="emoji">&#x1F91D;</div>
+                    <div class="name">&#x1F91D; خدمة العملاء</div>
+                    <div class="desc">رعاية مبيعات المنتجات والاستفسارات العامة</div>
+                    <div class="active-badge" id="badge-customer_support" style="display:none;">&#x2705; نشط الآن</div>
+                </div>
+                <div class="agent-card" data-agent="shipping_tracking" onclick="switchAgent('shipping_tracking')">
+                    <div class="emoji">&#x1F4E6;</div>
+                    <div class="name">&#x1F4E6; متابعة الشحنات</div>
+                    <div class="desc">تتبع شحنات ZR Express والتوصيل</div>
+                    <div class="active-badge" id="badge-shipping_tracking" style="display:none;">&#x2705; نشط الآن</div>
+                </div>
+            </div>
+
+            <div class="agent-route-test">
+                <div style="font-size:13px; color:#667; margin-bottom:8px;">&#x1F50D; اختبار التوجيه الذكي:</div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="testMessage" placeholder="اكتب رسالة تجريبية... مثال: سعر الحذاء أو وين طلبي" onkeydown="if(event.key==='Enter')testAgentRoute()">
+                    <button class="test-btn" onclick="testAgentRoute()">&#x25B6; اختبر</button>
+                </div>
+                <div class="agent-result" id="agentTestResult">
+                    <div><span class="detected" id="detectedAgent">-</span></div>
+                    <div class="reply-text" id="agentReplyText">-</div>
+                </div>
             </div>
         </div>
 
@@ -157,6 +212,86 @@
         }
         loadDashboard();
         setInterval(loadDashboard, 30000);
+
+        // ======= AI AGENT CONTROLS =======
+        async function loadAgentStatus() {
+            try {
+                const res = await fetch('/api/agent/status');
+                if (!res.ok) return;
+                const data = await res.json();
+                updateAgentUI(data);
+            } catch(e) { console.error('Agent status error:', e); }
+        }
+
+        function updateAgentUI(data) {
+            // تحديث البطاقات
+            document.querySelectorAll('.agent-card').forEach(function(card) {
+                const agentId = card.dataset.agent;
+                const isActive = agentId === data.active_agent;
+                card.classList.toggle('active', isActive);
+                document.getElementById('badge-' + agentId).style.display = isActive ? 'inline-block' : 'none';
+            });
+        }
+
+        async function switchAgent(agentId) {
+            try {
+                const res = await fetch('/api/agent/switch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({agent: agentId})
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (data.success) {
+                    updateAgentUI(data.stats);
+                }
+            } catch(e) {
+                console.error('Switch agent error:', e);
+                alert('فشل تغيير الوكيل: ' + e.message);
+            }
+        }
+
+        async function testAgentRoute() {
+            const msg = document.getElementById('testMessage').value.trim();
+            if (!msg) {
+                alert('الرجاء كتابة رسالة للاختبار');
+                return;
+            }
+            const resultDiv = document.getElementById('agentTestResult');
+            const detectedSpan = document.getElementById('detectedAgent');
+            const replySpan = document.getElementById('agentReplyText');
+
+            resultDiv.classList.remove('show');
+            detectedSpan.textContent = 'جار التحليل...';
+            replySpan.textContent = '';
+
+            try {
+                const res = await fetch('/api/agent/route-test', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg})
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (data.success) {
+                    const agentNames = {
+                        'customer_support': '\uD83E\uDD1D \u062E\u062F\u0645\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621',
+                        'shipping_tracking': '\uD83D\uDCE6 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0634\u062D\u0646\u0627\u062A'
+                    };
+                    detectedSpan.textContent = '\u200F' + (agentNames[data.detected_agent] || data.detected_agent);
+                    replySpan.textContent = data.reply;
+                    resultDiv.classList.add('show');
+                }
+            } catch(e) {
+                detectedSpan.textContent = '\u274C \u062E\u0637\u0623: ' + e.message;
+                replySpan.textContent = '';
+                resultDiv.classList.add('show');
+            }
+        }
+
+        // تحميل حالة الوكيلين عند بدء الصفحة
+        loadAgentStatus();
+        setInterval(loadAgentStatus, 60000);
     </script>
 </body>
 </html>

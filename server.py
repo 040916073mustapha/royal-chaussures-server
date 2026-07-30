@@ -231,22 +231,24 @@ def send_instagram_message(recipient_id, text):
         _log_safe(logger.error, "Instagram error", e)
         return False
 
-# OpenClaw / Auto Reply
+# AI Agent System
+from agents.router import route as agent_route, set_active_agent, get_active_agent, get_route_stats
+
 def get_atlas_response(msg, uid, platform="messenger"):
-    if OPENCLAW_API_URL and OPENCLAW_TOKEN:
-        try:
-            payload = {
-                "model": "openclaw/customer_support",
-                "messages": [{"role": "system", "content": "Ø£Ù†Øª Ù…ÙˆØ¸Ù Ø®Ø¯Ù…Ø© Ø¹Ù…Ù„Ø§Ø¡ ÙÙŠ Ù…ØªØ¬Ø± Royal ChaussuresØŒ Ù…ØªØ¬Ø± Ø¬Ø²Ø§Ø¦Ø±ÙŠ Ù„Ù„Ø£Ø­Ø°ÙŠØ© ÙˆØ§Ù„Ø¥ÙƒØ³Ø³ÙˆØ§Ø±Ø§Øª Ø§Ù„Ù†Ø³Ø§Ø¦ÙŠØ©. ØªØªØ­Ø¯Ø« Ø¨Ø§Ù„Ù„Ù‡Ø¬Ø© Ø§Ù„Ø¬Ø²Ø§Ø¦Ø±ÙŠØ© Ø§Ù„Ø¯Ø§Ø±Ø¬Ø©. Ø±Ø¯ÙˆØ¯Ùƒ Ù…Ø®ØªØµØ±Ø© (2-4 Ø¬Ù…Ù„). Ù„Ø§ ØªØªÙƒÙ„Ù… Ø¹Ù† Ù†ÙØ³Ùƒ ÙƒØ°ÙƒØ§Ø¡ Ø§ØµØ·Ù†Ø§Ø¹ÙŠ."}, {"role": "user", "content": msg}],
-                "user": f"customer:{platform}:{uid}"
-            }
-            headers = {"Content-Type": "application/json", "Authorization": f"Bearer {OPENCLAW_TOKEN}"}
-            resp = requests.post(OPENCLAW_API_URL, json=payload, headers=headers, timeout=30)
-            if resp.status_code == 200:
-                return resp.json()['choices'][0]['message']['content']
-        except Exception as e:
-            _log_safe(logger.error, "OpenClaw error", e)
-    return get_auto_reply(msg)
+    """استخدام الـ router الذكي لتوجيه الرسالة للوكيل المناسب"""
+    try:
+        reply, agent_id, used_ai = agent_route(
+            message=msg,
+            platform=platform,
+            uid=uid,
+            openclaw_api_url=OPENCLAW_API_URL,
+            openclaw_token=OPENCLAW_TOKEN
+        )
+        logger.info(f"[Agent:{agent_id}] AI={used_ai} Platform={platform} UID={uid[:20]}")
+        return reply
+    except Exception as e:
+        _log_safe(logger.error, "Agent route error", e)
+        return get_auto_reply(msg)
 
 def get_auto_reply(msg):
     m = msg.lower()
@@ -373,6 +375,79 @@ def api_dashboard_data():
     except Exception as e:
         _log_safe(logger.error, "Dashboard data error", e)
         return json_utf8({"error": _safe_str(e)}, 500)
+
+# ===================== AI AGENT ENDPOINTS =====================
+
+@app.route('/api/agent/status')
+def api_agent_status():
+    """إرجاع حالة الوكيلين"""
+    stats = get_route_stats()
+    return json_utf8(stats)
+
+
+@app.route('/api/agent/switch', methods=['POST'])
+def api_agent_switch():
+    """تغيير الوكيل النشط فوراً"""
+    try:
+        data = request.get_json()
+        if not data:
+            return json_utf8({"success": False, "error": "No JSON body"}, 400)
+        agent_id = data.get("agent", "").strip()
+        if not agent_id:
+            return json_utf8({"success": False, "error": "Agent ID required"}, 400)
+        if set_active_agent(agent_id):
+            logger.info(f"[Agent] Switched to: {agent_id}")
+            stats = get_route_stats()
+            return json_utf8({"success": True, "message": f"Switched to {stats['active_agent_name']}", "stats": stats})
+        else:
+            return json_utf8({"success": False, "error": f"Unknown agent: {agent_id}"}, 400)
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)}, 500)
+
+
+@app.route('/api/agent/config')
+def api_agent_config():
+    """إرجاع الإعدادات الكاملة للوكيلين (لـ Dashboard)"""
+    from agents.config import AGENTS_CONFIG
+    return json_utf8({"agents": {k: {
+        "id": v["id"],
+        "name": v["name"],
+        "name_en": v["name_en"],
+        "description": v["description"],
+        "emoji": v["emoji"],
+        "color": v["color"],
+        "keywords": v["keywords"],
+        "active_by_default": v["active_by_default"],
+        "needs_shopify_data": v["needs_shopify_data"],
+        "needs_zr_data": v["needs_zr_data"]
+    } for k, v in AGENTS_CONFIG.items()}})
+
+
+@app.route('/api/agent/route-test', methods=['POST'])
+def api_agent_route_test():
+    """اختبار التوجيه للوكيل المناسب"""
+    try:
+        data = request.get_json()
+        if not data or "message" not in data:
+            return json_utf8({"success": False, "error": "message field required"}, 400)
+        message = data["message"]
+        reply, agent_id, used_ai = agent_route(
+            message=message,
+            platform="api_test",
+            uid="test_user",
+            openclaw_api_url=None,  # Force auto-reply for test
+            openclaw_token=None
+        )
+        return json_utf8({
+            "success": True,
+            "message": message,
+            "detected_agent": agent_id,
+            "reply": reply,
+            "used_ai": used_ai
+        })
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)}, 500)
+
 
 # Global error handler for encoding issues
 @app.errorhandler(500)
