@@ -24,7 +24,23 @@ import base64
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify, render_template, render_template_string
+from flask import Flask, request, jsonify, render_template, render_template_string, Response
+from werkzeug.wrappers import Response as WerkzeugResponse
+# Patch: Force all JSON responses to use utf-8 to avoid latin-1 encoding errors
+_original_response_set_data = WerkzeugResponse.set_data
+def _patched_set_data(self, value):
+    if isinstance(value, bytes):
+        self.content_type = 'application/json; charset=utf-8'
+    return _original_response_set_data(self, value)
+WerkzeugResponse.set_data = _patched_set_data
+
+def json_utf8(data, status=200):
+    """Return JSON response with explicit utf-8 encoding (bypasses latin-1 issue)"""
+    return Response(
+        json.dumps(data, ensure_ascii=False).encode('utf-8'),
+        status=status,
+        content_type='application/json; charset=utf-8'
+    )
 
 load_dotenv()
 
@@ -241,7 +257,7 @@ def get_auto_reply(msg):
     return "مرحباً بك في Royal Chaussures! 🎀 شكراً لتواصلك. سيتم الرد عليك في أقرب وقت. 👠✨ للتحدث مع المدير: 0659832426 📞"
 @app.route('/')
 def index():
-    return jsonify({"status": "running", "service": "Royal Chaussures Cloud Server", "version": "3.0", "url": request.host_url.rstrip('/'), "build": "5bbeab857aad", "endpoints": {"dashboard":"/dashboard","orders":"/dashboard/orders","products":"/dashboard/products","tracking":"/dashboard/tracking","health":"/health","webhook":"/webhook"}})
+    return json_utf8({"status": "running", "service": "Royal Chaussures Cloud Server", "version": "3.0", "url": request.host_url.rstrip('/'), "build": "5bbeab857aad", "endpoints": {"dashboard":"/dashboard","orders":"/dashboard/orders","products":"/dashboard/products","tracking":"/dashboard/tracking","health":"/health","webhook":"/webhook"}})
 
 @app.route('/dashboard')
 def dashboard_page():
@@ -251,7 +267,7 @@ def dashboard_page():
         return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
     except Exception as e:
         logger.error(f'Dashboard template error: {e}')
-        return jsonify({"error": str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
+        return json_utf8({"error": str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
 
 @app.route('/dashboard/orders')
 def dashboard_orders():
@@ -267,28 +283,28 @@ def dashboard_tracking():
 
 @app.route('/health')
 def health():
-    return jsonify({"status":"healthy","timestamp":datetime.utcnow().isoformat(),"uptime":"running","database":"connected"})
+    return json_utf8({"status":"healthy","timestamp":datetime.utcnow().isoformat(),"uptime":"running","database":"connected"})
 
 @app.route('/api/orders')
 def api_orders():
     status = request.args.get("status", "any")
     limit = int(request.args.get("limit", 50))
     orders = fetch_shopify_orders(status=status, limit=limit)
-    return jsonify({"orders": orders, "count": len(orders)})
+    return json_utf8({"orders": orders, "count": len(orders)})
 
 @app.route('/api/products')
 def api_products():
     limit = int(request.args.get("limit", 50))
     products = fetch_shopify_products(limit=limit)
-    return jsonify({"products": products, "count": len(products)})
+    return json_utf8({"products": products, "count": len(products)})
 
 @app.route('/api/zr-lookup')
 def api_zr_lookup():
     phone = request.args.get("phone", "")
     if not phone:
-        return jsonify({"error": "Phone number required"}), 400
+        return json_utf8({"error": "Phone number required"}, 400)
     parcels = lookup_zr_tracking(phone)
-    return jsonify({"phone": phone, "parcels": parcels, "count": len(parcels)})
+    return json_utf8({"phone": phone, "parcels": parcels, "count": len(parcels)})
 
 
 @app.route('/api/dashboard-data')
@@ -300,7 +316,7 @@ def api_test_fetch():
         resp = requests.get(url, headers=SHOPIFY_HEADERS_ORDERS, timeout=15)
         data = json.loads(resp.content.decode('utf-8'))
         orders = data.get("orders", [])
-        return jsonify({
+        return json_utf8({
             "success": True,
             "status_code": resp.status_code,
             "encoding_ok": True,
@@ -308,7 +324,7 @@ def api_test_fetch():
             "sample": {"name": orders[0].get("name")} if orders else None
         })
     except Exception as e:
-        return jsonify({"success": False, "error": str(e), "error_type": type(e).__name__}), 500
+        return json_utf8({"success": False, "error": str(e), "error_type": type(e).__name__}, 500)
 
 
 @app.route('/api/dashboard-data')
@@ -324,7 +340,7 @@ def api_dashboard_data():
                 total_revenue += float(o.get("total_price", 0))
             except:
                 pass
-        return jsonify({
+        return json_utf8({
             "total_orders": total_orders,
             "unfulfilled_orders": unfulfilled,
             "total_revenue": f"{total_revenue:.2f} DZD",
@@ -346,7 +362,7 @@ def api_dashboard_data():
         })
     except Exception as e:
         logger.error(f"Dashboard data error: {e}")
-        return jsonify({"error": str(e)}), 500
+        return json_utf8({"error": str(e)}, 500)
 
 # Webhooks
 @app.route('/webhook', methods=['GET'])
