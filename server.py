@@ -31,9 +31,7 @@ load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("royal-server")
 
-import os
-_TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
-app = Flask(__name__, template_folder=_TEMPLATE_DIR)
+app = Flask(__name__)
 app.secret_key = os.urandom(24).hex()
 
 # Configuration
@@ -245,7 +243,7 @@ def index():
 
 @app.route('/dashboard')
 def dashboard_page():
-    return render_template('dashboard.html')
+    return render_template_string(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'dashboard.html'), 'r', encoding='utf-8').read())
 
 @app.route('/dashboard/orders')
 def dashboard_orders():
