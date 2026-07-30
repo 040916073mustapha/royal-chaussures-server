@@ -462,16 +462,57 @@ def api_agent_config():
 
 @app.route('/api/instagram/debug', methods=['GET'])
 def api_instagram_debug():
-    """معلومات debug عن Instagram setup"""
+    """تحليل كامل لـ Instagram setup + استخراج Business ID تلقائياً"""
     info = {
         "has_instagram_token": bool(INSTAGRAM_ACCESS_TOKEN),
         "instagram_token_length": len(INSTAGRAM_ACCESS_TOKEN) if INSTAGRAM_ACCESS_TOKEN else 0,
         "instagram_business_id_configured": bool(INSTAGRAM_BUSINESS_ID),
-        "instagram_business_id": INSTAGRAM_BUSINESS_ID if INSTAGRAM_BUSINESS_ID else "غير مضبوط — أضف INSTAGRAM_BUSINESS_ID في Render Env Vars",
+        "instagram_business_id": INSTAGRAM_BUSINESS_ID if INSTAGRAM_BUSINESS_ID else "غير مضبوط",
         "has_fb_token": bool(FB_SYSTEM_USER_TOKEN),
-        "how_to_get_business_id": "ارسل طلب GET إلى: https://graph.facebook.com/v21.0/me/accounts?access_token=YOUR_TOKEN",
         "recommended_env_vars": ["INSTAGRAM_ACCESS_TOKEN", "INSTAGRAM_BUSINESS_ID"]
     }
+
+    # محاولة استخراج Instagram Business ID من FB token
+    if FB_SYSTEM_USER_TOKEN and not INSTAGRAM_BUSINESS_ID:
+        try:
+            # Step 1: Get Facebook Pages
+            pages_url = f"https://graph.facebook.com/v21.0/me/accounts?access_token={FB_SYSTEM_USER_TOKEN}&limit=5"
+            pages_resp = requests.get(pages_url, timeout=10).json()
+            pages = pages_resp.get("data", [])
+            info["page_count"] = len(pages)
+            info["page_names"] = [p.get("name", "?") for p in pages]
+
+            # Step 2: لكل صفحة، جيب Instagram Business Account
+            ig_accounts = []
+            for page in pages:
+                pid = page.get("id", "")
+                ptok = page.get("access_token", "")
+                if pid and ptok:
+                    ig_url = f"https://graph.facebook.com/v21.0/{pid}?fields=instagram_business_account&access_token={ptok}"
+                    ig_resp = requests.get(ig_url, timeout=10).json()
+                    ig_acct = ig_resp.get("instagram_business_account")
+                    if ig_acct and ig_acct.get("id"):
+                        ig_accounts.append({
+                            "page_name": page.get("name", "?"),
+                            "page_id": pid,
+                            "instagram_business_id": ig_acct["id"]
+                        })
+
+            if ig_accounts:
+                info["found_instagram_accounts"] = ig_accounts
+                info["instagram_business_id_recommended"] = ig_accounts[0]["instagram_business_id"]
+                info["next_step"] = (
+                    f"1. أضف INSTAGRAM_BUSINESS_ID = {ig_accounts[0]['instagram_business_id']} في Render Env Vars\n"
+                    f"2. تأكد من وجود INSTAGRAM_ACCESS_TOKEN\n"
+                    f"3. أعد الـ Deploy"
+                )
+            else:
+                info["found_instagram_accounts"] = []
+                info["hint"] = "لم نجد Instagram Business Account مرتبط بأي صفحة. تأكد من ربط الـ Instagram Business بـ Facebook Page."
+
+        except Exception as e:
+            info["instagram_scan_error"] = _safe_str(e)
+
     return json_utf8(info)
 
 
