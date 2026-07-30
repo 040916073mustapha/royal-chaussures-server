@@ -101,8 +101,9 @@ def fetch_shopify_orders(status="any", limit=50):
         url = f"{SHOPIFY_BASE}/orders.json?status={status}&limit={limit}"
         resp = requests.get(url, headers=SHOPIFY_HEADERS_ORDERS, timeout=15)
         if resp.status_code == 200:
-            return resp.json().get("orders", [])
-        logger.error(f"Shopify error {resp.status_code}: {resp.text[:200]}")
+            # Use raw content + json.loads to avoid latin-1 encoding issues
+            return json.loads(resp.content.decode('utf-8')).get("orders", [])
+        logger.error(f"Shopify error {resp.status_code}: {resp.content[:500]}")
         return []
     except Exception as e:
         logger.error(f"Shopify fetch failed: {e}")
@@ -113,8 +114,9 @@ def fetch_shopify_products(limit=50):
         url = f"{SHOPIFY_BASE}/products.json?limit={limit}"
         resp = requests.get(url, headers=SHOPIFY_HEADERS_CATALOG, timeout=15)
         if resp.status_code == 200:
-            return resp.json().get("products", [])
-        logger.error(f"Shopify products error {resp.status_code}: {resp.text[:200]}")
+            # Use raw content + json.loads to avoid latin-1 encoding issues
+            return json.loads(resp.content.decode('utf-8')).get("products", [])
+        logger.error(f"Shopify products error {resp.status_code}: {resp.content[:500]}")
         return []
     except Exception as e:
         logger.error(f"Shopify products fetch failed: {e}")
@@ -287,6 +289,26 @@ def api_zr_lookup():
         return jsonify({"error": "Phone number required"}), 400
     parcels = lookup_zr_tracking(phone)
     return jsonify({"phone": phone, "parcels": parcels, "count": len(parcels)})
+
+
+@app.route('/api/dashboard-data')
+@app.route('/api/test-fetch')
+def api_test_fetch():
+    """Test endpoint to verify Shopify fetch works correctly"""
+    try:
+        url = f"{SHOPIFY_BASE}/orders.json?status=any&limit=1"
+        resp = requests.get(url, headers=SHOPIFY_HEADERS_ORDERS, timeout=15)
+        data = json.loads(resp.content.decode('utf-8'))
+        orders = data.get("orders", [])
+        return jsonify({
+            "success": True,
+            "status_code": resp.status_code,
+            "encoding_ok": True,
+            "orders_count": len(orders),
+            "sample": {"name": orders[0].get("name")} if orders else None
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "error_type": type(e).__name__}), 500
 
 
 @app.route('/api/dashboard-data')
