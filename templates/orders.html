@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — الطلبات</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #0a0a1a; color: #e0e0e0; padding: 32px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; color: #fff; }
+        .header a { color: #e94560; text-decoration: none; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: right; padding: 12px 16px; color: #667; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 14px; }
+        tr:hover { background: rgba(233,69,96,0.03); }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-pending { background: rgba(255,193,7,0.15); color: #ffc107; }
+        .badge-paid { background: rgba(0,123,255,0.15); color: #0d6efd; }
+        .badge-shipped { background: rgba(13,202,240,0.15); color: #0dcaf0; }
+        .badge-delivered { background: rgba(25,135,84,0.15); color: #198754; }
+        .badge-cancelled { background: rgba(220,53,69,0.15); color: #dc3545; }
+        .loading { text-align: center; color: #667; padding: 48px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 جميع الطلبات</h1>
+        <a href="/dashboard">← العودة للوحة التحكم</a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>الطلب</th><th>الزبون</th><th>الهاتف</th><th>المبلغ</th>
+                <th>المالية</th><th>الشحن</th>
+            </tr>
+        </thead>
+        <tbody id="ordersBody">
+            <tr><td colspan="6" class="loading">جاري التحميل...</td></tr>
+        </tbody>
+    </table>
+    <script>
+    async function loadOrders() {
+        try {
+            const r = await fetch('/api/orders');
+            const d = await r.json();
+            const b = document.getElementById('ordersBody');
+            if (!d.orders || d.orders.length === 0) {
+                b.innerHTML = '<tr><td colspan="6" class="loading">لا توجد طلبات</td></tr>';
+                return;
+            }
+            b.innerHTML = d.orders.map(function(o) {
+                var fc = o.financial_status === 'paid' ? 'badge-paid' : 'badge-pending';
+                var fl = o.fulfillment_status || 'unfulfilled';
+                var flc = fl === 'fulfilled' ? 'badge-delivered' : (fl === 'partial' ? 'badge-shipped' : 'badge-pending');
+                var c = o.customer || {};
+                var a = (o.shipping_address || o.billing_address || {});
+                return '<tr><td>' + (o.name || o.id) + '</td>' +
+                    '<td>' + (c.first_name || '') + ' ' + (c.last_name || '') + '</td>' +
+                    '<td>' + (a.phone || '-') + '</td>' +
+                    '<td>' + (o.total_price || '0') + ' DZD</td>' +
+                    '<td><span class="badge ' + fc + '">' + (o.financial_status || 'pending') + '</span></td>' +
+                    '<td><span class="badge ' + flc + '">' + fl + '</span></td></tr>';
+            }).join('');
+        } catch(e) {
+            document.getElementById('ordersBody').innerHTML = '<tr><td colspan="6" class="loading" style="color:#dc3545;">⚠️ فشل التحميل</td></tr>';
+        }
+    }
+    loadOrders();
+    setInterval(loadOrders, 60000);
+    </script>
+</body>
+</html>

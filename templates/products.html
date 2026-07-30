@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — المنتجات</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #0a0a1a; color: #e0e0e0; padding: 32px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; color: #fff; }
+        .header a { color: #e94560; text-decoration: none; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; }
+        .card .title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .card .price { color: #e94560; font-size: 18px; font-weight: 700; }
+        .card .meta { font-size: 12px; color: #667; margin-top: 4px; }
+        .loading { text-align: center; color: #667; padding: 48px; grid-column: 1 / -1; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛍️ المنتجات</h1>
+        <a href="/dashboard">← العودة للوحة التحكم</a>
+    </div>
+    <div class="grid" id="productsGrid">
+        <div class="loading">جاري التحميل...</div>
+    </div>
+    <script>
+    async function loadProducts() {
+        try {
+            const r = await fetch('/api/products');
+            const d = await r.json();
+            const g = document.getElementById('productsGrid');
+            if (!d.products || d.products.length === 0) {
+                g.innerHTML = '<div class="loading">لا توجد منتجات</div>';
+                return;
+            }
+            g.innerHTML = d.products.map(function(p) {
+                var v = p.variants && p.variants[0];
+                var price = v ? v.price : '0';
+                var variants = p.variants ? p.variants.length + ' مقاس' : '0 مقاس';
+                return '<div class="card"><div class="title">' + p.title + '</div>' +
+                    '<div class="price">' + price + ' DZD</div>' +
+                    '<div class="meta">' + variants + '</div></div>';
+            }).join('');
+        } catch(e) {
+            document.getElementById('productsGrid').innerHTML = '<div class="loading" style="color:#dc3545;">⚠️ فشل التحميل</div>';
+        }
+    }
+    loadProducts();
+    </script>
+</body>
+</html>

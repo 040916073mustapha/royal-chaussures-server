@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — تتبع الشحنات</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #0a0a1a; color: #e0e0e0; padding: 32px; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; color: #fff; }
+        .header a { color: #e94560; text-decoration: none; font-size: 14px; }
+        .search-box { display: flex; gap: 12px; margin-bottom: 24px; }
+        .search-box input { flex: 1; padding: 12px 16px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 16px; direction: ltr; }
+        .search-box button { padding: 12px 24px; border-radius: 10px; background: #e94560; color: #fff; border: none; cursor: pointer; font-size: 14px; }
+        .result-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+        .result-card .field { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .result-card .field:last-child { border-bottom: none; }
+        .result-card .label { color: #667; }
+        .result-card .value { color: #fff; }
+        .loading { text-align: center; color: #667; padding: 48px; }
+        .error { color: #dc3545; text-align: center; padding: 24px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 تتبع الشحنات - ZR Express</h1>
+        <a href="/dashboard">← العودة للوحة التحكم</a>
+    </div>
+    <div class="search-box">
+        <input type="text" id="phoneInput" placeholder="رقم الهاتف (مثال: 0659832426)" dir="ltr">
+        <button onclick="search()">🔍 بحث</button>
+    </div>
+    <div id="results"><div class="loading">أدخل رقم الهاتف للبحث</div></div>
+    <script>
+    async function search() {
+        var r = document.getElementById('results');
+        var p = document.getElementById('phoneInput').value.trim();
+        if (!p) { r.innerHTML = '<div class="loading">الرجاء إدخال رقم الهاتف</div>'; return; }
+        r.innerHTML = '<div class="loading">جاري البحث...</div>';
+        try {
+            var res = await fetch('/api/zr-lookup?phone=' + encodeURIComponent(p));
+            var d = await res.json();
+            if (!d.parcels || d.parcels.length === 0) {
+                r.innerHTML = '<div class="loading">لا توجد شحنات لهذا الرقم</div>';
+                return;
+            }
+            r.innerHTML = d.parcels.map(function(par) {
+                var f = par || {};
+                var html = '<div class="result-card">';
+                Object.keys(f).forEach(function(k) {
+                    if (typeof f[k] !== 'object')
+                        html += '<div class="field"><span class="label">' + k + '</span><span class="value">' + f[k] + '</span></div>';
+                });
+                html += '</div>';
+                return html;
+            }).join('');
+        } catch(e) {
+            r.innerHTML = '<div class="error">⚠️ فشل البحث</div>';
+        }
+    }
+    document.getElementById('phoneInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') search();
+    });
+    </script>
+</body>
+</html>
