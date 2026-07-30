@@ -74,7 +74,7 @@ AGENTS_CONFIG = {
         "active_by_default": False,
         "keywords": [
             "تتبع", "تتبع", "شحن", "وين طلبي", "ZR",
-            "tracking", "delivery", "shipment",
+            "tracking", "delivery", "shipment", "order",
             "متى يوصل", "وقت التوصيل", "الطلب",
             "أين طلبي", "فين طلبي",
             "كود", "رقم التتبع", "بارسيل",
