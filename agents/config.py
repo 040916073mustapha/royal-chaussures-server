@@ -78,7 +78,7 @@ AGENTS_CONFIG = {
             "متى يوصل", "وقت التوصيل", "الطلب",
             "أين طلبي", "فين طلبي",
             "كود", "رقم التتبع", "بارسيل",
-            "express", "livraison", "suivi"
+            "express", "livraison", "suivi", "tlahi", "talahi", "plasi", "track", "order", "shipment", "where is", "find"
         ],
         "auto_reply_map": {
             "تتبع": "📦 نوفر خدمة التتبع لشحنات ZR Express. يرجى إرسال رقم هاتفك للتحقق من حالة الشحنة.",
@@ -117,19 +117,18 @@ def detect_agent_from_message(message, active_agent_id="customer_support"):
                 score += 1
         scores[agent_id] = score
 
-    # إذا ما لقى كلمات مفتاحية — استعمل الوكيل النشط
     max_score = max(scores.values()) if scores else 0
+
+    # Shipping preference: if any shipping keyword matches AND >= customer
+    shipping_score = scores.get("shipping_tracking", 0)
+    customer_score = scores.get("customer_support", 0)
+    if shipping_score > 0 and shipping_score >= customer_score:
+        return "shipping_tracking"
+
     if max_score == 0:
         return active_agent_id
 
-    # ابحث عن الوكيل صاحب أعلى score
-    best_agent = max(scores, key=lambda k: scores[k])
-
-    # إذا shipping له نقاط أكتر من customer_support — حول للشحنات
-    if scores.get("shipping_tracking", 0) > scores.get("customer_support", 0):
-        return "shipping_tracking"
-
-    return best_agent
+    return max(scores, key=lambda k: scores[k])
 
 
 def get_auto_reply(agent_id, message):
