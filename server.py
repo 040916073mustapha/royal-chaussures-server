@@ -152,7 +152,7 @@ def get_page_token():
         logger.warning("No FB_SYSTEM_USER_TOKEN")
         return None
     try:
-        url = f"https://graph.facebook.com/v20.0/me/accounts?access_token=***}"
+        url = "https://graph.facebook.com/v20.0/me/accounts?access_token=" + FB_SYSTEM_USER_TOKEN***}"
         resp = requests.get(url, timeout=10)
         data = resp.json()
         if "data" in data and len(data["data"]) > 0:
@@ -169,7 +169,7 @@ def send_messenger_message(recipient_id, text):
     token = get_page_token()
     if not token: return False
     try:
-        url = f"https://graph.facebook.com/v20.0/me/messages?access_token=***}"
+        url = "https://graph.facebook.com/v20.0/me/messages?access_token=" + token***}"
         payload = {"recipient": {"id": recipient_id}, "message": {"text": text}}
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
         return resp.status_code == 200
@@ -193,7 +193,7 @@ def send_instagram_message(recipient_id, text):
     token = get_page_token()
     if not token: return False
     try:
-        url = f"https://graph.facebook.com/v20.0/me/messages?access_token=***}"
+        url = "https://graph.facebook.com/v20.0/me/messages?access_token=" + token***}"
         payload = {"recipient": {"id": recipient_id}, "message": {"text": text}}
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
         return resp.status_code == 200
