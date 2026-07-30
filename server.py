@@ -80,6 +80,7 @@ WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
 
 INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
+INSTAGRAM_BUSINESS_ID = os.environ.get("INSTAGRAM_BUSINESS_ID", "")
 OPENCLAW_API_URL = os.getenv("OPENCLAW_API_URL", "")
 OPENCLAW_TOKEN = os.environ.get("OPENCLAW_TOKEN", "")
 
@@ -220,15 +221,51 @@ def send_whatsapp_message(to_number, text):
         return False
 
 def send_instagram_message(recipient_id, text):
+    """
+    إرسال رسالة رد على إنستغرام.
+    يحاول 3 طرق:
+    1. INSTAGRAM_BUSINESS_ID + INSTAGRAM_ACCESS_TOKEN (المسار الرسمي)
+    2. INSTAGRAM_ACCESS_TOKEN مباشرة مع /me/messages
+    3. Fallback إلى Page Token
+    """
+    # Try 1: Best method — Instagram Business Account ID + IG Token
+    if INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ID:
+        try:
+            url = f"https://graph.facebook.com/v21.0/{INSTAGRAM_BUSINESS_ID}/messages?access_token={INSTAGRAM_ACCESS_TOKEN}"
+            payload = {"recipient": {"id": recipient_id}, "message": {"text": text}}
+            resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
+            if resp.status_code == 200:
+                return True
+            logger.warning(f"Instagram method 1 failed: {resp.status_code}")
+        except Exception as e:
+            _log_safe(logger.warning, "Instagram method 1 error", e)
+
+    # Try 2: IG Token with /me/messages
+    if INSTAGRAM_ACCESS_TOKEN:
+        try:
+            url = "https://graph.facebook.com/v21.0/me/messages?access_token=" + INSTAGRAM_ACCESS_TOKEN
+            payload = {"recipient": {"id": recipient_id}, "message": {"text": text}}
+            resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
+            if resp.status_code == 200:
+                return True
+            logger.warning(f"Instagram method 2 failed: {resp.status_code}")
+        except Exception as e:
+            _log_safe(logger.warning, "Instagram method 2 error", e)
+
+    # Try 3: Fallback to Page Token
     token = get_page_token()
-    if not token: return False
+    if not token:
+        return False
     try:
-        url = "https://graph.facebook.com/v20.0/me/messages?access_token=" + token
+        url = "https://graph.facebook.com/v21.0/me/messages?access_token=" + token
         payload = {"recipient": {"id": recipient_id}, "message": {"text": text}}
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
-        return resp.status_code == 200
+        if resp.status_code == 200:
+            return True
+        logger.warning(f"Instagram method 3 (fallback) failed: {resp.status_code}")
+        return False
     except Exception as e:
-        _log_safe(logger.error, "Instagram error", e)
+        _log_safe(logger.error, "Instagram error (fallback)", e)
         return False
 
 # AI Agent System
@@ -421,6 +458,21 @@ def api_agent_config():
         "needs_shopify_data": v["needs_shopify_data"],
         "needs_zr_data": v["needs_zr_data"]
     } for k, v in AGENTS_CONFIG.items()}})
+
+
+@app.route('/api/instagram/debug', methods=['GET'])
+def api_instagram_debug():
+    """معلومات debug عن Instagram setup"""
+    info = {
+        "has_instagram_token": bool(INSTAGRAM_ACCESS_TOKEN),
+        "instagram_token_length": len(INSTAGRAM_ACCESS_TOKEN) if INSTAGRAM_ACCESS_TOKEN else 0,
+        "instagram_business_id_configured": bool(INSTAGRAM_BUSINESS_ID),
+        "instagram_business_id": INSTAGRAM_BUSINESS_ID if INSTAGRAM_BUSINESS_ID else "غير مضبوط — أضف INSTAGRAM_BUSINESS_ID في Render Env Vars",
+        "has_fb_token": bool(FB_SYSTEM_USER_TOKEN),
+        "how_to_get_business_id": "ارسل طلب GET إلى: https://graph.facebook.com/v21.0/me/accounts?access_token=YOUR_TOKEN",
+        "recommended_env_vars": ["INSTAGRAM_ACCESS_TOKEN", "INSTAGRAM_BUSINESS_ID"]
+    }
+    return json_utf8(info)
 
 
 @app.route('/api/agent/route-test', methods=['POST'])
@@ -651,13 +703,28 @@ def webhook_receive():
 
     elif obj == 'instagram':
         for entry in data.get('entry', []):
-            for messaging_event in entry.get('messaging', []):
-                if messaging_event.get('message') and 'text' in messaging_event['message']:
-                    sid = messaging_event['sender']['id']
-                    msg = messaging_event['message']['text']
-                    logger.info(f"[Instagram] {sid}: {msg[:100]}")
-                    reply = get_atlas_response(msg, sid, "instagram")
-                    send_instagram_message(sid, reply)
+            # Instagram webhook قد يكون فيه messaging أو changes
+            if 'messaging' in entry:
+                for messaging_event in entry['messaging']:
+                    if messaging_event.get('message') and 'text' in messaging_event['message']:
+                        sid = messaging_event['sender']['id']
+                        msg = messaging_event['message']['text']
+                        logger.info(f"[Instagram] Messenger {sid}: {msg[:100]}")
+                        reply = get_atlas_response(msg, sid, "instagram")
+                        send_instagram_message(sid, reply)
+
+            # بعض إصدارات Instagram webhook تستخدم changes بدل messaging
+            if 'changes' in entry:
+                for change in entry['changes']:
+                    value = change.get('value', {})
+                    if 'messages' in value:
+                        for msg in value['messages']:
+                            if 'text' in msg:
+                                sid = msg.get('from', {}).get('id', msg.get('from', ''))
+                                text = msg['text'].get('body', msg['text']) if isinstance(msg['text'], dict) else msg['text']
+                                logger.info(f"[Instagram] Changes {sid}: {text[:100]}")
+                                reply = get_atlas_response(text, sid, "instagram")
+                                send_instagram_message(sid, reply)
 
     return "EVENT_RECEIVED", 200
 
