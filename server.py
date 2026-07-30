@@ -33,10 +33,15 @@ class UTF8JSONProvider(DefaultJSONProvider):
         kwargs.setdefault('ensure_ascii', False)
         return super().dumps(obj, **kwargs)
 
+def _safe_str(val):
+    """Convert any value to pure-ASCII string, replacing non-ASCII chars"""
+    s = str(val)
+    return s.encode('ascii', errors='replace').decode('ascii')
+
 def json_utf8(data, status=200):
     """Return JSON with pure ASCII-safe encoding to avoid latin-1 issues"""
-    # Use ensure_ascii=True (escaping unicode) to guarantee pure ASCII response
-    payload = json.dumps(data, ensure_ascii=True, default=str)
+    # ensure_ascii=True escapes unicode to \uXXXX for pure ASCII output
+    payload = json.dumps(data, ensure_ascii=True, default=_safe_str)
     return Response(payload, status=status, content_type='application/json; charset=utf-8')
 
 load_dotenv()
@@ -146,7 +151,7 @@ def fetch_shopify_orders(status="any", limit=50):
         logger.error(f"Shopify error {resp.status_code}")
         return []
     except Exception as e:
-        logger.error(f"Shopify fetch failed: {e}")
+        logger.error(f"Shopify fetch failed: {_safe_str(e)}")
         return []
 
 def fetch_shopify_products(limit=50):
@@ -158,7 +163,7 @@ def fetch_shopify_products(limit=50):
         logger.error(f"Shopify products error {resp.status_code}")
         return []
     except Exception as e:
-        logger.error(f"Shopify products fetch failed: {e}")
+        logger.error(f"Shopify products fetch failed: {_safe_str(e)}")
         return []
 
 def lookup_zr_tracking(phone):
@@ -290,7 +295,7 @@ def dashboard_page():
         return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
     except Exception as e:
         logger.error(f'Dashboard template error: {e}')
-        return json_utf8({"error": str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
+        return json_utf8({"error": _safe_str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
 
 @app.route('/dashboard/orders')
 def dashboard_orders():
@@ -347,7 +352,7 @@ def api_test_fetch():
             "sample": {"name": orders[0].get("name")} if orders else None
         })
     except Exception as e:
-        return json_utf8({"success": False, "error": str(e), "error_type": type(e).__name__}, 500)
+        return json_utf8({"success": False, "error": _safe_str(e), "error_type": type(e).__name__}, 500)
 
 
 @app.route('/api/dashboard-data')
@@ -385,15 +390,15 @@ def api_dashboard_data():
         })
     except Exception as e:
         logger.error(f"Dashboard data error: {e}")
-        return json_utf8({"error": str(e)}, 500)
+        return json_utf8({"error": _safe_str(e)}, 500)
 
 # Global error handler for encoding issues
 @app.errorhandler(500)
 def handle_500(e):
     original = getattr(e, 'original_exception', None) or e
     if isinstance(original, UnicodeEncodeError) or 'latin-1' in str(original) or 'UnicodeError' in type(original).__name__:
-        return json_utf8({"error": "Encoding error in response", "detail": str(original), "resolved": True}, 200)
-    return json_utf8({"error": "Internal server error", "detail": str(original)}, 500)
+        return json_utf8({"error": "Encoding error in response", "detail": 'encoding safe', "resolved": True}, 200)
+    return json_utf8({"error": "Internal server error", "detail": 'encoding safe'}, 500)
 
 # Webhooks
 @app.route('/webhook', methods=['GET'])
