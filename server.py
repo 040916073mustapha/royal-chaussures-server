@@ -31,7 +31,9 @@ load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("royal-server")
 
-app = Flask(__name__)
+import os
+_TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+app = Flask(__name__, template_folder=_TEMPLATE_DIR)
 app.secret_key = os.urandom(24).hex()
 
 # Configuration
