@@ -239,11 +239,17 @@ def get_auto_reply(msg):
 # Routes
 @app.route('/')
 def index():
-    return jsonify({"status": "running", "service": "Royal Chaussures Cloud Server", "version": "3.0", "url": request.host_url.rstrip('/'), "endpoints": {"dashboard":"/dashboard","orders":"/dashboard/orders","products":"/dashboard/products","tracking":"/dashboard/tracking","health":"/health","webhook":"/webhook"}})
+    return jsonify({"status": "running", "service": "Royal Chaussures Cloud Server", "version": "3.0", "url": request.host_url.rstrip('/'), "build": "5bbeab857aad", "endpoints": {"dashboard":"/dashboard","orders":"/dashboard/orders","products":"/dashboard/products","tracking":"/dashboard/tracking","health":"/health","webhook":"/webhook"}})
 
 @app.route('/dashboard')
 def dashboard_page():
-    return render_template_string(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'dashboard.html'), 'r', encoding='utf-8').read())
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'dashboard.html'), 'r', encoding='utf-8') as f:
+            html = f.read()
+        return render_template_string(html)
+    except Exception as e:
+        logger.error(f'Dashboard template error: {e}')
+        return jsonify({"error": str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
 
 @app.route('/dashboard/orders')
 def dashboard_orders():
