@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — Agent Constellation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #050510; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; }
+
+        /* Sidebar */
+        .sidebar { position: fixed; top: 0; right: 0; width: 220px; height: 100vh; background: rgba(10,10,30,0.92); border-left: 1px solid rgba(255,255,255,0.06); padding: 28px 16px; z-index: 100; backdrop-filter: blur(10px); }
+        .sidebar .logo { font-size: 18px; font-weight: 700; color: #e94560; margin-bottom: 28px; }
+        .sidebar .logo small { display: block; font-size: 11px; color: #667; font-weight: 400; }
+        .sidebar a { display: block; padding: 10px 14px; color: #999; text-decoration: none; border-radius: 8px; margin-bottom: 4px; font-size: 13px; transition: 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(233,69,96,0.1); color: #e94560; }
+
+        /* Canvas Container */
+        .canvas-wrap { margin-right: 220px; width: calc(100vw - 220px); height: 100vh; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* Info Overlay — bottom-right */
+        .info-panel { position: fixed; bottom: 24px; left: 280px; background: rgba(10,10,30,0.85); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px 24px; min-width: 280px; max-width: 380px; backdrop-filter: blur(12px); display: none; z-index: 50; transition: opacity 0.3s; }
+        .info-panel.visible { display: block; }
+        .info-panel .close { float: left; cursor: pointer; color: #555; font-size: 18px; }
+        .info-panel .close:hover { color: #e94560; }
+        .info-panel h3 { font-size: 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .info-panel .stat { display: flex; justify-content: space-between; font-size: 12px; color: #999; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .info-panel .stat .val { color: #e0e0e0; font-weight: 600; }
+        .info-panel .stat .tag { padding: 1px 8px; border-radius: 10px; font-size: 10px; }
+        .tag-success { background: rgba(25,135,84,0.2); color: #198754; }
+        .tag-warning { background: rgba(255,193,7,0.2); color: #ffc107; }
+        .tag-primary { background: rgba(13,110,253,0.2); color: #0d6efd; }
+
+        /* Scope lines decoration */
+        .scope-corner { position: fixed; z-index: 10; pointer-events: none; opacity: 0.15; }
+        .scope-corner.tl { top: 16px; right: 240px; border-top: 1px solid #e94560; border-right: 1px solid #e94560; width: 40px; height: 40px; }
+        .scope-corner.br { bottom: 16px; left: 16px; border-bottom: 1px solid #0dcaf0; border-left: 1px solid #0dcaf0; width: 40px; height: 40px; }
+
+        /* Header overlay */
+        .constellation-title { position: fixed; top: 16px; right: 250px; color: rgba(255,255,255,0.3); font-size: 11px; letter-spacing: 6px; text-transform: uppercase; z-index: 15; font-weight: 300; }
+        .constellation-title strong { color: rgba(233,69,96,0.5); }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 160px; }
+            .sidebar .logo { font-size: 15px; }
+            .sidebar a { font-size: 11px; padding: 8px 10px; }
+            .canvas-wrap { margin-right: 160px; width: calc(100vw - 160px); }
+            .info-panel { left: 180px; min-width: 200px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">Royal Chaussures 🌌<small>Constellation v1.0</small></div>
+        <a href="/dashboard">📊 لوحة التحكم</a>
+        <a href="/dashboard/orders">📦 الطلبات</a>
+        <a href="#" class="active">🌌 Agent Constellation</a>
+        <a href="/dashboard/products">🛍️ المنتجات</a>
+        <a href="/dashboard/tracking">🔍 تتبع الشحنات</a>
+        <a href="/health">❤️ صحة السيرفر</a>
+    </div>
+
+    <div class="canvas-wrap">
+        <canvas id="constellation"></canvas>
+    </div>
+
+    <div class="scope-corner tl"></div>
+    <div class="scope-corner br"></div>
+    <div class="constellation-title"><strong>ROYAL CHAUSSURES</strong> // AGENT CONSTELLATION</div>
+
+    <!-- Info Panel -->
+    <div class="info-panel" id="infoPanel">
+        <span class="close" onclick="hideInfo()">&times;</span>
+        <h3 id="infoTitle">Node</h3>
+        <div id="infoStats"></div>
+    </div>
+
+    <script>
+        // ========================
+        // AGENT CONSTELLATION ENGINE
+        // Pure Canvas + requestAnimationFrame
+        // ========================
+
+        const canvas = document.getElementById('constellation');
+        const ctx = canvas.getContext('2d');
+        let W, H;
+
+        function resize() {
+            W = canvas.width = canvas.clientWidth * window.devicePixelRatio;
+            H = canvas.height = canvas.clientHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // ======= NODE DEFINITIONS =======
+        const cx = () => (window.innerWidth - 220) / 2;
+        const cy = () => window.innerHeight / 2;
+
+        const NODES = [
+            { id: 'shopify_core',    label: 'Shopify Core',             x: () => cx(),         y: () => cy(),        r: 44, color: '#e94560', type: 'core',    pulse: false, connections: [] },
+            { id: 'customer_support', label: '🤝 خدمة العملاء',          x: () => cx()+200,     y: () => cy()-80,     r: 34, color: '#0d6efd', type: 'agent',   pulse: false, connections: ['shopify_core','webhook_gateway'] },
+            { id: 'shipping_tracking',label: '📦 متابعة الشحنات',        x: () => cx()-200,     y: () => cy()-80,     r: 34, color: '#198754', type: 'agent',   pulse: false, connections: ['shopify_core','webhook_gateway'] },
+            { id: 'webhook_gateway',  label: '🔌 Webhook Gateway',       x: () => cx(),         y: () => cy()-160,    r: 30, color: '#6f42c1', type: 'gateway', pulse: false, connections: ['customer_support','shipping_tracking'] },
+            { id: 'whatsapp',         label: '💬 WhatsApp',              x: () => cx()+150,     y: () => cy()-260,    r: 22, color: '#25D366', type: 'channel', pulse: false, connections: ['webhook_gateway'] },
+            { id: 'messenger',        label: '💬 Messenger',             x: () => cx()-50,      y: () => cy()-280,    r: 22, color: '#006AFF', type: 'channel', pulse: false, connections: ['webhook_gateway'] },
+            { id: 'instagram',        label: '📸 Instagram',             x: () => cx()-180,     y: () => cy()-200,    r: 22, color: '#E4405F', type: 'channel', pulse: false, connections: ['webhook_gateway'] },
+        ];
+
+        // Click tracking per node (for info panel)
+        function getNodeAt(mx, my) {
+            for (const n of NODES) {
+                const dx = mx - n.x();
+                const dy = my - n.y();
+                if (dx * dx + dy * dy <= (n.r + 8) * (n.r + 8)) return n;
+            }
+            return null;
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const node = getNodeAt(mx, my);
+            if (node) showInfo(node);
+            else hideInfo();
+        });
+
+        // ======= PARTICLES SYSTEM =======
+        let particles = [];
+        const MAX_PARTICLES = 30;
+
+        function spawnParticle(from, to) {
+            particles.push({
+                x: from.x(), y: from.y(),
+                tx: to.x(), ty: to.y(),
+                progress: 0,
+                speed: 0.008 + Math.random() * 0.006,
+                color: to.color,
+                size: 2 + Math.random() * 2,
+                alive: true
+            });
+            if (particles.length > MAX_PARTICLES) particles.shift();
+        }
+
+        function updateParticles() {
+            for (const p of particles) {
+                p.progress += p.speed;
+                if (p.progress >= 1) { p.alive = false; continue; }
+                p.x += (p.tx - p.x) * 0.04;
+                p.y += (p.ty - p.y) * 0.04;
+            }
+            particles = particles.filter(p => p.alive);
+        }
+
+        // ======= DRAW FUNCTIONS =======
+
+        function drawBackground() {
+            // Subtle grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+            ctx.lineWidth = 1;
+            const step = 60;
+            for (let x = 0; x < W/devicePixelRatio; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, H/devicePixelRatio);
+                ctx.stroke();
+            }
+            for (let y = 0; y < H/devicePixelRatio; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W/devicePixelRatio, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawConnection(n1, n2, now) {
+            const x1 = n1.x(), y1 = n1.y();
+            const x2 = n2.x(), y2 = n2.y();
+            const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+            grad.addColorStop(0, n1.color + '40');
+            grad.addColorStop(1, n2.color + '40');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Dashed data flow line (subtle)
+            ctx.setLineDash([4, 8]);
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawNode(node, now) {
+            const x = node.x(), y = node.y(), r = node.r;
+            const active = node.pulse;
+
+            // Glow effect
+            const glowSize = active ? 30 + Math.sin(now / 400) * 12 : 10;
+            const glow = ctx.createRadialGradient(x, y, r * 0.3, x, y, r + glowSize);
+            glow.addColorStop(0, node.color + (active ? '60' : '30'));
+            glow.addColorStop(0.5, node.color + (active ? '30' : '15'));
+            glow.addColorStop(1, node.color + '00');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(x, y, r + glowSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pulse ring for active nodes
+            if (active) {
+                const ringRadius = r + 10 + Math.sin(now / 300) * 8;
+                ctx.strokeStyle = node.color + '50';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 6]);
+                ctx.beginPath();
+                ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Main circle
+            ctx.shadowColor = node.color;
+            ctx.shadowBlur = active ? 25 + Math.sin(now / 400) * 10 : 8;
+            ctx.fillStyle = node.color + '25';
+            ctx.strokeStyle = node.color + (active ? 'AA' : '77');
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Inner glow for active
+            if (active) {
+                const inner = ctx.createRadialGradient(x, y, 0, x, y, r);
+                inner.addColorStop(0, node.color + '40');
+                inner.addColorStop(1, node.color + '05');
+                ctx.fillStyle = inner;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Type icon
+            ctx.font = (node.type === 'core' ? '22px' : node.type === 'agent' ? '18px' : '14px') + ' sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const icons = {
+                'shopify_core': '⚡', 'customer_support': '🤝', 'shipping_tracking': '📦',
+                'webhook_gateway': '🔌', 'whatsapp': '💬', 'messenger': '💬', 'instagram': '📸'
+            };
+            ctx.fillStyle = '#fff';
+            ctx.globalAlpha = 0.9;
+            ctx.fillText(icons[node.id] || '●', x, y);
+            ctx.globalAlpha = 1;
+
+            // Label
+            ctx.font = (node.type === 'core' ? '12px' : '10px') + ' sans-serif';
+            ctx.fillStyle = active ? (node.color + 'DD') : 'rgba(255,255,255,0.5)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const labelY = y + r + 8;
+            ctx.fillText(node.label, x, labelY);
+
+            // Active status indicator
+            if (active) {
+                ctx.fillStyle = '#198754';
+                ctx.beginPath();
+                ctx.arc(x + r - 4, y - r + 4, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawParticles() {
+            for (const p of particles) {
+                const alpha = 1 - Math.abs(0.5 - p.progress) * 2;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = alpha * 0.8;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // ======= MAIN LOOP =======
+        function draw(now) {
+            ctx.clearRect(0, 0, W / devicePixelRatio, H / devicePixelRatio);
+
+            drawBackground();
+
+            // Draw connections
+            const connected = [];
+            for (const node of NODES) {
+                for (const connId of node.connections) {
+                    const target = NODES.find(n => n.id === connId);
+                    if (target && !connected.includes(node.id + '-' + connId)) {
+                        drawConnection(node, target, now);
+                        connected.push(node.id + '-' + connId);
+                        connected.push(connId + '-' + node.id);
+                    }
+                }
+            }
+
+            // Periodically spawn particles (simulate messages)
+            if (Math.random() < 0.05 && particles.length < MAX_PARTICLES) {
+                const activeNodes = NODES.filter(n => n.pulse);
+                if (activeNodes.length > 0) {
+                    const src = activeNodes[Math.floor(Math.random() * activeNodes.length)];
+                    const dstId = src.connections[Math.floor(Math.random() * src.connections.length)];
+                    const dst = NODES.find(n => n.id === dstId);
+                    if (dst) spawnParticle(src, dst);
+                }
+            }
+
+            // Spawn random occasional particles between random connected nodes
+            if (Math.random() < 0.02 && particles.length < MAX_PARTICLES) {
+                const src = NODES[Math.floor(Math.random() * NODES.length)];
+                if (src.connections.length > 0) {
+                    const dstId = src.connections[Math.floor(Math.random() * src.connections.length)];
+                    const dst = NODES.find(n => n.id === dstId);
+                    if (dst) spawnParticle(src, dst);
+                }
+            }
+
+            updateParticles();
+            drawParticles();
+
+            // Draw nodes
+            for (const node of NODES) {
+                drawNode(node, now);
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // ======= LIVE DATA FEED =======
+        async function fetchLiveStatus() {
+            try {
+                const resp = await fetch('/api/agent/live-status');
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                // Update node pulses based on live activity
+                const agents = data.available_agents || [];
+                for (const agent of agents) {
+                    const node = NODES.find(n => n.id === agent.id);
+                    if (node) {
+                        node.pulse = agent.active || false;
+                    }
+                }
+
+                // Store metrics for info panel
+                window._liveMetrics = data.agent_metrics || {};
+
+            } catch (e) {
+                // silently fail, keep current state
+            }
+        }
+
+        // ======= INFO PANEL =======
+        function showInfo(node) {
+            const panel = document.getElementById('infoPanel');
+            const title = document.getElementById('infoTitle');
+            const stats = document.getElementById('infoStats');
+
+            title.innerHTML = `<span style="color:${node.color}">●</span> ${node.label}`;
+
+            const metrics = window._liveMetrics || {};
+            const m = metrics[node.id] || {};
+
+            let html = '';
+            html += `<div class="stat"><span>الحالة</span><span class="val"><span class="tag ${node.pulse ? 'tag-success' : 'tag-warning'}">${node.pulse ? 'نشط 🟢' : 'ساكن ⚪'}</span></span></div>`;
+            html += `<div class="stat"><span>النوع</span><span class="val">${node.type === 'core' ? '🖥️ Core' : node.type === 'agent' ? '🤖 Agent' : node.type === 'gateway' ? '🔌 Gateway' : '📡 Channel'}</span></div>`;
+            html += `<div class="stat"><span>الاتصالات</span><span class="val">${node.connections.length}</span></div>`;
+
+            if (m.messages_today !== undefined) html += `<div class="stat"><span>رسائل اليوم</span><span class="val">${m.messages_today}</span></div>`;
+            if (m.avg_response_s !== undefined) html += `<div class="stat"><span>متوسط الرد</span><span class="val">${m.avg_response_s}s</span></div>`;
+            if (m.last_activity) html += `<div class="stat"><span>آخر نشاط</span><span class="val">${m.last_activity}</span></div>`;
+
+            stats.innerHTML = html;
+            panel.classList.add('visible');
+        }
+
+        function hideInfo() {
+            document.getElementById('infoPanel').classList.remove('visible');
+        }
+
+        // ======= INIT =======
+        requestAnimationFrame(draw);
+        fetchLiveStatus();
+        setInterval(fetchLiveStatus, 5000);
+
+        // After status fetch, check if webhook is receiving (for pulse)
+        // This is handled by the live-status API returning agent.active = true
+    </script>
+</body>
+</html>
