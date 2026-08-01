@@ -145,6 +145,16 @@
         .animate-in:nth-child(3) { animation-delay:0.15s; }
         .animate-in:nth-child(4) { animation-delay:0.2s; }
 
+        【= sidebar social links =】
+        .sidebar-social { padding: 8px 14px; margin-bottom: 4px; display: flex; gap: 6px; justify-content: center; }
+        .sidebar-social a { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border: 1px solid var(--border-subtle); text-decoration: none; font-size: 16px; transition: all 0.3s ease; }
+        .sidebar-social a:hover { transform: translateY(-2px); box-shadow: var(--glow-gold); }
+        .sidebar-social a.facebook:hover { background: rgba(24,119,242,0.15); color: #1877F2; border-color: #1877F2; }
+        .sidebar-social a.instagram:hover { background: rgba(225,48,108,0.15); color: #E1306C; border-color: #E1306C; }
+        .sidebar-social a.whatsapp:hover { background: rgba(37,211,102,0.15); color: #25D366; border-color: #25D366; }
+        .sidebar-social a.phone:hover { background: rgba(0,122,255,0.15); color: #007AFF; border-color: #007AFF; }
+        【= end social =】
+
         @media (max-width:1024px) { .charts-row { grid-template-columns:1fr; } }
         @media (max-width:768px) { .sidebar{transform:translateX(100%)} .sidebar.open{transform:translateX(0)} .sidebar-toggle{display:flex} .main{margin-right:0;padding:20px 16px;padding-top:68px} .header{flex-direction:column;align-items:flex-start;gap:12px} .header h1{font-size:22px} .cards{grid-template-columns:repeat(2,1fr);gap:12px} .card .value{font-size:26px} .table-header{flex-direction:column;align-items:flex-start} .agent-selector{flex-direction:column} .agent-card{min-width:100%} th,td{padding:10px 12px;font-size:12px} }
         @media (max-width:480px) { .cards{grid-template-columns:1fr} .main{padding:14px 12px;padding-top:64px} .filter-btn{font-size:11px;padding:4px 10px} }
@@ -170,6 +180,11 @@
         <div class="nav-label">🧠 الذكاء</div>
         <a href="/dashboard/constellation" target="_blank"><i class="fas fa-globe icon"></i> Agent Constellation</a>
         <a href="/health"><i class="fas fa-heart icon"></i> صحة السيرفر</a>
+        <div class="sidebar-social">
+            <a href="https://facebook.com/royalchaussures" target="_blank" class="facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://instagram.com/royalchaussures" target="_blank" class="instagram" title="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/213659832426" target="_blank" class="whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        </div>
         <div class="sidebar-footer">
             <div class="server-info">
                 <span class="pulse-dot"></span>
