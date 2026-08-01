@@ -47,8 +47,9 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s [%
 logger = logging.getLogger("royal-server")
 
 import os
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
-app = Flask(__name__, template_folder=_TEMPLATE_DIR)
+app = Flask(__name__, template_folder=_TEMPLATE_DIR, static_folder=_STATIC_DIR, static_url_path='/static')
 app.secret_key = os.urandom(24).hex()
 
 # After-request: ensure all text responses declare utf-8
@@ -317,6 +318,17 @@ def dashboard_page():
     except Exception as e:
         _log_safe(logger.error, "Dashboard template error", e)
         return json_utf8({"error": _safe_str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
+
+
+@app.route('/premium')
+def dashboard_premium():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'dashboard_premium.html'), 'r', encoding='utf-8') as f:
+            html = f.read()
+        return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        _log_safe(logger.error, "Premium template error", e)
+        return json_utf8({"error": "Premium template not found"})
 
 @app.route('/dashboard/orders')
 def dashboard_orders():

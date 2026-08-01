@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — القيادة البريميوم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles_premium.css">
+</head>
+<body>
+    <!-- Particles BG -->
+    <canvas id="particleCanvas"></canvas>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+
+    <!-- ===== SIDEBAR ===== -->
+    <div class="sidebar" id="sidebar">
+        <div class="logo">Royal Chaussures<small>Premium Command Center</small></div>
+        <div class="nav-label">🛠 العمليات</div>
+        <a href="/dashboard" class="active"><span class="icon">📊</span> لوحة التحكم</a>
+        <a href="/dashboard/orders"><span class="icon">📦</span> الطلبات</a>
+        <a href="/dashboard/products"><span class="icon">👠</span> المنتجات</a>
+        <a href="/dashboard/tracking"><span class="icon">🔍</span> تتبع الشحنات</a>
+        <div class="nav-label">🧠 الذكاء</div>
+        <a href="/dashboard/constellation" target="_blank"><span class="icon">🌌</span> Agent Constellation</a>
+        <a href="/health"><span class="icon">❤️</span> صحة السيرفر</a>
+        <div class="sidebar-footer">
+            <div class="server-info">
+                <span class="pulse-dot"></span>
+                <span id="serverUrl">جار التحميل...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MAIN ===== -->
+    <div class="main">
+        <!-- ===== HEADER ===== -->
+        <div class="header">
+            <div class="header-left">
+                <h1>
+                    القيادة البريميوم
+                    <span class="subtitle">Royal Chaussures · مركز التحكم الذكي</span>
+                </h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn-action" onclick="syncNow()" id="syncBtn">
+                    🔄 مزامنة
+                </button>
+                <div class="time" id="currentTime">جار التحميل...</div>
+            </div>
+        </div>
+
+        <!-- ===== KPI CARDS ===== -->
+        <div class="cards" id="kpiCards">
+            <div class="card highlight animate-in">
+                <div class="card-top">
+                    <div class="label">💰 إجمالي الإيرادات</div>
+                    <div class="card-icon">👑</div>
+                </div>
+                <div class="value" id="totalRevenue">0 DZD</div>
+                <div class="sub">الطلبات المدفوعة <span class="trend up">▲ نشط</span></div>
+            </div>
+            <div class="card animate-in">
+                <div class="card-top">
+                    <div class="label">📦 إجمالي الطلبات</div>
+                    <div class="card-icon">📋</div>
+                </div>
+                <div class="value" id="totalOrders">0</div>
+                <div class="sub">جميع الطلبات</div>
+            </div>
+            <div class="card animate-in">
+                <div class="card-top">
+                    <div class="label">⏳ لم يتم شحنها</div>
+                    <div class="card-icon">📤</div>
+                </div>
+                <div class="value" id="unfulfilled">0</div>
+                <div class="sub">في انتظار الشحن</div>
+            </div>
+            <div class="card animate-in">
+                <div class="card-top">
+                    <div class="label">👠 المنتجات</div>
+                    <div class="card-icon">🛍️</div>
+                </div>
+                <div class="value" id="totalProducts">0</div>
+                <div class="sub">في المتجر</div>
+            </div>
+        </div>
+
+        <!-- ===== CHARTS ROW ===== -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>📈 تدفق الإيرادات</span>
+                    <span class="chart-value" id="revenueSparklineValue">0 DZD</span>
+                </div>
+                <div class="chart-sub">آخر 7 أيام</div>
+                <svg id="revenueSparkline" viewBox="0 0 300 80" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.4"/>
+                            <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <path id="sparkPath" d="" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/>
+                    <path id="sparkFill" d="" fill="url(#goldGrad)"/>
+                </svg>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>🔄 حالات الطلبات</span>
+                </div>
+                <div class="chart-sub">توزيع الطلبات حسب الحالة</div>
+                <svg id="donutChart" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"/>
+                    <circle class="donut-segment" cx="60" cy="60" r="48" fill="none" stroke="#22c55e" stroke-width="12" stroke-dasharray="120 181" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                    <circle class="donut-segment" cx="60" cy="60" r="48" fill="none" stroke="#eab308" stroke-width="12" stroke-dasharray="105 301" stroke-dashoffset="-120" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                    <circle class="donut-segment" cx="60" cy="60" r="48" fill="none" stroke="#ef4444" stroke-width="12" stroke-dasharray="30 301" stroke-dashoffset="-225" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                    <text x="60" y="64" text-anchor="middle" fill="#D4AF37" font-size="14" font-weight="700">100%</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- ===== AI AGENTS SECTION ===== -->
+        <div class="agent-section">
+            <div class="title">🧠 AI Agents 💡</div>
+            <div class="agent-selector" id="agentSelector">
+                <div class="agent-card active" data-agent="customer_support" onclick="switchAgent('customer_support')">
+                    <div class="emoji">🤝</div>
+                    <div class="name">خدمة العملاء</div>
+                    <div class="desc">رعاية مبيعات المنتجات والاستفسارات العامة</div>
+                    <div class="active-badge" id="badge-customer_support" style="display:none;">✅ نشط الآن</div>
+                </div>
+                <div class="agent-card" data-agent="shipping_tracking" onclick="switchAgent('shipping_tracking')">
+                    <div class="emoji">📦</div>
+                    <div class="name">متابعة الشحنات</div>
+                    <div class="desc">تتبع شحنات ZR Express والتوصيل</div>
+                    <div class="active-badge" id="badge-shipping_tracking" style="display:none;">✅ نشط الآن</div>
+                </div>
+            </div>
+
+            <div class="agent-route-test">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">🔍 اختبار التوجيه الذكي:</div>
+                <div class="test-input-group">
+                    <input type="text" id="testMessage" placeholder="اكتب رسالة تجريبية... مثال: سعر الحذاء أو وين طلبي">
+                    <button class="test-btn" onclick="testAgentRoute()">▶ اختبر</button>
+                </div>
+                <div class="agent-result" id="agentTestResult">
+                    <div><span class="detected" id="detectedAgent">-</span></div>
+                    <div class="reply-text" id="agentReplyText">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== STATUS BAR ===== -->
+        <div class="section-title">🔄 حالة النظام</div>
+        <div class="status-bar" id="systemStatus">
+            <div class="item"><span class="dot green"></span> Shopify: <span id="shopifyStatus">متصل</span></div>
+            <div class="item"><span class="dot green"></span> قاعدة البيانات: <span id="dbStatus">متصل</span></div>
+            <div class="item"><span class="dot yellow"></span> Webhook: <span id="webhookStatus">في انتظار الاتصال</span></div>
+        </div>
+
+        <!-- ===== ORDERS TABLE ===== -->
+        <div class="section-title">📦 آخر الطلبات</div>
+        <div class="table-wrapper">
+            <div class="table-header">
+                <div class="table-title">
+                    📋 قائمة الطلبات
+                    <span class="count-badge" id="orderCount">0</span>
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" onclick="filterOrders('all')">الكل</button>
+                    <button class="filter-btn" onclick="filterOrders('paid')">مدفوع</button>
+                    <button class="filter-btn" onclick="filterOrders('pending')">معلق</button>
+                    <button class="filter-btn" onclick="filterOrders('shipped')">مشحون</button>
+                    <button class="filter-btn" onclick="filterOrders('cancelled')">ملغي</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>الطلب</th>
+                        <th>الزبون</th>
+                        <th>المبلغ</th>
+                        <th>الحالة المالية</th>
+                        <th>الشحن</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTable">
+                    <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:40px;">⏳ جار تحميل الطلبات...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/static/script_premium.js"></script>
+</body>
+</html>
