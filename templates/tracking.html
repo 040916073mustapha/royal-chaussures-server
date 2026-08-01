@@ -37,9 +37,26 @@
         .search-box input::placeholder{color:var(--text-muted)}
         .search-box button{padding:12px 24px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--gold-dark),var(--gold-light));color:#0a0a0a;border:none;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;font-family:inherit}
         .search-box button:hover{box-shadow:var(--glow-gold);transform:translateY(-1px)}
+        .search-box button:hover{box-shadow:var(--glow-gold);transform:translateY(-1px)}
         .result-card{background:linear-gradient(135deg,var(--bg-card),rgba(255,255,255,0.01));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border-subtle);border-radius:var(--radius-card);padding:20px;margin-bottom:12px;transition:0.3s}
         .result-card:hover{border-color:rgba(212,175,55,0.1)}
-        .result-card .field{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}
+        .result-card .status-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+        .result-card .order-title{font-size:16px;font-weight:600;color:var(--text-primary)}
+        .result-card .order-status{padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600}
+        .status-pending{background:rgba(234,179,8,0.12);color:#eab308}
+        .status-shipped{background:rgba(34,211,238,0.12);color:#22d3ee}
+        .status-delivered{background:rgba(34,197,94,0.12);color:#22c55e}
+        /* ===== TIMELINE ===== */
+        .timeline{position:relative;padding:8px 0;margin:12px 0}
+        .timeline::before{content:'';position:absolute;right:16px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--gold-dark),var(--gold-light),var(--gold-dark))}
+        .timeline-item{position:relative;padding-right:44px;padding-bottom:12px;min-height:36px}
+        .timeline-item:last-child{padding-bottom:0}
+        .timeline-item .dot{position:absolute;right:10px;top:6px;width:14px;height:14px;border-radius:50%;border:2px solid var(--gold-light);background:var(--bg-primary);z-index:1;transition:all 0.3s}
+        .timeline-item.done .dot{background:var(--gold-light);box-shadow:0 0 8px rgba(212,175,55,0.4)}
+        .timeline-item .content .tl-label{font-size:12px;font-weight:600;color:var(--text-primary)}
+        .timeline-item .content .tl-date{font-size:10px;color:var(--text-muted);margin-top:2px}
+        .timeline-item.done .content .tl-label{color:var(--gold-light)}
+        .result-card .field{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03)}
         .result-card .field:last-child{border-bottom:none}
         .result-card .label{color:var(--text-muted);font-size:12px}
         .result-card .value{color:var(--text-primary);font-weight:500}
@@ -84,7 +101,9 @@
         <div id="results"><div class="loading">📱 أدخل رقم الهاتف للبحث</div></div>
     </div>
     <script>
-        function search(){var r=document.getElementById('results');var p=document.getElementById('phoneInput').value.trim();if(!p){r.innerHTML='<div class="loading">الرجاء إدخال رقم الهاتف</div>';return}r.innerHTML='<div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري البحث...</div>';fetch('/api/zr-lookup?phone='+encodeURIComponent(p)).then(function(res){return res.json()}).then(function(d){if(!d.parcels||!d.parcels.length){r.innerHTML='<div class="loading">لا توجد شحنات لهذا الرقم</div>';return}var html='<div class="results-summary"><i class="fas fa-check-circle" style="color:#22c55e"></i> تم العثور على '+d.parcels.length+' شحنة</div>';html+=d.parcels.map(function(par){var f=par||{};var card='<div class="result-card">';Object.keys(f).forEach(function(k){if(typeof f[k]!=='object'){var val=String(f[k]);card+='<div class="field"><span class="label">'+k+'</span><span class="value">'+val+'</span></div>'}});card+='</div>';return card}).join('');r.innerHTML=html}).catch(function(e){r.innerHTML='<div class="loading" style="color:#ef4444;">⚠️ فشل البحث</div>'})}
+        function buildTimeline(parcel){var status=parcel.Status||parcel.status||parcel.etat||'';var date=parcel.Date||parcel.date||parcel.created_at||parcel['تاريخ']||'';var steps=[{label:'📦 تم إنشاء الشحنة',date:date,key:'created'},{label:'🚚 قيد التوصيل',date:'',key:'shipped'},{label:'📍 في الزبونة',date:'',key:'delivery'},{label:'✅ تم التوصيل',date:'',key:'delivered'}];var currentIdx=0;if(status.includes('livré')||status.includes('delivered')||status.includes('recu'))currentIdx=3;else if(status.includes('livraison')||status.includes('shipped')||status.includes('en cours')||status.includes('achemin'))currentIdx=2;else if(status.includes('prepar')||status.includes('pending')||status.includes('attente'))currentIdx=1;var html='<div class="timeline">';steps.forEach(function(s,i){var done=i<=currentIdx?'done':'';var d=i===0?date:'-';html+='<div class="timeline-item '+done+'"><div class="dot"></div><div class="content"><div class="tl-label">'+s.label+'</div><div class="tl-date">'+d+'</div></div></div>'});html+='</div>';return html}
+        
+        function search(){var r=document.getElementById('results');var p=document.getElementById('phoneInput').value.trim();if(!p){r.innerHTML='<div class="loading">الرجاء إدخال رقم الهاتف</div>';return}r.innerHTML='<div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري البحث...</div>';fetch('/api/zr-lookup?phone='+encodeURIComponent(p)).then(function(res){return res.json()}).then(function(d){if(!d.parcels||!d.parcels.length){r.innerHTML='<div class="loading">لا توجد شحنات لهذا الرقم</div>';return}var html='<div class="results-summary"><i class="fas fa-check-circle" style="color:#22c55e"></i> تم العثور على '+d.parcels.length+' شحنة</div>';html+=d.parcels.map(function(par){var f=par||{};var status=par.Status||par.status||par.etat||'غير معروف';var statusClass=status.includes('livré')||status.includes('delivered')?'status-delivered':(status.includes('cours')||status.includes('shipped')?'status-shipped':'status-pending');var card='<div class="result-card"><div class="status-bar"><span class="order-title">📦 شحنة</span><span class="order-status '+statusClass+'">'+status+'</span></div>'+buildTimeline(par)+'<div class="details">';Object.keys(f).forEach(function(k){if(typeof f[k]!=='object'){var val=String(f[k]);if(k!=='Status'&&k!=='status'&&k!=='etat')card+='<div class="field"><span class="label">'+k+'</span><span class="value">'+val+'</span></div>'}});card+='</div></div>';return card}).join('');r.innerHTML=html}).catch(function(e){r.innerHTML='<div class="loading" style="color:#ef4444;">⚠️ فشل البحث</div>'})}
         document.getElementById('phoneInput').addEventListener('keypress',function(e){if(e.key==='Enter')search()});
         document.addEventListener('DOMContentLoaded',function(){document.getElementById('serverUrl').textContent=window.location.origin});
     </script>

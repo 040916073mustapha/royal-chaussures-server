@@ -1008,6 +1008,162 @@ def shopify_webhook():
 
     return json.dumps({"status": "received"}), 200
 
+
+# ============================================================
+# CLIENTS API
+# ============================================================
+@app.route('/api/clients')
+def api_clients():
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""SELECT 
+            customer_phone, customer_name, 
+            MAX(created_at) as last_order_date,
+            COUNT(*) as total_orders,
+            SUM(CAST(total_price AS REAL)) as total_spent,
+            GROUP_CONCAT(DISTINCT financial_status) as statuses
+            FROM orders WHERE customer_phone != ''
+            GROUP BY customer_phone
+            ORDER BY last_order_date DESC
+            LIMIT 100""")
+        rows = c.fetchall()
+        conn.close()
+        clients = []
+        for r in rows:
+            clients.append({
+                'phone': r['customer_phone'],
+                'name': r['customer_name'] or 'عميل',
+                'last_order': r['last_order_date'] or '',
+                'total_orders': r['total_orders'],
+                'total_spent': f"{r['total_spent'] or 0:.2f}",
+                'statuses': (r['statuses'] or '').split(',')
+            })
+        return json.dumps({'success': True, 'clients': clients})
+    except Exception as e:
+        _log_safe(logger.error, 'Clients API error', e)
+        return json.dumps({'success': False, 'error': _safe_str(e)})
+
+
+@app.route('/api/client-orders')
+def api_client_orders():
+    phone = request.args.get('phone', '')
+    if not phone:
+        return json.dumps({'success': False, 'orders': []})
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""SELECT * FROM orders 
+            WHERE customer_phone = ? 
+            ORDER BY created_at DESC LIMIT 50""", (phone,))
+        rows = c.fetchall()
+        conn.close()
+        orders = []
+        for r in rows:
+            orders.append({
+                'id': r['order_id'], 'name': r['order_name'],
+                'total': r['total_price'],
+                'financial_status': r['financial_status'],
+                'fulfillment_status': r['fulfillment_status'],
+                'created_at': r['created_at'],
+                'city': r.get('city', ''), 'wilaya': r.get('wilaya', '')
+            })
+        return json.dumps({'success': True, 'orders': orders})
+    except Exception as e:
+        return json.dumps({'success': False, 'error': _safe_str(e)})
+
+
+# ============================================================
+# DASHBOARD CLIENTS ROUTE
+# ============================================================
+@app.route('/dashboard/clients')
+def dashboard_clients():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'clients.html'), 'r', encoding='utf-8') as f:
+            html = f.read()
+        return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        return f"<h2>Template not found</h2><p>{_safe_str(e)}</p>", 404
+
+
+@app.route('/dashboard/client/<phone>')
+def dashboard_client_profile(phone):
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'client-profile.html'), 'r', encoding='utf-8') as f:
+            html = f.read()
+        return render_template_string(html, client_phone=phone), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        return f"<h2>Template not found</h2><p>{_safe_str(e)}</p>", 404
+
+
+# ============================================================
+# BULK ORDERS API
+# ============================================================
+@app.route('/api/orders/bulk-update', methods=['POST'])
+def api_orders_bulk_update():
+    try:
+        data = request.get_json(force=True) or {}
+        order_ids = data.get('order_ids', [])
+        field = data.get('field', 'financial_status')
+        value = data.get('value', '')
+        if not order_ids or not value:
+            return json.dumps({'success': False, 'error': 'Missing data'})
+        conn = get_db()
+        c = conn.cursor()
+        placeholders = ','.join('?' * len(order_ids))
+        now = datetime.utcnow().isoformat()
+        if field == 'financial_status':
+            c.execute(f"UPDATE orders SET financial_status=?, updated_at=? WHERE order_id IN ({placeholders})",
+                      (value, now, *order_ids))
+        elif field == 'fulfillment_status':
+            c.execute(f"UPDATE orders SET fulfillment_status=?, updated_at=? WHERE order_id IN ({placeholders})",
+                      (value, now, *order_ids))
+        conn.commit()
+        affected = c.rowcount
+        conn.close()
+        return json.dumps({'success': True, 'affected': affected})
+    except Exception as e:
+        _log_safe(logger.error, 'Bulk update error', e)
+        return json.dumps({'success': False, 'error': _safe_str(e)})
+
+
+# ============================================================
+# ANALYTICS API
+# ============================================================
+@app.route('/api/analytics')
+def api_analytics():
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        # Orders per day (last 7 days)
+        c.execute("""SELECT DATE(created_at) as day, COUNT(*) as count,
+            SUM(CAST(total_price AS REAL)) as revenue
+            FROM orders WHERE created_at > datetime('now', '-7 days')
+            GROUP BY DATE(created_at) ORDER BY day""")
+        daily = c.fetchall()
+        # Orders by channel (via note field or detection)
+        c.execute("""SELECT financial_status, COUNT(*) as count,
+            SUM(CAST(total_price AS REAL)) as total
+            FROM orders GROUP BY financial_status""")
+        by_status = c.fetchall()
+        # Top clients
+        c.execute("""SELECT customer_name, customer_phone,
+            COUNT(*) as total_orders, SUM(CAST(total_price AS REAL)) as total_spent
+            FROM orders WHERE customer_phone != ''
+            GROUP BY customer_phone ORDER BY total_spent DESC LIMIT 10""")
+        top_clients = c.fetchall()
+        conn.close()
+        return json.dumps({
+            'success': True,
+            'daily': [{'day': r['day'], 'count': r['count'], 'revenue': r['revenue'] or 0} for r in daily],
+            'by_status': [{'status': r['financial_status'], 'count': r['count'], 'total': r['total'] or 0} for r in by_status],
+            'top_clients': [{'name': r['customer_name'] or 'عميل', 'phone': r['customer_phone'], 'orders': r['total_orders'], 'spent': r['total_spent'] or 0} for r in top_clients]
+        })
+    except Exception as e:
+        _log_safe(logger.error, 'Analytics API error', e)
+        return json.dumps({'success': False, 'error': _safe_str(e)})
+
+
 if __name__ != '__main__':
     gunicorn_app = app
 
