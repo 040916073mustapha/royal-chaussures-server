@@ -4,74 +4,98 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Royal Chaussures — الطلبات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: #0a0a1a; color: #e0e0e0; padding: 32px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .header h1 { font-size: 24px; color: #fff; }
-        .header a { color: #e94560; text-decoration: none; font-size: 14px; }
-        .header a + a { margin-right: 16px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: right; padding: 12px 16px; color: #667; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-        td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 14px; }
-        tr:hover { background: rgba(233,69,96,0.03); }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .badge-pending { background: rgba(255,193,7,0.15); color: #ffc107; }
-        .badge-paid { background: rgba(0,123,255,0.15); color: #0d6efd; }
-        .badge-shipped { background: rgba(13,202,240,0.15); color: #0dcaf0; }
-        .badge-delivered { background: rgba(25,135,84,0.15); color: #198754; }
-        .badge-cancelled { background: rgba(220,53,69,0.15); color: #dc3545; }
-        .loading { text-align: center; color: #667; padding: 48px; }
+        :root{--gold:#D4AF37;--gold-light:#E8C95A;--gold-dark:#B8962A;--bg-primary:#08080f;--bg-card:rgba(255,255,255,0.03);--border-subtle:rgba(255,255,255,0.06);--border-gold:rgba(212,175,55,0.25);--text-primary:#f0f0f0;--text-secondary:#8888a0;--text-muted:#555570;--glow-gold:0 0 20px rgba(212,175,55,0.15);--sidebar-width:240px;--radius-card:16px;--radius-sm:10px}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh}
+        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.25);border-radius:3px}
+        .sidebar{position:fixed;top:0;right:0;width:var(--sidebar-width);height:100vh;background:rgba(10,10,20,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-left:1px solid var(--border-gold);padding:28px 16px;z-index:100;display:flex;flex-direction:column}
+        .sidebar .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--gold-light),var(--gold-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;padding:8px 12px}
+        .sidebar .logo::after{content:'👑';font-size:14px;-webkit-text-fill-color:initial;margin-right:6px}
+        .sidebar .logo small{display:block;font-family:'Inter',sans-serif;font-size:11px;-webkit-text-fill-color:var(--text-muted);background:none;margin-top:2px}
+        .sidebar .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin:24px 12px 8px;font-weight:600}
+        .sidebar a{display:flex;align-items:center;gap:12px;padding:11px 14px;color:var(--text-secondary);text-decoration:none;border-radius:var(--radius-sm);margin-bottom:2px;font-size:14px;font-weight:500;transition:all 0.3s;position:relative}
+        .sidebar a::before{content:'';position:absolute;right:-16px;top:50%;transform:translateY(-50%) scaleY(0);width:3px;height:24px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--gold-light),var(--gold-dark));transition:transform 0.3s}
+        .sidebar a:hover,.sidebar a.active{background:rgba(212,175,55,0.08);color:var(--gold-light)}
+        .sidebar a:hover::before,.sidebar a.active::before{transform:translateY(-50%) scaleY(1)}
+        .sidebar a .icon{width:20px;text-align:center}
+        .sidebar-footer{margin-top:auto;padding:16px 14px;border-top:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-muted)}
+        .pulse-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulseDot 2s ease-in-out infinite}
+        @keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+        .main{margin-right:var(--sidebar-width);padding:28px 32px;min-height:100vh}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.04)}
+        .header h1{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;background:linear-gradient(135deg,#fff 30%,var(--gold-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .header a{color:var(--gold-light);text-decoration:none;font-size:13px;font-weight:500;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-gold);background:rgba(212,175,55,0.05);transition:0.3s}
+        .header a:hover{background:rgba(212,175,55,0.12)}
+        .table-wrapper{background:linear-gradient(135deg,var(--bg-card),rgba(255,255,255,0.01));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border-subtle);border-radius:var(--radius-card);overflow:hidden}
+        .table-wrapper:hover{border-color:rgba(212,175,55,0.1)}
+        .table-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border-subtle);flex-wrap:wrap;gap:12px}
+        .table-header .table-title{font-size:15px;font-weight:600}
+        .filter-group{display:flex;gap:6px;flex-wrap:wrap}
+        .filter-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border-subtle);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:500;cursor:pointer;transition:0.3s;font-family:inherit}
+        .filter-btn:hover{border-color:rgba(212,175,55,0.3);color:var(--gold-light)}
+        .filter-btn.active{background:rgba(212,175,55,0.12);border-color:var(--border-gold);color:var(--gold-light)}
+        table{width:100%;border-collapse:collapse}
+        th{text-align:right;padding:14px 20px;color:var(--text-muted);font-size:12px;border-bottom:1px solid var(--border-subtle);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+        td{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.02);font-size:14px;color:var(--text-secondary)}
+        tr{transition:background 0.2s}
+        tr:hover{background:rgba(212,175,55,0.03)}
+        .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+        .badge-pending{background:rgba(234,179,8,0.12);color:#eab308}
+        .badge-paid{background:rgba(59,130,246,0.12);color:#3b82f6}
+        .badge-shipped{background:rgba(34,211,238,0.12);color:#22d3ee}
+        .badge-delivered{background:rgba(34,197,94,0.12);color:#22c55e}
+        .badge-cancelled{background:rgba(239,68,68,0.12);color:#ef4444}
+        .loading{text-align:center;color:var(--text-muted);padding:48px}
+        @media(max-width:768px){.sidebar{transform:translateX(100%)}.main{margin-right:0;padding:20px 16px;padding-top:68px}.header{flex-direction:column;gap:12px}.header h1{font-size:20px}.filter-btn{font-size:11px;padding:4px 10px}th,td{padding:10px 12px;font-size:12px}}
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📦 جميع الطلبات</h1>
-        <a href="/dashboard/constellation" target="_blank">🌌 Agent Constellation</a>
-        <a href="/dashboard">← العودة للوحة التحكم</a>
+    <div class="sidebar">
+        <div class="logo">Royal Chaussures<small>Premium Command Center</small></div>
+        <div class="nav-label">🛠 العمليات</div>
+        <a href="/dashboard"><i class="fas fa-chart-pie icon"></i> لوحة التحكم</a>
+        <a href="/dashboard/orders" class="active"><i class="fas fa-box icon"></i> الطلبات</a>
+        <a href="/dashboard/products"><i class="fas fa-shoe-prints icon"></i> المنتجات</a>
+        <a href="/dashboard/tracking"><i class="fas fa-search icon"></i> تتبع الشحنات</a>
+        <div class="nav-label">🧠 الذكاء</div>
+        <a href="/dashboard/constellation" target="_blank"><i class="fas fa-globe icon"></i> Agent Constellation</a>
+        <a href="/health"><i class="fas fa-heart icon"></i> صحة السيرفر</a>
+        <div class="sidebar-footer"><span class="pulse-dot"></span> <span id="serverUrl">Online</span></div>
     </div>
-    <table>
-        <thead>
-            <tr>
-                <th>الطلب</th><th>الزبون</th><th>الهاتف</th><th>المبلغ</th>
-                <th>المالية</th><th>الشحن</th>
-            </tr>
-        </thead>
-        <tbody id="ordersBody">
-            <tr><td colspan="6" class="loading">جاري التحميل...</td></tr>
-        </tbody>
-    </table>
+    <div class="main">
+        <div class="header">
+            <h1>📦 جميع الطلبات</h1>
+            <a href="/dashboard"><i class="fas fa-arrow-right"></i> العودة للوحة التحكم</a>
+        </div>
+        <div class="table-wrapper">
+            <div class="table-header">
+                <div class="table-title">📋 قائمة الطلبات <span class="count-badge" id="orderCount" style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:rgba(212,175,55,0.1);color:var(--gold-light)">0</span></div>
+                <div class="filter-group">
+                    <button class="filter-btn active" onclick="filterOrders('all')">الكل</button>
+                    <button class="filter-btn" onclick="filterOrders('paid')">مدفوع</button>
+                    <button class="filter-btn" onclick="filterOrders('pending')">معلق</button>
+                    <button class="filter-btn" onclick="filterOrders('shipped')">مشحون</button>
+                    <button class="filter-btn" onclick="filterOrders('cancelled')">ملغي</button>
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>الطلب</th><th>الزبون</th><th>الهاتف</th><th>المبلغ</th><th>المالية</th><th>الشحن</th></tr></thead>
+                <tbody id="ordersBody"><tr><td colspan="6" class="loading">⏳ جار التحميل...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
     <script>
-    async function loadOrders() {
-        try {
-            const r = await fetch('/api/orders');
-            const d = await r.json();
-            const b = document.getElementById('ordersBody');
-            if (!d.orders || d.orders.length === 0) {
-                b.innerHTML = '<tr><td colspan="6" class="loading">لا توجد طلبات</td></tr>';
-                return;
-            }
-            b.innerHTML = d.orders.map(function(o) {
-                var fc = o.financial_status === 'paid' ? 'badge-paid' : 'badge-pending';
-                var fl = o.fulfillment_status || 'unfulfilled';
-                var flc = fl === 'fulfilled' ? 'badge-delivered' : (fl === 'partial' ? 'badge-shipped' : 'badge-pending');
-                var c = o.customer || {};
-                var a = (o.shipping_address || o.billing_address || {});
-                var oid = o.id || '';
-                return '<tr onclick="window.location.href=\'/dashboard/orders/' + oid + '\'" style="cursor:pointer;">' +
-                    '<td>' + (o.name || o.id) + '</td>' +
-                    '<td>' + (c.first_name || '') + ' ' + (c.last_name || '') + '</td>' +
-                    '<td>' + (a.phone || '-') + '</td>' +
-                    '<td>' + (o.total_price || '0') + ' DZD</td>' +
-                    '<td><span class="badge ' + fc + '">' + (o.financial_status || 'pending') + '</span></td>' +
-                    '<td><span class="badge ' + flc + '">' + fl + '</span></td></tr>';
-            }).join('');
-        } catch(e) {
-            document.getElementById('ordersBody').innerHTML = '<tr><td colspan="6" class="loading" style="color:#dc3545;">⚠️ فشل التحميل</td></tr>';
-        }
-    }
-    loadOrders();
-    setInterval(loadOrders, 60000);
+        var _allOrders=[];
+        function filterOrders(f){document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});if(event&&event.target)event.target.classList.add('active');renderOrders(f==='all'?_allOrders:_allOrders.filter(function(o){var s=(o.financial_status||'').toLowerCase();var fl=(o.fulfillment_status||o.fulfillment||'').toLowerCase();if(f==='paid')return s==='paid';if(f==='pending')return s==='pending'||!s||!fl||fl==='unfulfilled';if(f==='shipped')return fl==='fulfilled'||fl==='partial';if(f==='cancelled')return s==='cancelled'||s==='refunded';return true}))}
+        function renderOrders(orders){var tb=document.getElementById('ordersBody');var c=document.getElementById('orderCount');if(c)c.textContent=orders.length;if(!orders.length){tb.innerHTML='<tr><td colspan="6" class="loading">لا توجد طلبات</td></tr>';return}tb.innerHTML=orders.map(function(o){var a=o.shipping_address||o.billing_address||{};var c=o.customer||{};var fc=o.financial_status==='paid'?'badge-paid':'badge-pending';var fl=o.fulfillment_status||o.fulfillment||'unfulfilled';var flc=fl==='fulfilled'?'badge-delivered':(fl==='partial'?'badge-shipped':'badge-pending');var oid=o.id||'';return'<tr onclick="window.location.href=\'/dashboard/orders/'+oid+'\'" style="cursor:pointer"><td>'+(o.name||o.id)+'</td><td>'+(c.first_name||'')+' '+(c.last_name||'')+'</td><td>'+(a.phone||'-')+'</td><td>'+(o.total_price||o.total||'0')+' DZD</td><td><span class="badge '+fc+'">'+(o.financial_status||'pending')+'</span></td><td><span class="badge '+flc+'">'+fl+'</span></td></tr>'}).join('')}
+        function loadOrders(){fetch('/api/orders').then(function(r){return r.json()}).then(function(d){if(!d.orders||!d.orders.length){document.getElementById('ordersBody').innerHTML='<tr><td colspan="6" class="loading">لا توجد طلبات</td></tr>';return}_allOrders=d.orders;renderOrders(_allOrders)}).catch(function(e){document.getElementById('ordersBody').innerHTML='<tr><td colspan="6" class="loading" style="color:#ef4444;">⚠️ فشل التحميل</td></tr>'})}
+        document.addEventListener('DOMContentLoaded',function(){loadOrders();setInterval(loadOrders,60000);document.getElementById('serverUrl').textContent=window.location.origin});
     </script>
 </body>
 </html>

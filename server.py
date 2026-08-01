@@ -320,15 +320,6 @@ def dashboard_page():
         return json_utf8({"error": _safe_str(e), "products_count":0, "recent_orders":[], "total_orders":0, "total_revenue":"0.00 DZD", "unfulfilled_orders":0})
 
 
-@app.route('/premium')
-def dashboard_premium():
-    try:
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'dashboard_premium.html'), 'r', encoding='utf-8') as f:
-            html = f.read()
-        return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
-    except Exception as e:
-        _log_safe(logger.error, "Premium template error", e)
-        return json_utf8({"error": "Premium template not found"})
 
 @app.route('/dashboard/orders')
 def dashboard_orders():
