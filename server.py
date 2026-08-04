@@ -615,8 +615,8 @@ def api_stats():
 
 @app.route('/api/orders')
 def api_orders():
-    sf = request.args.get('status', '').strip()
-    q = request.args.get('search', '').strip()
+    sf = str(request.args.get('status', '')).strip()
+    q = str(request.args.get('search', '')).strip()
     conn = sqlite3.connect(_DB_PATH)
     c = conn.cursor()
     sql = "SELECT id, shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, quantity, total_price, status, delivery_method, created_at FROM orders WHERE 1=1"
@@ -781,9 +781,9 @@ def zr_create_shipment(order):
         payload = {
             "reference": order.get("name", f"ORDER-{order.get('id')}"),
             "shopify_order_id": str(order.get("id")),
-            "customer_name": f"{customer.get('first_name','')} {customer.get('last_name','')}".strip(),
+            "customer_name": (f"{customer.get('first_name','')} {customer.get('last_name','')}").strip(),
             "customer_phone": phone,
-            "customer_address": f"{addr.get('address1','')} {addr.get('address2','')}".strip(),
+            "customer_address": (f"{addr.get('address1','')} {addr.get('address2','')}").strip(),
             "city": addr.get("city", ""),
             "wilaya": addr.get("province", ""),
             "total_amount": total,
@@ -899,7 +899,7 @@ def send_confirmation_whatsapp(order):
             logger.warning(f"[WA Confirm] No phone for order {order.get('name')}")
             return {"success": False, "error": "No phone number"}
         customer = order.get("customer") or {}
-        name = f"{customer.get('first_name','')} {customer.get('last_name','')}".strip() or "عميلنا العزيز"
+        name = (f"{customer.get('first_name','')} {customer.get('last_name','')}").strip() or "عميلنا العزيز"
         items_summary = ", ".join([i.get("title","")[:30] for i in order.get("line_items", [])[:3]])
         message = (
             f"❤️ *Royal Chaussures* - تأكيد الطلب\n\n"
@@ -961,7 +961,7 @@ def api_wa_confirm_toggle():
 def api_wa_confirm_send():
     try:
         data = request.get_json() or {}
-        order_id = data.get("order_id", "").strip()
+        order_id = str(data.get("order_id", "")).strip()
         if not order_id:
             return json_utf8({"success": False, "error": "order_id required"}, 400)
         shopify_data = shopify_api("GET", "orders.json", {"status": "any", "limit": 250}, token_type="orders")
@@ -994,7 +994,7 @@ def api_messages():
     try:
         limit = int(request.args.get("limit", 50))
         platform = request.args.get("platform", "")
-        search = request.args.get("search", "").strip()
+        search = str(request.args.get("search", "")).strip()
         conn = sqlite3.connect(_DB_PATH)
         c = conn.cursor()
         query = "SELECT * FROM messages"
