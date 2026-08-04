@@ -749,7 +749,12 @@ def health():
 # ============================================================
 
 def _clean_phone(phone):
-    """Normalize phone to international format"""
+    """Normalize phone to international format. Accepts str, int, float."""
+    if phone is None:
+        return ""
+    if not isinstance(phone, str):
+        phone = str(int(phone)) if isinstance(phone, float) else str(phone)
+    phone = phone.strip()
     if not phone:
         return ""
     clean = re.sub(r"[^0-9]", "", phone)
