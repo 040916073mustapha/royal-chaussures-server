@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { royal: { 50: "#fdf2f8", 100: "#fce7f3", 200: "#fbcfe8", 300: "#f9a8d4", 400: "#f472b6", 500: "#db2777", 600: "#be185d", 700: "#9d174d", 800: "#831843", 900: "#500724" } } } } }
+        document.documentElement.classList.add("dark");
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body class="bg-[#0f0f13] text-gray-100 font-sans" x-data="app()">
+    <div class="flex h-screen">
+        <aside class="w-64 bg-[#1a1a23] border-l border-[#2a2a35] p-4 flex flex-col">
+            <div class="text-center mb-6 py-3">
+                <h1 class="text-xl font-bold bg-gradient-to-r from-royal-400 to-pink-400 bg-clip-text text-transparent">Royal Chaussures</h1>
+                <p class="text-xs text-gray-500">SaaS Dashboard</p>
+            </div>
+            <nav class="space-y-1 flex-1">
+                <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ 'bg-royal-600/20 text-royal-300 border border-royal-500/30' if active == 'dashboard' else 'text-gray-400 hover:bg-[#252530] hover:text-white' }}">
+                    <span>📊</span> <span>لوحة التحكم</span>
+                </a>
+                <a href="/dashboard/orders" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ 'bg-royal-600/20 text-royal-300 border border-royal-500/30' if active == 'orders' else 'text-gray-400 hover:bg-[#252530] hover:text-white' }}">
+                    <span>📦</span> <span>الطلبات</span>
+                </a>
+                <a href="/dashboard/products" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ 'bg-royal-600/20 text-royal-300 border border-royal-500/30' if active == 'products' else 'text-gray-400 hover:bg-[#252530] hover:text-white' }}">
+                    <span>👟</span> <span>المنتجات</span>
+                </a>
+                <a href="/dashboard/clients" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ 'bg-royal-600/20 text-royal-300 border border-royal-500/30' if active == 'clients' else 'text-gray-400 hover:bg-[#252530] hover:text-white' }}">
+                    <span>👥</span> <span>العملاء</span>
+                </a>
+                <div class="border-t border-[#2a2a35] my-3"></div>
+                <div class="text-xs text-gray-500 px-3 mb-1">🧠 الذكاء</div>
+                <a href="/dashboard/chat" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ 'bg-royal-600/20 text-royal-300 border border-royal-500/30' if active == 'chat' else 'text-gray-400 hover:bg-[#252530] hover:text-white' }}">
+                    <span>💬</span> <span>المحادثات الحية</span>
+                </a>
+                <a href="/dashboard/constellation" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ 'bg-royal-600/20 text-royal-300 border border-royal-500/30' if active == 'constellation' else 'text-gray-400 hover:bg-[#252530] hover:text-white' }}">
+                    <span>🌐</span> <span>Agent Constellation</span>
+                </a>
+                <a href="/dashboard/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ 'bg-royal-600/20 text-royal-300 border border-royal-500/30' if active == 'settings' else 'text-gray-400 hover:bg-[#252530] hover:text-white' }}">
+                    <span>⚙️</span> <span>الإعدادات</span>
+                </a>
+            </nav>
+            <div class="text-center text-xs text-gray-600 mt-4 pt-4 border-t border-[#2a2a35]">
+                <span id="serverUrl" class="block text-royal-400/50">Online</span>
+                RC Agent v2.0
+            </div>
+        </aside>
+        <main class="flex-1 overflow-y-auto p-6 bg-[#0f0f13]">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script>function app(){return{init(){}}}</script>
+</body>
+</html>

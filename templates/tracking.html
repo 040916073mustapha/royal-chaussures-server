@@ -1,112 +1,40 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Royal Chaussures — تتبع الشحنات</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style>
-        :root{--gold:#D4AF37;--gold-light:#E8C95A;--gold-dark:#B8962A;--bg-primary:#08080f;--bg-card:rgba(255,255,255,0.03);--border-subtle:rgba(255,255,255,0.06);--border-gold:rgba(212,175,55,0.25);--text-primary:#f0f0f0;--text-secondary:#8888a0;--text-muted:#555570;--glow-gold:0 0 20px rgba(212,175,55,0.15);--sidebar-width:240px;--radius-card:16px;--radius-sm:10px}
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh}
-        ::-webkit-scrollbar{width:6px}
-        ::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.25);border-radius:3px}
-        .sidebar{position:fixed;top:0;right:0;width:var(--sidebar-width);height:100vh;background:rgba(10,10,20,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-left:1px solid var(--border-gold);padding:28px 16px;z-index:100;display:flex;flex-direction:column}
-        .sidebar .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--gold-light),var(--gold-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;padding:8px 12px}
-        .sidebar .logo::after{content:'👑';font-size:14px;-webkit-text-fill-color:initial;margin-right:6px}
-        .sidebar .logo small{display:block;font-family:'Inter',sans-serif;font-size:11px;-webkit-text-fill-color:var(--text-muted);background:none;margin-top:2px}
-        .sidebar .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin:24px 12px 8px;font-weight:600}
-        .sidebar a{display:flex;align-items:center;gap:12px;padding:11px 14px;color:var(--text-secondary);text-decoration:none;border-radius:var(--radius-sm);margin-bottom:2px;font-size:14px;font-weight:500;transition:all 0.3s;position:relative}
-        .sidebar a::before{content:'';position:absolute;right:-16px;top:50%;transform:translateY(-50%) scaleY(0);width:3px;height:24px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--gold-light),var(--gold-dark));transition:transform 0.3s}
-        .sidebar a:hover,.sidebar a.active{background:rgba(212,175,55,0.08);color:var(--gold-light)}
-        .sidebar a:hover::before,.sidebar a.active::before{transform:translateY(-50%) scaleY(1)}
-        .sidebar-footer{margin-top:auto;padding:16px 14px;border-top:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-muted)}
-        .pulse-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulseDot 2s ease-in-out infinite}
-        @keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-        .main{margin-right:var(--sidebar-width);padding:28px 32px;min-height:100vh}
-        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.04)}
-        .header h1{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;background:linear-gradient(135deg,#fff 30%,var(--gold-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-        .header a{color:var(--gold-light);text-decoration:none;font-size:13px;font-weight:500;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-gold);background:rgba(212,175,55,0.05);transition:0.3s}
-        .header a:hover{background:rgba(212,175,55,0.12)}
-        .search-box{display:flex;gap:12px;margin-bottom:24px}
-        .search-box input{flex:1;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.04);border:1px solid var(--border-subtle);color:var(--text-primary);font-size:16px;direction:ltr;outline:none;transition:0.3s;font-family:inherit}
-        .search-box input:focus{border-color:var(--border-gold);box-shadow:0 0 0 3px rgba(212,175,55,0.08)}
-        .search-box input::placeholder{color:var(--text-muted)}
-        .search-box button{padding:12px 24px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--gold-dark),var(--gold-light));color:#0a0a0a;border:none;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;font-family:inherit}
-        .search-box button:hover{box-shadow:var(--glow-gold);transform:translateY(-1px)}
-        .search-box button:hover{box-shadow:var(--glow-gold);transform:translateY(-1px)}
-        .result-card{background:linear-gradient(135deg,var(--bg-card),rgba(255,255,255,0.01));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border-subtle);border-radius:var(--radius-card);padding:20px;margin-bottom:12px;transition:0.3s}
-        .result-card:hover{border-color:rgba(212,175,55,0.1)}
-        .result-card .status-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
-        .result-card .order-title{font-size:16px;font-weight:600;color:var(--text-primary)}
-        .result-card .order-status{padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600}
-        .status-pending{background:rgba(234,179,8,0.12);color:#eab308}
-        .status-shipped{background:rgba(34,211,238,0.12);color:#22d3ee}
-        .status-delivered{background:rgba(34,197,94,0.12);color:#22c55e}
-        /* ===== TIMELINE ===== */
-        .timeline{position:relative;padding:8px 0;margin:12px 0}
-        .timeline::before{content:'';position:absolute;right:16px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--gold-dark),var(--gold-light),var(--gold-dark))}
-        .timeline-item{position:relative;padding-right:44px;padding-bottom:12px;min-height:36px}
-        .timeline-item:last-child{padding-bottom:0}
-        .timeline-item .dot{position:absolute;right:10px;top:6px;width:14px;height:14px;border-radius:50%;border:2px solid var(--gold-light);background:var(--bg-primary);z-index:1;transition:all 0.3s}
-        .timeline-item.done .dot{background:var(--gold-light);box-shadow:0 0 8px rgba(212,175,55,0.4)}
-        .timeline-item .content .tl-label{font-size:12px;font-weight:600;color:var(--text-primary)}
-        .timeline-item .content .tl-date{font-size:10px;color:var(--text-muted);margin-top:2px}
-        .timeline-item.done .content .tl-label{color:var(--gold-light)}
-        .result-card .field{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03)}
-        .result-card .field:last-child{border-bottom:none}
-        .result-card .label{color:var(--text-muted);font-size:12px}
-        .result-card .value{color:var(--text-primary);font-weight:500}
-        .loading{text-align:center;color:var(--text-muted);padding:48px}
-        .results-summary{display:flex;align-items:center;gap:8px;margin-bottom:16px;color:var(--text-secondary);font-size:13px}
-        @media(max-width:768px){.sidebar{transform:translateX(100%)}.main{margin-right:0;padding:20px 16px;padding-top:68px}.header{flex-direction:column;gap:12px}.header h1{font-size:20px}.search-box{flex-direction:column}}
-        .sidebar-social{padding:8px 14px;margin-bottom:4px;display:flex;gap:6px;justify-content:center}
-        .sidebar-social a{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);border:1px solid var(--border-subtle);text-decoration:none;font-size:16px;transition:all .3s}
-        .sidebar-social a:hover{transform:translateY(-2px)}
-        .sidebar-social a.facebook:hover{background:rgba(24,119,242,.15);color:#1877F2;border-color:#1877F2}
-        .sidebar-social a.instagram:hover{background:rgba(225,48,108,.15);color:#E1306C;border-color:#E1306C}
-        .sidebar-social a.whatsapp:hover{background:rgba(37,211,102,.15);color:#25D366;border-color:#25D366}
-    </style>
-</head>
-<body>
-    <div class="sidebar">
-        <div class="logo">Royal Chaussures<small>Premium Command Center</small></div>
-        <div class="nav-label">🛠 العمليات</div>
-        <a href="/dashboard"><i class="fas fa-chart-pie icon"></i> لوحة التحكم</a>
-        <a href="/dashboard/orders"><i class="fas fa-box icon"></i> الطلبات</a>
-        <a href="/dashboard/products"><i class="fas fa-shoe-prints icon"></i> المنتجات</a>
-        <a href="/dashboard/tracking" class="active"><i class="fas fa-search icon"></i> تتبع الشحنات</a>
-        <div class="nav-label">🧠 الذكاء والمحادثات</div>
-        <a href="/dashboard/chat"><i class="fas fa-comments icon"></i> المحادثات الحية 💬</a>
-        <a href="/dashboard/constellation" target="_blank"><i class="fas fa-globe icon"></i> Agent Constellation</a>
-        <a href="/health"><i class="fas fa-heart icon"></i> صحة السيرفر</a>
-        <div class="sidebar-social">
-            <a href="https://facebook.com/royalchaussures" target="_blank" class="facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-            <a href="https://instagram.com/royalchaussures" target="_blank" class="instagram" title="Instagram"><i class="fab fa-instagram"></i></a>
-            <a href="https://wa.me/213659832426" target="_blank" class="whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ shipments: [], tracking: '', trackResult: null, loadShipments(){ fetch('/api/shipments').then(r=>r.json()).then(d=>this.shipments=d.shipments||[]) }, trackOrder(){ if(!this.tracking) return; fetch('/api/shipments/'+this.tracking).then(r=>r.json()).then(d=>this.trackResult=d); this.tracking='' } }" x-init="loadShipments()">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">🔍 تتبع الشحنات</h1>
+        <div class="flex gap-2">
+            <input type="text" x-model="tracking" @keyup.enter="trackOrder()" placeholder="رقم التتبع..." class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm w-48">
+            <button @click="trackOrder()" class="bg-royal-500/20 text-royal-300 border border-royal-500/30 px-4 py-2 rounded-lg text-sm hover:bg-royal-500/30 transition">بحث</button>
         </div>
-        <div class="sidebar-footer"><span class="pulse-dot"></span> <span id="serverUrl">Online</span></div>
     </div>
-    <div class="main">
-        <div class="header">
-            <h1>🔍 تتبع الشحنات - ZR Express</h1>
-            <a href="/dashboard"><i class="fas fa-arrow-right"></i> العودة للوحة التحكم</a>
+    <!-- Tracking result -->
+    <template x-if="trackResult">
+        <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] p-5 mb-4">
+            <h3 class="text-lg font-semibold mb-2" x-text="'شحنة: '+trackResult.tracking"></h3>
+            <p class="text-sm text-gray-400" x-text="'الحالة: '+trackResult.status"></p>
+            <p class="text-sm text-gray-400" x-text="'الوجهة: '+trackResult.destination"></p>
         </div>
-        <div class="search-box">
-            <input type="text" id="phoneInput" placeholder="رقم الهاتف (مثال: 0659832426)" dir="ltr">
-            <button onclick="search()"><i class="fas fa-search"></i> بحث</button>
-        </div>
-        <div id="results"><div class="loading">📱 أدخل رقم الهاتف للبحث</div></div>
+    </template>
+    <!-- Shipments list -->
+    <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-[#252530] text-gray-400">
+                <tr><th class="p-3 text-right">رقم التتبع</th><th class="p-3 text-right">الزبون</th><th class="p-3 text-right">الولاية</th><th class="p-3 text-right">الحالة</th><th class="p-3 text-right">التاريخ</th></tr>
+            </thead>
+            <tbody>
+                <template x-for="s in shipments" :key="s.id">
+                    <tr class="border-t border-[#2a2a35] hover:bg-[#252530]/50">
+                        <td class="p-3 font-medium" x-text="s.tracking||'-'"></td>
+                        <td class="p-3" x-text="s.customer||'-'"></td>
+                        <td class="p-3 text-gray-400" x-text="s.wilaya||'-'"></td>
+                        <td class="p-3"><span class="text-xs px-2 py-1 rounded" :class="{'bg-emerald-500/20 text-emerald-400':s.status=='delivered','bg-yellow-500/20 text-yellow-400':s.status=='pending','bg-blue-500/20 text-blue-400':s.status=='shipped'}" x-text="s.status"></span></td>
+                        <td class="p-3 text-xs text-gray-500" x-text="s.date?.slice(0,10)||'-'"></td>
+                    </tr>
+                </template>
+                <tr x-show="shipments.length===0"><td colspan="5" class="p-8 text-center text-gray-500">لا توجد شحنات</td></tr>
+            </tbody>
+        </table>
     </div>
-    <script>
-        function buildTimeline(parcel){var status=parcel.Status||parcel.status||parcel.etat||'';var date=parcel.Date||parcel.date||parcel.created_at||parcel['تاريخ']||'';var steps=[{label:'📦 تم إنشاء الشحنة',date:date,key:'created'},{label:'🚚 قيد التوصيل',date:'',key:'shipped'},{label:'📍 في الزبونة',date:'',key:'delivery'},{label:'✅ تم التوصيل',date:'',key:'delivered'}];var currentIdx=0;if(status.includes('livré')||status.includes('delivered')||status.includes('recu'))currentIdx=3;else if(status.includes('livraison')||status.includes('shipped')||status.includes('en cours')||status.includes('achemin'))currentIdx=2;else if(status.includes('prepar')||status.includes('pending')||status.includes('attente'))currentIdx=1;var html='<div class="timeline">';steps.forEach(function(s,i){var done=i<=currentIdx?'done':'';var d=i===0?date:'-';html+='<div class="timeline-item '+done+'"><div class="dot"></div><div class="content"><div class="tl-label">'+s.label+'</div><div class="tl-date">'+d+'</div></div></div>'});html+='</div>';return html}
-        
-        function search(){var r=document.getElementById('results');var p=document.getElementById('phoneInput').value.trim();if(!p){r.innerHTML='<div class="loading">الرجاء إدخال رقم الهاتف</div>';return}r.innerHTML='<div class="loading"><i class="fas fa-spinner fa-spin"></i> جاري البحث...</div>';fetch('/api/zr-lookup?phone='+encodeURIComponent(p)).then(function(res){return res.json()}).then(function(d){if(!d.parcels||!d.parcels.length){r.innerHTML='<div class="loading">لا توجد شحنات لهذا الرقم</div>';return}var html='<div class="results-summary"><i class="fas fa-check-circle" style="color:#22c55e"></i> تم العثور على '+d.parcels.length+' شحنة</div>';html+=d.parcels.map(function(par){var f=par||{};var status=par.Status||par.status||par.etat||'غير معروف';var statusClass=status.includes('livré')||status.includes('delivered')?'status-delivered':(status.includes('cours')||status.includes('shipped')?'status-shipped':'status-pending');var card='<div class="result-card"><div class="status-bar"><span class="order-title">📦 شحنة</span><span class="order-status '+statusClass+'">'+status+'</span></div>'+buildTimeline(par)+'<div class="details">';Object.keys(f).forEach(function(k){if(typeof f[k]!=='object'){var val=String(f[k]);if(k!=='Status'&&k!=='status'&&k!=='etat')card+='<div class="field"><span class="label">'+k+'</span><span class="value">'+val+'</span></div>'}});card+='</div></div>';return card}).join('');r.innerHTML=html}).catch(function(e){r.innerHTML='<div class="loading" style="color:#ef4444;">⚠️ فشل البحث</div>'})}
-        document.getElementById('phoneInput').addEventListener('keypress',function(e){if(e.key==='Enter')search()});
-        document.addEventListener('DOMContentLoaded',function(){document.getElementById('serverUrl').textContent=window.location.origin});
-    </script>
-</body>
-</html>
+</div>
+{% endblock %}

@@ -1,242 +1,156 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Royal Chaussures — الطلبات</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style>:root{--gold:#D4AF37;--gold-light:#E8C95A;--gold-dark:#B8962A;--bg-primary:#08080f;--bg-card:rgba(255,255,255,0.03);--border-subtle:rgba(255,255,255,0.06);--border-gold:rgba(212,175,55,0.25);--text-primary:#f0f0f0;--text-secondary:#8888a0;--text-muted:#555570;--sidebar-width:240px;--radius-card:16px;--radius-sm:10px}
-    *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.25)}
-    .sidebar{position:fixed;top:0;right:0;width:var(--sidebar-width);height:100vh;background:rgba(10,10,20,0.88);backdrop-filter:blur(20px);border-left:1px solid var(--border-gold);padding:28px 16px;z-index:100;display:flex;flex-direction:column}
-    .sidebar .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--gold-light),var(--gold-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:8px 12px}
-    .sidebar .logo::after{content:'👑';font-size:14px;-webkit-text-fill-color:initial;margin-right:6px}
-    .sidebar .logo small{display:block;font-family:'Inter',sans-serif;font-size:11px;-webkit-text-fill-color:var(--text-muted);margin-top:2px}
-    .sidebar .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin:24px 12px 8px;font-weight:600}
-    .sidebar a{display:flex;align-items:center;gap:12px;padding:11px 14px;color:var(--text-secondary);text-decoration:none;border-radius:var(--radius-sm);margin-bottom:2px;font-size:14px;font-weight:500;transition:all 0.3s;position:relative}
-    .sidebar a::before{content:'';position:absolute;right:-16px;top:50%;transform:translateY(-50%) scaleY(0);width:3px;height:24px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--gold-light),var(--gold-dark));transition:transform 0.3s}
-    .sidebar a:hover,.sidebar a.active{background:rgba(212,175,55,0.08);color:var(--gold-light)}
-    .sidebar a:hover::before,.sidebar a.active::before{transform:translateY(-50%) scaleY(1)}
-    .sidebar-footer{margin-top:auto;padding:16px 14px;border-top:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-muted)}
-    .pulse-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulseDot 2s ease-in-out infinite}
-    @keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-    .sidebar-social{padding:8px 14px;margin-bottom:4px;display:flex;gap:6px;justify-content:center}
-    .sidebar-social a{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);border:1px solid var(--border-subtle);text-decoration:none;font-size:16px;transition:all .3s}
-    .sidebar-social a:hover{transform:translateY(-2px)}
-    .sidebar-social a.facebook:hover{background:rgba(24,119,242,.15);color:#1877F2;border-color:#1877F2}
-    .sidebar-social a.instagram:hover{background:rgba(225,48,108,.15);color:#E1306C;border-color:#E1306C}
-    .sidebar-social a.whatsapp:hover{background:rgba(37,211,102,.15);color:#25D366;border-color:#25D366}
-    .main{margin-right:var(--sidebar-width);padding:28px 32px;min-height:100vh}
-    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.04)}
-    .header h1{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;background:linear-gradient(135deg,#fff 30%,var(--gold-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-    .header a{color:var(--gold-light);text-decoration:none;font-size:13px;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-gold);background:rgba(212,175,55,0.05);transition:0.3s}
-    .header a:hover{background:rgba(212,175,55,0.12)}
-    .channel-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-    .channel-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border-subtle);background:transparent;color:var(--text-secondary);font-size:11px;font-weight:500;cursor:pointer;transition:0.3s;font-family:inherit;display:flex;align-items:center;gap:4px}
-    .channel-btn:hover{border-color:rgba(212,175,55,0.3);color:var(--gold-light)}
-    .channel-btn.active{background:rgba(212,175,55,0.12);border-color:var(--border-gold);color:var(--gold-light)}
-    .ch-whatsapp{border-color:rgba(37,211,102,0.2);color:#25D366}
-    .ch-whatsapp.active,.ch-whatsapp:hover{background:rgba(37,211,102,0.12);border-color:#25D366;color:#25D366}
-    .ch-messenger{border-color:rgba(0,106,255,0.2);color:#006AFF}
-    .ch-messenger.active,.ch-messenger:hover{background:rgba(0,106,255,0.12);border-color:#006AFF;color:#006AFF}
-    .ch-instagram{border-color:rgba(228,64,95,0.2);color:#E4405F}
-    .ch-instagram.active,.ch-instagram:hover{background:rgba(228,64,95,0.12);border-color:#E4405F;color:#E4405F}
-    .ch-facebook{border-color:rgba(24,119,242,0.2);color:#1877F2}
-    .ch-facebook.active,.ch-facebook:hover{background:rgba(24,119,242,0.12);border-color:#1877F2;color:#1877F2}
-    .table-wrapper{background:linear-gradient(135deg,var(--bg-card),rgba(255,255,255,0.01));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border-subtle);border-radius:var(--radius-card);overflow:hidden}
-    .table-wrapper:hover{border-color:rgba(212,175,55,0.1)}
-    .table-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border-subtle);flex-wrap:wrap;gap:12px}
-    .table-header .table-title{font-size:15px;font-weight:600}
-    .filter-group{display:flex;gap:6px;flex-wrap:wrap}
-    .filter-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border-subtle);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:500;cursor:pointer;transition:0.3s;font-family:inherit}
-    .filter-btn:hover{border-color:rgba(212,175,55,0.3);color:var(--gold-light)}
-    .filter-btn.active{background:rgba(212,175,55,0.12);border-color:var(--border-gold);color:var(--gold-light)}
-    .bulk-bar{display:none;align-items:center;gap:10px;padding:12px 20px;background:rgba(212,175,55,0.06);border-bottom:1px solid var(--border-gold);flex-wrap:wrap}
-    .bulk-bar.show{display:flex}.bulk-bar .count{font-size:13px;color:var(--gold-light);font-weight:600}
-    .bulk-bar select{padding:7px 12px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);color:var(--text-primary);font-size:12px;outline:none;font-family:inherit}
-    .bulk-bar select:focus{border-color:var(--border-gold)}
-    .bulk-bar .bulk-btn{padding:7px 18px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--gold-dark),var(--gold-light));color:#0a0a0a;font-size:12px;font-weight:600;cursor:pointer;transition:0.3s;font-family:inherit}
-    .bulk-bar .bulk-btn:hover{box-shadow:var(--glow-gold)}
-    .bulk-bar .cancel-btn{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;transition:0.3s;font-family:inherit}
-    .bulk-bar .cancel-btn:hover{color:#e94560;border-color:rgba(233,69,96,0.3)}
-    .checkbox-col{width:36px;text-align:center}
-    input[type=checkbox]{accent-color:var(--gold-light);width:16px;height:16px;cursor:pointer}
-    table{width:100%;border-collapse:collapse}
-    th{text-align:right;padding:14px 20px;color:var(--text-muted);font-size:12px;border-bottom:1px solid var(--border-subtle);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-    td{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.02);font-size:14px;color:var(--text-secondary)}
-    tr{transition:background 0.2s}tr:hover{background:rgba(212,175,55,0.03)}
-    .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
-    .badge-pending{background:rgba(234,179,8,0.12);color:#eab308}
-    .badge-paid{background:rgba(59,130,246,0.12);color:#3b82f6}
-    .badge-shipped{background:rgba(34,211,238,0.12);color:#22d3ee}
-    .badge-delivered{background:rgba(34,197,94,0.12);color:#22c55e}
-    .badge-cancelled{background:rgba(239,68,68,0.12);color:#ef4444}
-    .action-btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:12px;font-weight:600;transition:0.3s;font-family:inherit;display:flex;align-items:center;gap:6px}
-    .action-btn.ship-btn{background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(59,130,246,0.08));border:1px solid rgba(59,130,246,0.25);color:#3b82f6}
-    .action-btn.ship-btn:hover{background:rgba(59,130,246,0.2);border-color:#3b82f6}
-    .action-btn.wa-btn{background:linear-gradient(135deg,rgba(37,211,102,0.15),rgba(37,211,102,0.08));border:1px solid rgba(37,211,102,0.25);color:#25D366}
-    .action-btn.wa-btn:hover{background:rgba(37,211,102,0.2);border-color:#25D366}
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-    .modal-overlay.show{display:flex}
-    .modal{background:var(--bg-primary);border:1px solid var(--border-gold);border-radius:var(--radius-card);padding:28px 32px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
-    .modal h2{font-size:18px;font-weight:700;margin-bottom:4px}
-    .modal p.sub{font-size:12px;color:var(--text-muted);margin-bottom:16px}
-    .modal .stat-row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
-    .modal .stat{flex:1;min-width:100px;background:rgba(255,255,255,0.02);border-radius:var(--radius-sm);padding:14px;text-align:center}
-    .modal .stat .num{font-size:22px;font-weight:700;color:var(--gold-light)}
-    .modal .stat .lbl{font-size:11px;color:var(--text-muted);margin-top:4px}
-    .modal .modal-btn{padding:10px 22px;border-radius:var(--radius-sm);border:none;font-weight:600;font-size:13px;cursor:pointer;transition:0.3s;font-family:inherit}
-    .modal .modal-btn.primary{background:linear-gradient(135deg,var(--gold-dark),var(--gold-light));color:#0a0a0a}
-    .modal .modal-btn.primary:hover{box-shadow:var(--glow-gold)}
-    .modal .modal-btn.danger{background:rgba(233,69,96,0.15);border:1px solid rgba(233,69,96,0.3);color:#e94560}
-    .modal .modal-btn.secondary{background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);color:var(--text-secondary);margin-right:8px}
-    .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-subtle)}
-    .toggle-row:last-child{border-bottom:none}
-    .toggle-row .lbl{font-size:13px}
-    .toggle-row .sub{font-size:11px;color:var(--text-muted)}
-    .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
-    .switch input{opacity:0;width:0;height:0}
-    .switch .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.1);border-radius:24px;transition:0.3s}
-    .switch .slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s}
-    .switch input:checked+.slider{background:var(--gold-light)}
-    .switch input:checked+.slider::before{transform:translateX(18px)}
-    .switch.wa input:checked+.slider{background:#25D366}
-    .modal-close{float:left;cursor:pointer;font-size:20px;color:var(--text-muted);transition:0.3s}
-    .modal-close:hover{color:#e94560}
-    .toast{position:fixed;bottom:24px;padding:12px 24px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;z-index:1000;animation:fadeInUp 0.3s ease;display:none}
-    .toast.success{background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#22c55e}
-    .toast.error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444}
-    .loading{padding:48px;text-align:center;color:var(--text-muted)}
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-    @media(max-width:768px){.sidebar{transform:translateX(100%)}.main{margin-right:0;padding:20px 16px;padding-top:68px}.header{flex-direction:column;gap:12px}.filter-btn,.channel-btn{font-size:11px;padding:4px 10px}th,td{padding:10px 12px;font-size:12px}}
-    </style>
-</head>
-<body>
-    <div class="sidebar">
-        <div class="logo">Royal Chaussures<small>Premium Command Center</small></div>
-        <div class="nav-label">🛠 العمليات</div>
-        <a href="/dashboard"><i class="fas fa-chart-pie icon"></i> لوحة التحكم</a>
-        <a href="/dashboard/orders" class="active"><i class="fas fa-box icon"></i> الطلبات</a>
-        <a href="/dashboard/products"><i class="fas fa-shoe-prints icon"></i> المنتجات</a>
-        <a href="/dashboard/tracking"><i class="fas fa-search icon"></i> تتبع الشحنات</a>
-        <a href="/dashboard/clients"><i class="fas fa-users icon"></i> العملاء</a>
-        <div class="nav-label">🧠 الذكاء</div>
-        <a href="/dashboard/chat"><i class="fas fa-comments icon"></i> المحادثات الحية 💬</a>
-        <a href="/dashboard/constellation" target="_blank"><i class="fas fa-globe icon"></i> Agent Constellation</a>
-        <a href="/health"><i class="fas fa-heart icon"></i> صحة السيرفر</a>
-        <div class="sidebar-social"><a href="https://facebook.com/royalchaussures" target="_blank" class="facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a><a href="https://instagram.com/royalchaussures" target="_blank" class="instagram" title="Instagram"><i class="fab fa-instagram"></i></a><a href="https://wa.me/213659832426" target="_blank" class="whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a></div>
-        <div class="sidebar-footer"><span class="pulse-dot"></span> <span id="serverUrl">Online</span></div>
+{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ orders:[], statusFilter:'', searchQuery:'', showAutoShip:false, showWAConfirm:false, shipStatus:{enabled:false,orders_shipped:0,errors:[]}, waStatus:{enabled:false,messages_sent:0}, selectedIds:[], loadOrders(){ let u='/api/orders?'; if(this.statusFilter) u+='status='+this.statusFilter; if(this.searchQuery) u+=(this.statusFilter?'&':'')+'search='+encodeURIComponent(this.searchQuery); fetch(u).then(r=>r.json()).then(d=>this.orders=d.orders||[]) }, updateStatus(id,s){ fetch('/api/orders/'+id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:s})}).then(r=>r.json()).then(d=>{if(d.success)this.loadOrders()}) }, toggleSelect(id){ let idx=this.selectedIds.indexOf(id); if(idx==-1) this.selectedIds.push(id); else this.selectedIds.splice(idx,1) }, selectAll(){ this.selectedIds=this.orders.map(o=>o.id) }, clearSel(){ this.selectedIds=[] }, loadShipStatus(){ fetch('/api/orders/auto-ship/status').then(r=>r.json()).then(d=>this.shipStatus=d) }, loadWAStatus(){ fetch('/api/whatsapp/confirm/status').then(r=>r.json()).then(d=>this.waStatus=d) }, toggleAutoShip(){ fetch('/api/orders/auto-ship/toggle',{method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).then(d=>{this.loadShipStatus()}) }, runAutoShip(){ fetch('/api/orders/auto-ship/run',{method:'POST'}).then(r=>r.json()).then(d=>{this.loadShipStatus();this.loadOrders();alert('✅ تم شحن '+d.shipped+' طلب'+(d.failed>0?'، فشل '+d.failed:''))}) }, toggleWAConfirm(){ fetch('/api/whatsapp/confirm/toggle',{method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).then(d=>{this.loadWAStatus()}) }, sendWAConfirm(id){ fetch('/api/whatsapp/confirm/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:id})}).then(r=>r.json()).then(d=>{this.loadWAStatus();alert(d.success?'✅ تم إرسال التأكيد':'❌ فشل الإرسال')}) }, shipOrder(id){ fetch('/api/orders/ship-single',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:id})}).then(r=>r.json()).then(d=>{alert(d.success?'✅ تم التصدير لـ ZR':'❌ '+d.error)}) } }" x-init="loadOrders()">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">📦 إدارة الطلبات</h1>
+        <div class="flex gap-2 items-center">
+            <!-- Phase 3: ZR Express Button -->
+            <button @click="showAutoShip=true; loadShipStatus()" class="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600/30 transition flex items-center gap-2">
+                <i class="fas fa-truck"></i> 📦 ZR Express
+            </button>
+            <!-- Phase 3: WA Confirm Button -->
+            <button @click="showWAConfirm=true; loadWAStatus()" class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600/30 transition flex items-center gap-2">
+                <i class="fab fa-whatsapp"></i> 💬 تأكيد WhatsApp
+            </button>
+            <select x-model="statusFilter" @change="loadOrders()" class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm">
+                <option value="">الكل</option>
+                <option value="Nouveau">جديد</option>
+                <option value="Confirme">مؤكد</option>
+                <option value="Livre">تم التوصيل</option>
+                <option value="Annule">ملغي</option>
+            </select>
+            <input type="text" x-model="searchQuery" @keyup.enter="loadOrders()" placeholder="بحث..." class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm w-48">
+        </div>
     </div>
-    <div class="main">
-        <div class="header"><h1>📦 جميع الطلبات</h1><a href="/dashboard"><i class="fas fa-arrow-right"></i> العودة</a></div>
-        <div class="action-bar">
-            <button class="action-btn ship-btn" onclick="showAutoShipPanel()"><i class="fas fa-truck"></i> 📦 تصدير ZR Express</button>
-            <button class="action-btn wa-btn" onclick="showWAConfirmPanel()"><i class="fab fa-whatsapp"></i> 💬 تأكيد WhatsApp</button>
-            <span id="autoShipStatus" style="font-size:11px;color:var(--text-muted);margin-right:4px"></span>
-        </div>
-        <div class="channel-filter">
-            <button class="channel-btn active" onclick="filterChannel('all')">🌐 الكل</button>
-            <button class="channel-btn ch-whatsapp" onclick="filterChannel('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-            <button class="channel-btn ch-messenger" onclick="filterChannel('messenger')"><i class="fab fa-facebook-messenger"></i> Messenger</button>
-            <button class="channel-btn ch-instagram" onclick="filterChannel('instagram')"><i class="fab fa-instagram"></i> Instagram</button>
-            <button class="channel-btn ch-facebook" onclick="filterChannel('facebook')"><i class="fab fa-facebook"></i> Facebook</button>
-        </div>
-        <div class="table-wrapper">
-            <div class="table-header">
-                <div class="table-title">📋 قائمة الطلبات <span class="count-badge" style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:rgba(212,175,55,0.1);color:var(--gold-light)" id="orderCount">0</span></div>
-                <div class="filter-group">
-                    <button class="filter-btn active" onclick="filterOrders('all')">الكل</button>
-                    <button class="filter-btn" onclick="filterOrders('paid')">مدفوع</button>
-                    <button class="filter-btn" onclick="filterOrders('pending')">معلق</button>
-                    <button class="filter-btn" onclick="filterOrders('shipped')">مشحون</button>
-                    <button class="filter-btn" onclick="filterOrders('cancelled')">ملغي</button>
+
+    <!-- ZR Express Auto-ship Modal -->
+    <div x-show="showAutoShip" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="showAutoShip=false">
+        <div class="bg-[#1a1a23] border border-[#2a2a35] rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">📦 ZR Express</h2>
+                <button @click="showAutoShip=false" class="text-gray-500 hover:text-white text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-400 mb-4">إرسال الطلبات المدفوعة إلى ZR Express للشحن</p>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-[#252530] rounded-lg p-4 text-center">
+                    <p class="text-2xl font-bold text-blue-400" x-text="shipStatus.orders_shipped"></p>
+                    <p class="text-xs text-gray-500">تم شحنها</p>
+                </div>
+                <div class="bg-[#252530] rounded-lg p-4 text-center">
+                    <p class="text-2xl font-bold text-red-400" x-text="shipStatus.errors?.length||0"></p>
+                    <p class="text-xs text-gray-500">أخطاء</p>
                 </div>
             </div>
-            <div class="bulk-bar" id="bulkBar">
-                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" title="تحديد الكل">
-                <span class="count" id="selectedCount">0 محدد</span>
-                <select id="bulkField"><option value="financial_status">الحالة المالية</option><option value="fulfillment_status">حالة الشحن</option></select>
-                <select id="bulkValue"><option value="paid">مدفوع</option><option value="pending">معلق</option><option value="cancelled">ملغي</option></select>
-                <button class="bulk-btn" onclick="applyBulk()">تطبيق</button>
-                <button class="cancel-btn" onclick="clearSelection()">إلغاء</button>
+            <div class="flex items-center justify-between py-3 border-t border-[#2a2a35]">
+                <div>
+                    <p class="text-sm font-medium">🤖 التصدير التلقائي</p>
+                    <p class="text-xs text-gray-500">شحن الطلبات المدفوعة تلقائياً</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" :checked="shipStatus.enabled" @change="toggleAutoShip()">
+                    <div class="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                </label>
             </div>
-            <table>
-                <thead><tr><th class="checkbox-col"></th><th>الطلب</th><th>الزبون</th><th>الهاتف</th><th>المبلغ</th><th>المالية</th><th>الشحن</th><th>القناة</th></tr></thead>
-                <tbody id="ordersBody"><tr><td colspan="8" class="loading">⏳ جار التحميل...</td></tr></tbody>
-            </table>
+            <button @click="runAutoShip()" class="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition flex items-center justify-center gap-2">
+                <i class="fas fa-play"></i> تشغيل الآن
+            </button>
         </div>
     </div>
-    <script>
-    var _allOrders=[],_renderedOrders=[],_selectedIds=[],_chFilter='all',_stFilter='all';
-    window.filterChannel=function(ch){document.querySelectorAll('.channel-btn').forEach(function(b){b.classList.remove('active')});event.target.classList.add('active');_chFilter=ch;applyAll()}
-    window.filterOrders=function(f){document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});if(event&&event.target)event.target.classList.add('active');_stFilter=f;applyAll()}
-    function applyAll(){var orders=_allOrders;if(_stFilter!=='all'){var s=_stFilter.toLowerCase();orders=orders.filter(function(o){var fs=(o.financial_status||'').toLowerCase();var fl=(o.fulfillment_status||o.fulfillment||'').toLowerCase();if(s==='paid')return fs==='paid';if(s==='pending')return fs==='pending'||!fs||fl==='unfulfilled';if(s==='shipped')return fl==='fulfilled'||fl==='partial';if(s==='cancelled')return fs==='cancelled'||fs==='refunded';return true})}if(_chFilter!=='all'){orders=orders.filter(function(o){var ch=(o.channel||o.source||o.note||'').toLowerCase();return ch.includes(_chFilter)})}renderOrders(orders)}
-    function renderOrders(orders){_renderedOrders=orders;var tb=document.getElementById('ordersBody'),c=document.getElementById('orderCount');if(c)c.textContent=orders.length;if(!orders.length){tb.innerHTML='<tr><td colspan="8" class="loading">لا توجد طلبات</td></tr>';return}tb.innerHTML=orders.map(function(o){var a=o.shipping_address||o.billing_address||{},cx=o.customer||{},fc=o.financial_status==='paid'?'badge-paid':(o.financial_status==='cancelled'?'badge-cancelled':'badge-pending'),fl=o.fulfillment_status||o.fulfillment||'unfulfilled',flc=fl==='fulfilled'?'badge-delivered':(fl==='partial'?'badge-shipped':'badge-pending'),oid=o.id||'',ch=(o.channel||o.source||'').toLowerCase(),chIcon='🌐';if(ch.includes('whatsapp'))chIcon='<i class="fab fa-whatsapp" style="color:#25D366"></i>';else if(ch.includes('messenger')||ch.includes('fb'))chIcon='<i class="fab fa-facebook-messenger" style="color:#006AFF"></i>';else if(ch.includes('instagram'))chIcon='<i class="fab fa-instagram" style="color:#E4405F"></i>';else if(ch.includes('facebook'))chIcon='<i class="fab fa-facebook" style="color:#1877F2"></i>';return'<tr><td class="checkbox-col"><input type="checkbox" class="order-checkbox" value="'+oid+'" '+(~_selectedIds.indexOf(oid)?'checked':'')+' onchange="toggleSelect(\''+oid+'\')"></td><td onclick="window.location.href=\'/dashboard/orders/'+oid+'\'" style="cursor:pointer">'+(o.name||o.id)+'</td><td onclick="window.location.href=\'/dashboard/orders/'+oid+'\'" style="cursor:pointer">'+(cx.first_name||'')+' '+(cx.last_name||'')+'</td><td onclick="window.location.href=\'/dashboard/orders/'+oid+'\'" style="cursor:pointer">'+(a.phone||'-')+'</td><td onclick="window.location.href=\'/dashboard/orders/'+oid+'\'" style="cursor:pointer">'+(o.total_price||o.total||'0')+' DZD</td><td onclick="window.location.href=\'/dashboard/orders/'+oid+'\'" style="cursor:pointer"><span class="badge '+fc+'">'+(o.financial_status||'pending')+'</span></td><td onclick="window.location.href=\'/dashboard/orders/'+oid+'\'" style="cursor:pointer"><span class="badge '+flc+'">'+fl+'</span></td><td>'+chIcon+'</td></tr>'}).join('')}
-    window.toggleSelect=function(oid){var idx=_selectedIds.indexOf(oid);~idx?_selectedIds.splice(idx,1):_selectedIds.push(oid);updateBulk()}
-    window.toggleSelectAll=function(){var cb=document.getElementById('selectAll');_selectedIds=cb.checked?_renderedOrders.map(function(o){return o.id}):[];updateBulk();document.querySelectorAll('.order-checkbox').forEach(function(c){c.checked=_selectedIds.includes(c.value)})}
-    function updateBulk(){var bar=document.getElementById('bulkBar'),cnt=document.getElementById('selectedCount');bar.classList.toggle('show',_selectedIds.length>0);cnt.textContent=_selectedIds.length+' محدد';document.getElementById('selectAll').checked=_selectedIds.length>0&&_selectedIds.length===_renderedOrders.length}
-    window.clearSelection=function(){_selectedIds=[];updateBulk();document.querySelectorAll('.order-checkbox').forEach(function(c){c.checked=false})}
-    window.applyBulk=function(){if(!_selectedIds.length)return;var field=document.getElementById('bulkField').value,value=document.getElementById('bulkValue').value;fetch('/api/orders/bulk-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_ids:_selectedIds,field:field,value:value})}).then(function(r){return r.json()}).then(function(d){if(d.success){clearSelection();loadOrders();alert('✅ تم تحديث '+d.affected+' طلب')}else{alert('❌ فشل')}}).catch(function(e){alert('❌ خطأ')})}
-    function loadOrders(){fetch('/api/orders').then(function(r){return r.json()}).then(function(d){if(!d.orders||!d.orders.length){document.getElementById('ordersBody').innerHTML='<tr><td colspan="8" class="loading">لا توجد طلبات</td></tr>';return}_allOrders=d.orders;applyAll()}).catch(function(e){document.getElementById('ordersBody').innerHTML='<tr><td colspan="8" class="loading" style="color:#ef4444">⚠️ فشل التحميل</td></tr>'})}
-    document.addEventListener('DOMContentLoaded',function(){loadOrders();setInterval(loadOrders,60000);document.getElementById('serverUrl').textContent=window.location.origin});
 
-    function showToast(msg,tp){var t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast'}
-        t.textContent=msg;t.className='toast '+tp;document.body.appendChild(t);t.style.display='block'
-        setTimeout(function(){t.style.display='none'},4000)}
+    <!-- WhatsApp Confirm Modal -->
+    <div x-show="showWAConfirm" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="showWAConfirm=false">
+        <div class="bg-[#1a1a23] border border-[#2a2a35] rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">💬 تأكيد WhatsApp</h2>
+                <button @click="showWAConfirm=false" class="text-gray-500 hover:text-white text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-400 mb-4">إرسال رسالة تأكيد تلقائية عبر واتساب</p>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-[#252530] rounded-lg p-4 text-center">
+                    <p class="text-2xl font-bold text-emerald-400" x-text="waStatus.messages_sent"></p>
+                    <p class="text-xs text-gray-500">رسائل أُرسلت</p>
+                </div>
+                <div class="bg-[#252530] rounded-lg p-4 text-center">
+                    <p class="text-xs text-gray-400 truncate" x-text="waStatus.last_send?.slice(0,10)||'-'"></p>
+                    <p class="text-xs text-gray-500">آخر إرسال</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-between py-3 border-t border-[#2a2a35]">
+                <div>
+                    <p class="text-sm font-medium">🤖 الإرسال التلقائي</p>
+                    <p class="text-xs text-gray-500">عند تغيير الحالة إلى Confirmé/Paid</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" :checked="waStatus.enabled" @change="toggleWAConfirm()">
+                    <div class="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button @click="selectedIds.forEach(id=>sendWAConfirm(id))" :disabled="selectedIds.length===0" class="flex-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-500/30 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fab fa-whatsapp"></i> إرسال للمحدد
+                </button>
+                <button @click="showWAConfirm=false" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition">إغلاق</button>
+            </div>
+        </div>
+    </div>
 
-    function showAutoShipPanel(){showModal(
-        '<h2>📦 ZR Express · التصدير التلقائي</h2>'+'<p class="sub">إرسال الطلبات المدفوعة إلى ZR Express للشحن</p>'+'<div class="stat-row"><div class="stat"><div class="num" id="shipCount">0</div><div class="lbl">تم شحنها</div></div><div class="stat"><div class="num" id="shipErrors">0</div><div class="lbl">أخطاء</div></div></div>'+'<div class="toggle-row"><div><div class="lbl">🤖 التصدير التلقائي</div><div class="sub">شحن الطلبات المدفوعة تلقائياً</div></div><label class="switch"><input type="checkbox" id="autoShipToggle" onchange="toggleAutoShip()"><span class="slider"></span></label></div>'+'<div style="margin-top:16px;display:flex;gap:8px"><button class="modal-btn primary" onclick="runAutoShip()"><i class="fas fa-play"></i> تشغيل الآن</button><button class="modal-btn secondary" onclick="closeModal()">إغلاق</button></div>',
-        function(){fetchAutoShipStatus()})
-        setTimeout(fetchAutoShipStatus,100)}
-
-    function showWAConfirmPanel(){showModal(
-        '<h2>💬 WhatsApp · تأكيد الطلبات</h2>'+'<p class="sub">إرسال رسالة تأكيد تلقائية عبر واتساب عند تأكيد الطلب</p>'+'<div class="stat-row"><div class="stat"><div class="num" id="waCount">0</div><div class="lbl">رسائل أُرسلت</div></div><div class="stat"><div class="num" id="waLast">-</div><div class="lbl">آخر إرسال</div></div></div>'+'<div class="toggle-row"><div><div class="lbl">🤖 الإرسال التلقائي</div><div class="sub">إرسال رسالة تلقائياً عند تغيير الحالة إلى Confirmé</div></div><label class="switch wa"><input type="checkbox" id="waConfirmToggle" onchange="toggleWAConfirm()"><span class="slider"></span></label></div>'+'<div style="margin-top:16px;display:flex;gap:8px"><button class="modal-btn primary" onclick="sendSelectedWA()"><i class="fab fa-whatsapp"></i> إرسال للمحدد</button><button class="modal-btn secondary" onclick="closeModal()">إغلاق</button></div>',
-        function(){fetchWAConfirmStatus()})
-        setTimeout(fetchWAConfirmStatus,100)}
-
-    function showModal(html,cb){var overlay=document.getElementById('modalOverlay');if(!overlay){overlay=document.createElement('div');overlay.id='modalOverlay';overlay.className='modal-overlay';overlay.onclick=function(e){if(e.target===overlay)closeModal()};document.body.appendChild(overlay)}
-        var m=document.createElement('div');m.className='modal';m.innerHTML='<span class="modal-close" onclick="closeModal()">✕</span>'+html
-        overlay.innerHTML='';overlay.appendChild(m);overlay.classList.add('show');if(cb)cb()}
-
-    function closeModal(){var o=document.getElementById('modalOverlay');if(o){o.classList.remove('show')}}
-
-    function fetchAutoShipStatus(){fetch('/api/orders/auto-ship/status').then(function(r){return r.json()}).then(function(d){
-        var c=document.getElementById('shipCount');if(c)c.textContent=d.orders_shipped||0
-        var e=document.getElementById('shipErrors');if(e)e.textContent=(d.errors||[]).length||0
-        var t=document.getElementById('autoShipToggle');if(t)t.checked=d.enabled
-        var st=document.getElementById('autoShipStatus');if(st)st.textContent=d.enabled?'🟢 التصدير التلقائي نشط':'⏸ التصدير التلقائي متوقف'})}
-
-    window.toggleAutoShip=function(){fetch('/api/orders/auto-ship/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json()}).then(function(d){
-        if(d.success){fetchAutoShipStatus();showToast(d.enabled?'✅ التصدير التلقائي نشط':'⏸ تم إيقاف التصدير التلقائي','success')}else{showToast('❌ فشل','error')}})}
-
-    window.runAutoShip=function(){var btn=document.querySelector('.modal-btn.primary');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري...'}
-        fetch('/api/orders/auto-ship/run',{method:'POST'}).then(function(r){return r.json()}).then(function(d){
-            if(d.success){showToast('✅ تم شحن '+d.shipped+' طلب'+(d.failed>0?'، فشل '+d.failed:'')+' إلى ZR Express','success')}else{showToast('❌ '+d.error,'error')}
-            fetchAutoShipStatus();loadOrders()
-        }).catch(function(e){showToast('❌ خطأ في التصدير','error')})
-        .finally(function(){if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-play"></i> تشغيل الآن'}})}
-
-    function fetchWAConfirmStatus(){fetch('/api/whatsapp/confirm/status').then(function(r){return r.json()}).then(function(d){
-        var c=document.getElementById('waCount');if(c)c.textContent=d.messages_sent||0
-        var l=document.getElementById('waLast');if(l)l.textContent=d.last_send?d.last_send.slice(0,16):'-'
-        var t=document.getElementById('waConfirmToggle');if(t)t.checked=d.enabled})}
-
-    window.toggleWAConfirm=function(){fetch('/api/whatsapp/confirm/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json()}).then(function(d){
-        if(d.success){fetchWAConfirmStatus();showToast(d.enabled?'✅ تأكيد WhatsApp تلقائي نشط':'⏸ تم إيقاف تأكيد WhatsApp','success')}else{showToast('❌ فشل','error')}})}
-
-    window.sendSelectedWA=function(){if(!_selectedIds.length){showToast('⚠️ اختر طلباً أولاً','error');return}
-        var btn=document.querySelector('.modal-btn.primary');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري...'}
-        var sent=0,failed=0
-        function sendNext(idx){if(idx>=_selectedIds.length){
-            showToast('✅ تم إرسال '+sent+' تأكيد'+(failed>0?'، فشل '+failed:''),'success')
-            fetchWAConfirmStatus();if(btn){btn.disabled=false;btn.innerHTML='<i class="fab fa-whatsapp"></i> إرسال للمحدد'};return}
-            fetch('/api/whatsapp/confirm/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:_selectedIds[idx]})})
-            .then(function(r){return r.json()}).then(function(d){if(d.success)sent++;else failed++})
-            .catch(function(){failed++})
-            .finally(function(){sendNext(idx+1)})}
-        sendNext(0)}
-    </script>
-    <div class="toast" id="toast"></div>
-    <div class="modal-overlay" id="modalOverlay"></div>
-</body>
-</html>
+    <!-- Orders Table -->
+    <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden">
+        <!-- Bulk actions -->
+        <div x-show="selectedIds.length>0" class="bg-[#252530] px-4 py-2 flex items-center gap-3 border-b border-[#2a2a35]">
+            <span class="text-sm text-royal-300" x-text="selectedIds.length+' محدد'"></span>
+            <button @click="selectedIds.forEach(id=>shipOrder(id))" class="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded hover:bg-blue-500/30">
+                <i class="fas fa-truck"></i> تصدير لـ ZR
+            </button>
+            <button @click="selectedIds.forEach(id=>sendWAConfirm(id))" class="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded hover:bg-emerald-500/30">
+                <i class="fab fa-whatsapp"></i> إرسال WhatsApp
+            </button>
+            <button @click="clearSel()" class="text-xs text-gray-500 hover:text-white">إلغاء</button>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-[#252530] text-gray-400">
+                <tr>
+                    <th class="p-3 w-10"><input type="checkbox" @change="selectAll()" class="accent-royal-500"></th>
+                    <th class="p-3 text-right">الزبون</th>
+                    <th class="p-3 text-right">المنتج</th>
+                    <th class="p-3 text-right">الولاية</th>
+                    <th class="p-3 text-right">المجموع</th>
+                    <th class="p-3 text-right">الحالة</th>
+                    <th class="p-3 text-right">التاريخ</th>
+                    <th class="p-3 text-center">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="o in orders" :key="o.id">
+                    <tr class="border-t border-[#2a2a35] hover:bg-[#252530]/50">
+                        <td class="p-3"><input type="checkbox" :checked="selectedIds.includes(o.id)" @change="toggleSelect(o.id)" class="accent-royal-500"></td>
+                        <td class="p-3"><p x-text="o.customer||'-'" class="font-medium"></p><p x-text="o.phone||''" class="text-xs text-gray-500"></p></td>
+                        <td class="p-3"><p x-text="o.product"></p><p x-text="o.variant" class="text-xs text-gray-500"></p></td>
+                        <td class="p-3 text-gray-400" x-text="o.wilaya||'-'"></td>
+                        <td class="p-3" x-text="(o.total||0).toLocaleString()+' د.ج'"></td>
+                        <td class="p-3"><span class="text-xs px-2 py-1 rounded" :class="{'bg-emerald-500/20 text-emerald-400':o.status=='Confirme','bg-yellow-500/20 text-yellow-400':o.status=='Nouveau','bg-red-500/20 text-red-400':o.status=='Annule','bg-blue-500/20 text-blue-400':o.status=='Livre'}" x-text="o.status"></span></td>
+                        <td class="p-3 text-gray-400 text-xs" x-text="o.date"></td>
+                        <td class="p-3 text-center">
+                            <div class="flex gap-1 justify-center">
+                                <select @change="updateStatus(o.id, $event.target.value)" class="bg-[#1a1a23] border border-[#2a2a35] rounded text-xs px-2 py-1">
+                                    <option value="Nouveau">جديد</option>
+                                    <option value="Confirme">تأكيد</option>
+                                    <option value="Livre">توصيل</option>
+                                    <option value="Annule">إلغاء</option>
+                                </select>
+                                <button @click="shipOrder(o.id)" class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded hover:bg-blue-500/30" title="تصدير لـ ZR">
+                                    <i class="fas fa-truck"></i>
+                                </button>
+                                <button @click="sendWAConfirm(o.id)" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded hover:bg-emerald-500/30" title="إرسال WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+                <tr x-show="orders.length===0"><td colspan="8" class="p-8 text-center text-gray-500">لا توجد طلبات</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

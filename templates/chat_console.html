@@ -1,329 +1,95 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Royal Chaussures — المحادثات الحية</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style>
-        :root{--gold:#D4AF37;--gold-light:#E8C95A;--gold-dark:#B8962A;--bg-primary:#08080f;--bg-card:rgba(255,255,255,0.03);--border-subtle:rgba(255,255,255,0.06);--border-gold:rgba(212,175,55,0.25);--text-primary:#f0f0f0;--text-secondary:#8888a0;--text-muted:#555570;--radius-card:16px;--radius-sm:10px;--sidebar-width:240px}
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow:hidden;height:100vh}
-        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.25);border-radius:3px}
-        .sidebar{position:fixed;top:0;right:0;width:var(--sidebar-width);height:100vh;background:rgba(10,10,20,0.88);backdrop-filter:blur(20px);border-left:1px solid var(--border-gold);padding:28px 16px;z-index:100;display:flex;flex-direction:column}
-        .sidebar .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--gold-light),var(--gold-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:8px 12px}.sidebar .logo::after{content:'💬';font-size:14px;-webkit-text-fill-color:initial;margin-right:6px}
-        .sidebar .logo small{display:block;font-family:'Inter',sans-serif;font-size:11px;-webkit-text-fill-color:var(--text-muted);margin-top:2px}
-        .sidebar .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin:24px 12px 8px;font-weight:600}
-        .sidebar a{display:flex;align-items:center;gap:12px;padding:11px 14px;color:var(--text-secondary);text-decoration:none;border-radius:var(--radius-sm);margin-bottom:2px;font-size:14px;font-weight:500;transition:all 0.3s;position:relative}
-        .sidebar a::before{content:'';position:absolute;right:-16px;top:50%;transform:translateY(-50%) scaleY(0);width:3px;height:24px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--gold-light),var(--gold-dark));transition:transform 0.3s}
-        .sidebar a:hover,.sidebar a.active{background:rgba(212,175,55,0.08);color:var(--gold-light)}
-        .sidebar a:hover::before,.sidebar a.active::before{transform:translateY(-50%) scaleY(1)}
-        .sidebar-footer{margin-top:auto;padding:16px 14px;border-top:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-muted)}
-        .pulse-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulseDot 2s ease-in-out infinite}
-        @keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-        .main{margin-right:var(--sidebar-width);height:100vh;display:flex;flex-direction:column}
-        .header{padding:18px 24px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-        .header h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;background:linear-gradient(135deg,#fff 30%,var(--gold-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px}
-        .header h1 small{font-family:'Inter';font-size:11px;-webkit-text-fill-color:var(--text-muted);font-weight:400}
-        .chat-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-        .chat-controls .search-wrap{position:relative}
-        .chat-controls input{background:rgba(255,255,255,0.04);border:1px solid var(--border-subtle);color:var(--text-primary);padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;outline:none;width:200px;transition:0.3s;font-family:inherit}
-        .chat-controls input:focus{border-color:var(--border-gold);box-shadow:0 0 0 3px rgba(212,175,55,0.08)}
-        .chat-controls input::placeholder{color:var(--text-muted)}
-        .filter-chips{display:flex;gap:4px}
-        .chip{padding:6px 12px;border-radius:20px;border:1px solid var(--border-subtle);background:transparent;color:var(--text-secondary);font-size:11px;font-weight:500;cursor:pointer;transition:0.3s;display:flex;align-items:center;gap:4px;font-family:inherit}
-        .chip:hover,.chip.active{background:rgba(212,175,55,0.12);border-color:var(--border-gold);color:var(--gold-light)}
-        .chip.ch-whatsapp{border-color:rgba(37,211,102,0.2);color:#25D366}
-        .chip.ch-whatsapp:hover,.chip.ch-whatsapp.active{background:rgba(37,211,102,0.12);border-color:#25D366;color:#25D366}
-        .chip.ch-messenger{border-color:rgba(0,106,255,0.2);color:#006AFF}
-        .chip.ch-messenger:hover,.chip.ch-messenger.active{background:rgba(0,106,255,0.12);border-color:#006AFF;color:#006AFF}
-        .chip.ch-instagram{border-color:rgba(228,64,95,0.2);color:#E4405F}
-        .chip.ch-instagram:hover,.chip.ch-instagram.active{background:rgba(228,64,95,0.12);border-color:#E4405F;color:#E4405F}
-        .chat-body{flex:1;display:flex;overflow:hidden;position:relative}
-        .chat-list{width:340px;border-left:1px solid var(--border-subtle);display:flex;flex-direction:column;flex-shrink:0}
-        .chat-list-header{padding:14px 16px;border-bottom:1px solid var(--border-subtle);font-size:13px;font-weight:600;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center}
-        .chat-list-header .live-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:#22c55e;font-weight:500}
-        .chat-list-header .live-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulseDot 1.5s ease-in-out infinite}
-        .chat-items{flex:1;overflow-y:auto;padding:8px}
-        .chat-item{padding:12px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:0.2s;margin-bottom:4px;border:1px solid transparent;position:relative}
-        .chat-item:hover{background:rgba(255,255,255,0.02);border-color:var(--border-subtle)}
-        .chat-item.active{background:rgba(212,175,55,0.06);border-color:var(--border-gold)}
-        .chat-item .ci-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-        .chat-item .ci-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px}
-        .chat-item .ci-platform{font-size:10px;opacity:0.6}
-        .chat-item .ci-time{font-size:10px;color:var(--text-muted)}
-        .chat-item .ci-preview{font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
-        .chat-item .ci-badge{display:inline-flex;width:8px;height:8px;border-radius:50%;margin-left:4px;flex-shrink:0}
-        .chat-item .ci-badge.unread{background:#e94560;box-shadow:0 0 6px rgba(233,69,96,0.4)}
-        .chat-detail{flex:1;display:flex;flex-direction:column;background:rgba(255,255,255,0.01)}
-        .chat-detail .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);gap:8px}
-        .chat-detail .empty-state .icon{font-size:48px;opacity:0.3}
-        .chat-detail .empty-state p{font-size:14px}
-        .messages-area{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
-        .msg{max-width:75%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;position:relative;animation:fadeInMsg 0.2s ease}
-        @keyframes fadeInMsg{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-        .msg.from-customer{align-self:flex-start;background:rgba(255,255,255,0.04);border:1px solid var(--border-subtle);border-bottom-right-radius:4px}
-        .msg.from-customer::before{content:'';position:absolute;bottom:0;right:-6px;border:6px solid transparent;border-right-color:rgba(255,255,255,0.04);border-bottom-color:rgba(255,255,255,0.04)}
-        .msg.from-agent{align-self:flex-end;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.08));border:1px solid var(--border-gold);border-bottom-left-radius:4px}
-        .msg .msg-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px}
-        .msg .msg-time{font-size:10px;color:var(--text-muted)}
-        .msg .msg-platform{font-size:9px;padding:1px 6px;border-radius:8px;background:rgba(255,255,255,0.05);color:var(--text-secondary)}
-        .chat-input-area{padding:12px 16px;border-top:1px solid var(--border-subtle);display:flex;gap:8px;align-items:center;flex-shrink:0}
-        .chat-input-area textarea{flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px 14px;font-size:13px;outline:none;resize:none;font-family:inherit;min-height:42px;max-height:100px;transition:0.3s}
-        .chat-input-area textarea:focus{border-color:var(--border-gold);box-shadow:0 0 0 3px rgba(212,175,55,0.08)}
-        .chat-input-area textarea::placeholder{color:var(--text-muted)}
-        .chat-input-area .send-btn{width:40px;height:40px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--gold-dark),var(--gold-light));color:#0a0a0a;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:0.3s;flex-shrink:0}
-        .chat-input-area .send-btn:hover{box-shadow:var(--glow-gold);transform:scale(1.05)}
-        .chat-input-area .send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
-        .intervention-bar{display:none;padding:10px 16px;background:rgba(233,69,96,0.06);border-bottom:1px solid rgba(233,69,96,0.2);align-items:center;justify-content:space-between;flex-shrink:0}
-        .intervention-bar.show{display:flex}
-        .intervention-bar .ib-text{font-size:12px;color:#e94560;display:flex;align-items:center;gap:6px}
-        .intervention-bar .ib-toggle{position:relative;display:inline-block;width:40px;height:22px;margin:0 8px}
-        .intervention-bar .ib-toggle input{opacity:0;width:0;height:0}
-        .intervention-bar .ib-toggle .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.1);border-radius:22px;transition:0.3s}
-        .intervention-bar .ib-toggle .slider::before{content:'';position:absolute;height:16px;width:16px;border-radius:50%;left:3px;bottom:3px;background:#fff;transition:0.3s}
-        .intervention-bar .ib-toggle input:checked+.slider{background:#e94560}
-        .intervention-bar .ib-toggle input:checked+.slider::before{transform:translateX(18px)}
-        .reload-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border-subtle);background:transparent;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.3s;font-size:14px}
-        .reload-btn:hover{border-color:var(--border-gold);color:var(--gold-light);transform:rotate(180deg)}
-        .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-        .status-dot.online{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.4)}
-        .status-dot.offline{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.4)}
-        .agent-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:8px;background:rgba(212,175,55,0.1);color:var(--gold-light)}
-        @media(max-width:768px){.chat-list{width:100%;border:none}.chat-detail{display:none}.chat-detail.open{display:flex;position:fixed;inset:0;z-index:200;background:var(--bg-primary)}.chat-detail.open .mobile-back{display:flex}}
-        .mobile-back{display:none;padding:12px 16px;border-bottom:1px solid var(--border-subtle);font-size:13px;color:var(--gold-light);cursor:pointer;align-items:center;gap:6px;flex-shrink:0}
-    </style>
-</head>
-<body>
-    <div class="sidebar">
-        <div class="logo">Royal Chaussures<small>Live Chat Console</small></div>
-        <div class="nav-label">🛠 العمليات</div>
-        <a href="/dashboard"><i class="fas fa-chart-pie"></i> لوحة التحكم</a>
-        <a href="/dashboard/orders"><i class="fas fa-box"></i> الطلبات</a>
-        <a href="/dashboard/products"><i class="fas fa-shoe-prints"></i> المنتجات</a>
-        <a href="/dashboard/tracking"><i class="fas fa-search"></i> تتبع الشحنات</a>
-        <div class="nav-label">🧠 الذكاء</div>
-        <a href="/dashboard/chat" class="active"><i class="fas fa-comments"></i> المحادثات الحية</a>
-        <a href="/dashboard/constellation"><i class="fas fa-globe"></i> Agent Constellation</a>
-        <div class="sidebar-footer"><span class="pulse-dot"></span> <span id="serverUrl">Online</span></div>
+{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ messages:[], conversations:{}, activeConv:null, filter:'all', search:'', loadMsgs(){ fetch('/api/messages?limit=100').then(r=>r.json()).then(d=>{ if(d.success){ this.messages=d.messages; this.buildConvs() } }) }, buildConvs(){ let c={}; this.messages.forEach(m=>{ let k=m.sender_id+'@@'+m.platform; if(!c[k]) c[k]={sender_id:m.sender_id,platform:m.platform,messages:[],last_time:null,unread:0}; c[k].messages.push(m); if(!c[k].last_time||m.created_at>c[k].last_time) c[k].last_time=m.created_at; if(!m.reply) c[k].unread++ }); this.conversations=c }, toggleIntervention(e){ let enabled=e.target.checked; if(enabled) fetch('/api/agent/switch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:'customer_support'})}) }, sendReply(){ if(!this.activeConv) return; let parts=this.activeConv.split('@@'); let sid=parts[0], plat=parts[1]; let text=document.getElementById('replyInput')?.value; if(!text) return; fetch('/api/agent/route-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,platform:plat,uid:sid})}).then(()=>{ document.getElementById('replyInput').value=''; this.loadMsgs(); if(plat==='whatsapp') fetch('/api/whatsapp/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:sid,text:text})}) }) } }" x-init="loadMsgs(); setInterval(()=>loadMsgs(),10000)">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">💬 المحادثات الحية <span class="text-sm text-gray-500 font-normal">Live Inbox</span></h1>
+        <div class="flex gap-2">
+            <div class="flex gap-1">
+                <button @click="filter='all'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='all'?'bg-royal-600/20 text-royal-300 border border-royal-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'">الكل</button>
+                <button @click="filter='whatsapp'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='whatsapp'?'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                <button @click="filter='messenger'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='messenger'?'bg-blue-600/20 text-blue-300 border border-blue-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'"><i class="fab fa-facebook-messenger"></i> Messenger</button>
+                <button @click="filter='instagram'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='instagram'?'bg-pink-600/20 text-pink-300 border border-pink-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'"><i class="fab fa-instagram"></i> Instagram</button>
+            </div>
+            <input type="text" x-model="search" placeholder="بحث..." class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm w-40">
+        </div>
     </div>
-    <div class="main">
-        <div class="header">
-            <h1>💬 المحادثات الحية <small>Live Inbox</small></h1>
-            <div class="chat-controls">
-                <div class="filter-chips">
-                    <button class="chip active" onclick="filterChats('all')">🌐 الكل</button>
-                    <button class="chip ch-whatsapp" onclick="filterChats('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                    <button class="chip ch-messenger" onclick="filterChats('messenger')"><i class="fab fa-facebook-messenger"></i> Messenger</button>
-                    <button class="chip ch-instagram" onclick="filterChats('instagram')"><i class="fab fa-instagram"></i> Instagram</button>
-                </div>
-                <div class="search-wrap">
-                    <input type="text" id="searchInput" placeholder="🔍 بحث..." oninput="searchChats()">
-                </div>
-                <button class="reload-btn" onclick="loadChats()" title="تحديث"><i class="fas fa-sync-alt"></i></button>
+
+    <div class="flex gap-4 h-[calc(100vh-180px)]">
+        <!-- Conversations list -->
+        <div class="w-80 shrink-0 bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden flex flex-col">
+            <div class="px-4 py-3 border-b border-[#2a2a35] flex justify-between items-center">
+                <span class="text-sm text-gray-400">المحادثات</span>
+                <span class="text-xs text-emerald-400 flex items-center gap-1"><span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> مباشر</span>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <template x-for="(conv, key) in Object.entries(conversations).filter(([k,v])=>filter=='all'||v.platform==filter).filter(([k,v])=>!search||v.sender_id.includes(search)).sort((a,b)=>b[1].last_time?.localeCompare(a[1].last_time||''))" :key="key">
+                    <div @click="activeConv=key" class="px-4 py-3 border-b border-[#2a2a35] cursor-pointer transition" :class="activeConv==key?'bg-royal-600/10 border-r-2 border-royal-500':'hover:bg-[#252530]'">
+                        <div class="flex justify-between items-center">
+                            <p class="text-sm font-medium truncate" x-text="conv.sender_id.slice(0,16)"></p>
+                            <span class="text-xs text-gray-500" x-text="conv.last_time?.slice(5,16)||''"></span>
+                        </div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <span class="w-1.5 h-1.5 rounded-full" :class="conv.unread>0?'bg-rose-500':'bg-transparent'"></span>
+                            <p class="text-xs text-gray-500 truncate" x-text="conv.messages[conv.messages.length-1]?.message?.slice(0,40)||''"></p>
+                        </div>
+                        <div class="text-[10px] text-gray-600 mt-1">
+                            <span :class="{'text-emerald-400':v.platform=='whatsapp','text-blue-400':v.platform=='messenger','text-pink-400':v.platform=='instagram'}" x-text="conv.platform"></span>
+                            <span x-text="' · '+conv.messages.length+' رسالة'"></span>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="Object.keys(conversations).length===0">
+                    <div class="text-center py-12 text-gray-500 text-sm">لا توجد محادثات بعد</div>
+                </template>
             </div>
         </div>
-        <div class="chat-body">
-            <div class="chat-list">
-                <div class="chat-list-header">
-                    <span>المحادثات</span>
-                    <div class="live-badge">مباشر<span id="chatCount">0</span></div>
-                </div>
-                <div class="chat-items" id="chatItems"></div>
-            </div>
-            <div class="chat-detail" id="chatDetail">
-                <div class="mobile-back" onclick="closeMobileChat()"><i class="fas fa-arrow-right"></i> العودة</div>
-                <div class="intervention-bar" id="interventionBar">
-                    <div class="ib-text">🛑 وضع التدخل البشري</div>
-                    <label class="ib-toggle"><input type="checkbox" id="interventionToggle" onchange="toggleIntervention()"><span class="slider"></span></label>
-                    <span style="font-size:11px;color:var(--text-muted)">إيقاف الردود التلقائية</span>
-                </div>
-                <div class="messages-area" id="messagesArea">
-                    <div class="empty-state">
-                        <div class="icon">💬</div>
-                        <p>اختر محادثة لعرض الرسائل</p>
-                        <p style="font-size:12px">جميع المحادثات من واتساب، ماسنجر، وإنستغرام</p>
+
+        <!-- Chat detail -->
+        <div class="flex-1 bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden flex flex-col" x-show="activeConv">
+            <template x-if="activeConv && conversations[activeConv]">
+                <div class="flex flex-col h-full">
+                    <!-- Intervention bar -->
+                    <div class="px-4 py-2 bg-rose-600/10 border-b border-rose-500/20 flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs text-rose-400">
+                            <span>🛑</span> <span>وضع التدخل البشري — إيقاف الردود التلقائية</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" @change="toggleIntervention">
+                            <div class="w-10 h-5 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                        </label>
+                    </div>
+                    <!-- Messages -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="msgArea">
+                        <template x-for="msg in conversations[activeConv].messages.slice().reverse()" :key="msg.id">
+                            <div>
+                                <div class="flex items-start gap-2" :class="msg.reply ? 'justify-start flex-row-reverse' : ''">
+                                    <div class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed" :class="msg.reply ? 'bg-royal-600/20 border border-royal-500/20 rounded-tr-sm' : 'bg-[#252530] border border-[#2a2a35] rounded-tl-sm'">
+                                        <p x-text="msg.message"></p>
+                                        <template x-if="msg.reply">
+                                            <div class="mt-2 pt-2 border-t border-[#2a2a35] text-xs text-royal-300">🤖 <em x-text="msg.reply"></em></div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-gray-600 mt-1" :class="msg.reply ? 'text-right' : ''" x-text="msg.created_at?.slice(11,19)||''"></p>
+                            </div>
+                        </template>
+                    </div>
+                    <!-- Input -->
+                    <div class="px-4 py-3 border-t border-[#2a2a35] flex gap-2">
+                        <input id="replyInput" type="text" @keyup.enter="sendReply()" placeholder="اكتب رداً..." class="flex-1 bg-[#252530] border border-[#2a2a35] rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-royal-500/40">
+                        <button @click="sendReply()" class="bg-royal-500 hover:bg-royal-600 text-white rounded-lg px-4 py-2 text-sm transition flex items-center gap-2"><i class="fas fa-paper-plane"></i> إرسال</button>
                     </div>
                 </div>
-                <div class="chat-input-area">
-                    <textarea id="replyInput" rows="1" placeholder="اكتب رداً..." oninput="autoResize(this)"></textarea>
-                    <button class="send-btn" id="sendBtn" onclick="sendReply()" disabled><i class="fas fa-paper-plane"></i></button>
-                </div>
+            </template>
+        </div>
+        <!-- Empty state -->
+        <div class="flex-1 bg-[#1a1a23] rounded-xl border border-[#2a2a35] flex items-center justify-center" x-show="!activeConv">
+            <div class="text-center text-gray-500">
+                <p class="text-5xl mb-3">💬</p>
+                <p class="text-sm">اختر محادثة لعرض الرسائل</p>
+                <p class="text-xs mt-1">جميع المحادثات من واتساب، ماسنجر، وإنستغرام</p>
             </div>
         </div>
     </div>
-    <script>
-    var _allMessages=[],_conversations={},_activeConv=null,_filter='all',_activePlatform=null;
-
-    function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px'}
-
-    document.addEventListener('DOMContentLoaded',function(){
-        document.getElementById('serverUrl').textContent=window.location.origin;
-        loadChats();
-        setInterval(loadChats,10000);
-    });
-
-    function formatTime(ts){
-        if(!ts)return'';
-        try{
-            var d=new Date(ts.replace(' ','T')+'Z');
-            if(isNaN(d.getTime()))return ts.slice(0,16);
-            var now=new Date(),diff=(now-d)/1000;
-            if(diff<60)return'الآن';
-            if(diff<3600)return Math.floor(diff/60)+'د';
-            if(diff<86400)return Math.floor(diff/3600)+'س';
-            return d.toLocaleDateString('ar-DZ',{day:'numeric',month:'short'});
-        }catch(e){return ts?ts.slice(0,10):''}
-    }
-
-    function getPlatformIcon(p){
-        var icons={'whatsapp':'<i class="fab fa-whatsapp" style="color:#25D366"></i>',
-                   'messenger':'<i class="fab fa-facebook-messenger" style="color:#006AFF"></i>',
-                   'instagram':'<i class="fab fa-instagram" style="color:#E4405F"></i>',
-                   'facebook':'<i class="fab fa-facebook" style="color:#1877F2"></i>'};
-        return icons[p]||'🌐';
-    }
-
-    function loadChats(){
-        fetch('/api/messages?limit=100').then(function(r){return r.json()}).then(function(d){
-            if(!d.success)return;
-            _allMessages=d.messages||[];
-            buildConversations();
-            renderChatList();
-            if(_activeConv)renderMessages(_activeConv);
-        }).catch(function(e){console.error(e)});
-    }
-
-    function buildConversations(){
-        _conversations={};
-        _allMessages.forEach(function(m){
-            var key=m.sender_id+'@@'+m.platform;
-            if(!_conversations[key])_conversations[key]={
-                sender_id:m.sender_id,platform:m.platform,label:'عميل',
-                messages:[],last_time:null,unread:0
-            };
-            _conversations[key].messages.push(m);
-            if(!_conversations[key].last_time||m.created_at>_conversations[key].last_time)
-                _conversations[key].last_time=m.created_at;
-            if(!m.reply)_conversations[key].unread++;
-        });
-    }
-
-    function filterChats(platform){_filter=platform;
-        document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('active')});
-        event.target.classList.add('active');renderChatList()}
-
-    function searchChats(){renderChatList()}
-
-    function renderChatList(){
-        var search=(document.getElementById('searchInput')||{}).value||'';
-        var convs=Object.values(_conversations);
-        if(_filter!=='all')convs=convs.filter(function(c){return c.platform===_filter});
-        if(search)convs=convs.filter(function(c){
-            var s=c.sender_id.toLowerCase();
-            return s.includes(search.toLowerCase())
-        });
-        convs.sort(function(a,b){return(b.last_time||'').localeCompare(a.last_time||'')});
-        var container=document.getElementById('chatItems');
-        document.getElementById('chatCount').textContent=convs.length;
-        if(!convs.length){
-            container.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">لا توجد محادثات</div>';
-            return;
-        }
-        container.innerHTML=convs.map(function(c){
-            var key=c.sender_id+'@@'+c.platform;
-            var active=key===_activeConv?'active':'';
-            var lastMsg=c.messages[c.messages.length-1];
-            var preview=lastMsg?lastMsg.message.slice(0,50):'';
-            var unreadDot=c.unread>0?'<span class="ci-badge unread"></span>':'';
-            return '<div class="chat-item '+active+'" onclick="selectConv(\''+key+'\')">'+
-                '<div class="ci-top"><span class="ci-name">'+unreadDot+(c.sender_id.slice(0,12))+'</span>'+
-                '<span class="ci-platform">'+getPlatformIcon(c.platform)+'</span></div>'+
-                '<div class="ci-time">'+formatTime(c.last_time)+'</div>'+
-                '<div class="ci-preview">'+preview+'</div></div>'
-        }).join('');
-    }
-
-    function selectConv(key){
-        _activeConv=key;
-        _activePlatform=key.split('@@')[1];
-        renderChatList();
-        renderMessages(key);
-        document.getElementById('chatDetail').classList.add('open');
-    }
-
-    function closeMobileChat(){
-        document.getElementById('chatDetail').classList.remove('open');
-    }
-
-    function renderMessages(key){
-        var conv=_conversations[key];
-        if(!conv)return;
-        var area=document.getElementById('messagesArea');
-        document.getElementById('sendBtn').disabled=false;
-        document.getElementById('replyInput').disabled=false;
-        document.getElementById('replyInput').placeholder='اكتب رداً على '+conv.sender_id.slice(0,12)+'...';
-        var msgs=conv.messages;
-        if(!msgs.length){
-            area.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted)">لا توجد رسائل</div>';
-            return;
-        }
-        area.innerHTML=msgs.map(function(m,i){
-            var cls=m.reply?'from-agent':'from-customer';
-            var displayMsg=m.message||'';
-            var displayReply=m.reply||'';
-            var plat=getPlatformIcon(m.platform);
-            var time=formatTime(m.created_at);
-            var name=conv.sender_id.slice(0,12);
-            return '<div class="msg '+cls+'">'+
-                '<div>'+displayMsg+'</div>'+
-                (m.reply?'<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);font-size:12px;opacity:0.8">🤖 <em>'+displayReply+'</em></div>':'')+
-                '<div class="msg-meta"><span class="msg-time">'+time+'</span><span class="msg-platform">'+plat+' '+name+'</span></div></div>'
-        }).reverse().join('');
-        area.scrollTop=area.scrollHeight;
-    }
-
-    function sendReply(){
-        var input=document.getElementById('replyInput');
-        var text=input.value.trim();
-        if(!text||!_activeConv||!_activePlatform)return;
-        var parts=_activeConv.split('@@');
-        var senderId=parts[0];
-        fetch('/api/agent/route-test',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({message:text,platform:_activePlatform,uid:senderId})
-        }).then(function(r){return r.json()}).then(function(d){
-            input.value='';
-            autoResize(input);
-            loadChats();
-            if(!d.success)return;
-            // Platform-specific send
-            var p=_activePlatform;
-            if(p==='whatsapp'){
-                fetch('/api/whatsapp/send',{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({to:senderId,text:text})
-                }).then(function(){loadChats()});
-            }else{
-                loadChats();
-            }
-        }).catch(function(e){console.error(e)});
-    }
-
-    function toggleIntervention(){
-        var enabled=document.getElementById('interventionToggle').checked;
-        // This would connect to agent router
-        if(enabled){
-            fetch('/api/agent/switch',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({agent:'customer_support'})
-            });
-        }
-    }
-    </script>
-</body>
-</html>
+</div>
+{% endblock %}
