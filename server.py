@@ -699,7 +699,38 @@ def dashboard_clients():
 
 @app.route('/dashboard/settings')
 def dashboard_settings():
-    return render_template("dashboard.html", active="settings")
+    settings_data = {
+        "zr_express": {
+            "status": "متصل",
+            "tenant_id": "d2217f31-20f1-43c6-abd4-c420788a63ed",
+            "last_sync": "منذ دقيقة",
+            "server_status": "نشط"
+        },
+        "automations": {
+            "status": "نشط",
+            "items": [
+                {"icon": "💬", "name": "WhatsApp - تأكيد الطلبات", "badge": "تلقائي"},
+                {"icon": "📦", "name": "إشعارات الشحن", "badge": "تلقائي"},
+                {"icon": "📊", "name": "تقرير الصباح اليومي", "badge": "09:00 صباحاً"}
+            ]
+        },
+        "ai_agent": {
+            "status": "متصل",
+            "model": "DeepSeek-V4-Flash",
+            "platforms": [
+                {"name": "Messenger", "cls": "bg-blue-500/15 text-blue-400"},
+                {"name": "WhatsApp", "cls": "bg-green-500/15 text-green-400"},
+                {"name": "Instagram", "cls": "bg-pink-500/15 text-pink-400"}
+            ]
+        },
+        "shopify": {
+            "status": "متصل",
+            "store": "rwqchh-na.myshopify.com",
+            "auto_sync": "مفعلة",
+            "last_update": "منذ ساعة"
+        }
+    }
+    return render_template("dashboard_settings.html", active="settings", settings=settings_data)
 
 @app.route('/')
 def index():
