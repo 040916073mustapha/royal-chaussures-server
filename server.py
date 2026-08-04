@@ -73,6 +73,7 @@ def init_db():
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, shopify_order_id TEXT UNIQUE, customer_name TEXT, customer_phone TEXT, wilaya TEXT, municipality TEXT, product TEXT, variant TEXT, quantity INTEGER DEFAULT 1, total_price REAL DEFAULT 0, status TEXT DEFAULT 'Nouveau', delivery_method TEXT DEFAULT 'Home', delivery_fee REAL DEFAULT 0, source TEXT DEFAULT 'Shopify', notes TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
     c.execute("CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, phone TEXT UNIQUE, wilaya TEXT, municipality TEXT, total_orders INTEGER DEFAULT 1, total_spent REAL DEFAULT 0, last_order_at TEXT, created_at TEXT DEFAULT (datetime('now')))")
+    c.execute("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, platform TEXT, sender_id TEXT, message TEXT, reply TEXT, created_at TEXT DEFAULT (datetime('now')))")
     try:
         c.execute("SELECT shopify_order_id FROM orders LIMIT 1")
     except:
