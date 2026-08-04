@@ -69,8 +69,9 @@ _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "royal_order
 
 
 def init_db():
-    conn = sqlite3.connect(_DB_PATH)
+    conn = sqlite3.connect(_DB_PATH, timeout=15)
     c = conn.cursor()
+    c.execute("PRAGMA journal_mode=WAL")
     c.execute("CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, shopify_order_id TEXT UNIQUE, customer_name TEXT, customer_phone TEXT, wilaya TEXT, municipality TEXT, product TEXT, variant TEXT, quantity INTEGER DEFAULT 1, total_price REAL DEFAULT 0, status TEXT DEFAULT 'Nouveau', delivery_method TEXT DEFAULT 'Home', delivery_fee REAL DEFAULT 0, source TEXT DEFAULT 'Shopify', notes TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
     c.execute("CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, phone TEXT UNIQUE, wilaya TEXT, municipality TEXT, total_orders INTEGER DEFAULT 1, total_spent REAL DEFAULT 0, last_order_at TEXT, created_at TEXT DEFAULT (datetime('now')))")
     c.execute("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, platform TEXT, sender_id TEXT, message TEXT, reply TEXT, created_at TEXT DEFAULT (datetime('now')))")
@@ -848,7 +849,7 @@ def api_auto_ship_run():
 def api_orders_ship_single():
     try:
         data = request.get_json() or {}
-        order_id = data.get("order_id", "").strip()
+        order_id = str(data.get("order_id", "")).strip()
         if not order_id:
             return json_utf8({"success": False, "error": "order_id required"}, 400)
         shopify_data = shopify_api("GET", "orders.json", {"status": "any", "limit": 250}, token_type="orders")
