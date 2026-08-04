@@ -964,9 +964,50 @@ def api_wa_confirm_send():
         order_id = str(data.get("order_id", "")).strip()
         if not order_id:
             return json_utf8({"success": False, "error": "order_id required"}, 400)
+        # Step 1: Look up local DB to get shopify_order_id
+        shopify_order_id = None
+        try:
+            _conn = sqlite3.connect(_DB_PATH, timeout=15)
+            _c = _conn.cursor()
+            # Try as local id first
+            _c.execute("SELECT shopify_order_id FROM orders WHERE id=? OR shopify_order_id=?", (order_id, order_id))
+            _row = _c.fetchone()
+            if _row and _row[0]:
+                shopify_order_id = _row[0]
+                logger.info(f"[WA Confirm] Found local order: id={order_id}, shopify_id={shopify_order_id}")
+            _conn.close()
+        except Exception as db_err:
+            logger.warning(f"[WA Confirm] DB lookup error: {_safe_str(db_err)}")
+        # Step 2: Fetch from Shopify (by shopify_order_id or order name)
         shopify_data = shopify_api("GET", "orders.json", {"status": "any", "limit": 250}, token_type="orders")
         orders = shopify_data.get("orders", []) if shopify_data else []
-        order = next((o for o in orders if str(o.get("id")) == str(order_id) or o.get("name","") == f"#{order_id}"), None)
+        order = None
+        if shopify_order_id:
+            order = next((o for o in orders if str(o.get("id")) == str(shopify_order_id)), None)
+        if not order:
+            order = next((o for o in orders if str(o.get("id")) == str(order_id) or o.get("name","") == f"#{order_id}"), None)
+        # Step 3: If still not found, build a minimal order dict from local DB
+        if not order:
+            try:
+                _conn2 = sqlite3.connect(_DB_PATH, timeout=15)
+                _c2 = _conn2.cursor()
+                _c2.execute("SELECT shopify_order_id, customer_name, customer_phone, product, total_price FROM orders WHERE id=? OR shopify_order_id=?", (order_id, order_id))
+                _row2 = _c2.fetchone()
+                _conn2.close()
+                if _row2:
+                    soid, cname, cphone, prod, price = _row2
+                    order = {
+                        "id": int(soid) if soid and soid.isdigit() else 0,
+                        "name": f"#{order_id}",
+                        "customer": {"first_name": cname or "", "last_name": ""},
+                        "shipping_address": {"phone": cphone or ""} if cphone else {},
+                        "billing_address": {},
+                        "line_items": [{"title": prod or "منتجات"}],
+                        "total_price": str(price or "0")
+                    }
+                    logger.info(f"[WA Confirm] Built fallback order from local DB for {order_id}")
+            except:
+                pass
         if not order:
             return json_utf8({"success": False, "error": "Order not found"}, 404)
         result = send_confirmation_whatsapp(order)
