@@ -869,6 +869,28 @@ def send_confirmation_whatsapp(order):
         addr = order.get("shipping_address") or order.get("billing_address") or {}
         phone = _clean_phone(addr.get("phone", ""))
         if not phone:
+            customer_phone = (order.get("customer") or {}).get("phone", "")
+            phone = _clean_phone(customer_phone)
+        if not phone:
+            for attr in order.get("note_attributes", []):
+                if "phone" in attr.get("name", "").lower():
+                    phone = _clean_phone(attr.get("value", ""))
+                    break
+        # Fallback: look up in local DB by shopify_order_id
+        if not phone:
+            try:
+                _conn = sqlite3.connect(_DB_PATH)
+                _c = _conn.cursor()
+                _c.execute("SELECT customer_phone FROM orders WHERE shopify_order_id=?", (str(order.get("id")),))
+                _row = _c.fetchone()
+                _conn.close()
+                if _row and _row[0]:
+                    phone = _clean_phone(_row[0])
+                    logger.info(f"[WA Confirm] Got phone from local DB: {phone}")
+            except:
+                pass
+        if not phone:
+            logger.warning(f"[WA Confirm] No phone for order {order.get('name')}")
             return {"success": False, "error": "No phone number"}
         customer = order.get("customer") or {}
         name = f"{customer.get('first_name','')} {customer.get('last_name','')}".strip() or "عميلنا العزيز"
@@ -884,6 +906,7 @@ def send_confirmation_whatsapp(order):
             f"📍 الإمامة، تلمسان | 📞 0659832426"
         )
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+            logger.warning(f"[WA Confirm] WA not configured (token={'set' if WHATSAPP_ACCESS_TOKEN else 'empty'}, id={'set' if WHATSAPP_PHONE_NUMBER_ID else 'empty'})")
             return {"success": False, "error": "WhatsApp not configured"}
         url = f"https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
         headers = {"Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}", "Content-Type": "application/json"}
@@ -893,17 +916,19 @@ def send_confirmation_whatsapp(order):
             "type": "text",
             "text": {"body": message}
         }
+        logger.info(f"[WA Confirm] Sending to {phone} for order {order.get('name')}")
         resp = requests.post(url, json=payload, headers=headers, timeout=10)
         sent = resp.status_code in (200, 201)
+        if not sent:
+            logger.warning(f"[WA Confirm] FB API {resp.status_code}: {resp.text[:300]}")
         if sent:
             AUTO_CONFIRM_WA["messages_sent"] += 1
             AUTO_CONFIRM_WA["last_send"] = datetime.utcnow().isoformat()
             logger.info(f"[WA Confirm] Sent to {phone} for {order.get('name')}")
-        return {"success": sent, "to": phone}
+        return {"success": sent, "to": phone, "status_code": resp.status_code}
     except Exception as e:
+        logger.error(f"[WA Confirm] Exception: {_safe_str(e)}")
         return {"success": False, "error": _safe_str(e)}
-
-
 @app.route('/api/whatsapp/confirm/status')
 def api_wa_confirm_status():
     return json_utf8({
