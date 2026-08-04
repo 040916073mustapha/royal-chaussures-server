@@ -101,11 +101,7 @@ def upsert_order_from_shopify(od):
         variant = items[0].get("variant_title", "") if items else ""
         conn = sqlite3.connect(_DB_PATH)
         c = conn.cursor()
-        c.execute("SELECT id FROM orders WHERE shopify_order_id=?", (oid,))
-        if c.fetchone():
-            c.execute("UPDATE orders SET total_price=?, updated_at=datetime('now') WHERE shopify_order_id=?", (total, oid))
-        else:
-            c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?)", (oid, name, phone, wilaya, city, product, variant, total))
+        c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (oid, name, phone, wilaya, city, product, variant, total))
             if phone:
                 c.execute("SELECT id FROM clients WHERE phone=?", (phone,))
                 if c.fetchone():
@@ -781,7 +777,7 @@ def zr_create_shipment(order):
         payload = {
             "reference": order.get("name", f"ORDER-{order.get('id')}"),
             "shopify_order_id": str(order.get("id")),
-            "customer_name": (f"{customer.get('first_name','')} {customer.get('last_name','')}").strip(),
+            "customer_name": (f"{customer.get('first_name','') or ''} {customer.get('last_name','') or ''}").replace("None", "").strip(),
             "customer_phone": phone,
             "customer_address": (f"{addr.get('address1','')} {addr.get('address2','')}").strip(),
             "city": addr.get("city", ""),
@@ -899,7 +895,7 @@ def send_confirmation_whatsapp(order):
             logger.warning(f"[WA Confirm] No phone for order {order.get('name')}")
             return {"success": False, "error": "No phone number"}
         customer = order.get("customer") or {}
-        name = (f"{customer.get('first_name','')} {customer.get('last_name','')}").strip() or "عميلنا العزيز"
+        name = (f"{customer.get('first_name','') or ''} {customer.get('last_name','') or ''}").replace("None", "").strip() or "عميلنا العزيز"
         items_summary = ", ".join([i.get("title","")[:30] for i in order.get("line_items", [])[:3]])
         message = (
             f"❤️ *Royal Chaussures* - تأكيد الطلب\n\n"
