@@ -329,7 +329,7 @@ def get_fb_page_token():
 
 def generate_ai_reply(user_message, sender_id):
     if not AI_API_KEY:
-        logger.warning("AI_API_KEY not set, returning default greeting")
+        logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
     system_prompt = os.getenv(
         "AI_SYSTEM_PROMPT",
@@ -477,6 +477,7 @@ def send_whatsapp_reply(to_number, user_message):
 # Both use the same: entry[].messaging[].sender.id + message.text structure
 
 def process_messaging_entries(entries, platform, send_func):
+    logger.info('[Webhook] process_messaging called: plat=' + platform + ' entries=' + str(len(entries)))
     for entry in entries:
         for messaging in entry.get('messaging', []):
             sid = messaging.get('sender', {}).get('id', '')
@@ -490,6 +491,7 @@ def process_messaging_entries(entries, platform, send_func):
 # Structure: entry[].changes[].value.messages[].from + text.body
 
 def process_whatsapp_entries(entries):
+    logger.info('[Webhook] process_whatsapp called: entries=' + str(len(entries)))
     for entry in entries:
         for change in entry.get('changes', []):
             for msg in change.get('value', {}).get('messages', []):
