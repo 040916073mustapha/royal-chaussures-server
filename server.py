@@ -964,7 +964,8 @@ def api_wa_confirm_send():
         if not order:
             return json_utf8({"success": False, "error": "Order not found"}, 404)
         result = send_confirmation_whatsapp(order)
-        return json_utf8({"success": result["success"], "order_id": order_id, **result})
+        status_code = 200 if result.get("success") else (400 if result.get("error") else 500)
+        return json_utf8({"success": result["success"], "order_id": order_id, **result}, status_code)
     except Exception as e:
         return json_utf8({"success": False, "error": _safe_str(e)})
 
