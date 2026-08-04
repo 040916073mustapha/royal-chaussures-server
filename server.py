@@ -102,12 +102,12 @@ def upsert_order_from_shopify(od):
         conn = sqlite3.connect(_DB_PATH)
         c = conn.cursor()
         c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (oid, name, phone, wilaya, city, product, variant, total))
-            if phone:
-                c.execute("SELECT id FROM clients WHERE phone=?", (phone,))
-                if c.fetchone():
-                    c.execute("UPDATE clients SET total_orders=total_orders+1, total_spent=total_spent+?, last_order_at=datetime('now') WHERE phone=?", (total, phone))
-                else:
-                    c.execute("INSERT INTO clients (name, phone, wilaya, municipality, total_orders, total_spent, last_order_at) VALUES (?,?,?,?,1,?,datetime('now'))", (name, phone, wilaya, city, total))
+        if phone:
+            c.execute("SELECT id FROM clients WHERE phone=?", (phone,))
+            if c.fetchone():
+                c.execute("UPDATE clients SET total_orders=total_orders+1, total_spent=total_spent+?, last_order_at=datetime('now') WHERE phone=?", (total, phone))
+            else:
+                c.execute("INSERT INTO clients (name, phone, wilaya, municipality, total_orders, total_spent, last_order_at) VALUES (?,?,?,?,1,?,datetime('now'))", (name, phone, wilaya, city, total))
         conn.commit()
         conn.close()
     except Exception as e:
