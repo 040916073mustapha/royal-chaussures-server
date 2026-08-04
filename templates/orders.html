@@ -71,7 +71,43 @@
     .badge-shipped{background:rgba(34,211,238,0.12);color:#22d3ee}
     .badge-delivered{background:rgba(34,197,94,0.12);color:#22c55e}
     .badge-cancelled{background:rgba(239,68,68,0.12);color:#ef4444}
+    .action-btn{padding:8px 16px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:12px;font-weight:600;transition:0.3s;font-family:inherit;display:flex;align-items:center;gap:6px}
+    .action-btn.ship-btn{background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(59,130,246,0.08));border:1px solid rgba(59,130,246,0.25);color:#3b82f6}
+    .action-btn.ship-btn:hover{background:rgba(59,130,246,0.2);border-color:#3b82f6}
+    .action-btn.wa-btn{background:linear-gradient(135deg,rgba(37,211,102,0.15),rgba(37,211,102,0.08));border:1px solid rgba(37,211,102,0.25);color:#25D366}
+    .action-btn.wa-btn:hover{background:rgba(37,211,102,0.2);border-color:#25D366}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+    .modal-overlay.show{display:flex}
+    .modal{background:var(--bg-primary);border:1px solid var(--border-gold);border-radius:var(--radius-card);padding:28px 32px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+    .modal h2{font-size:18px;font-weight:700;margin-bottom:4px}
+    .modal p.sub{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+    .modal .stat-row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+    .modal .stat{flex:1;min-width:100px;background:rgba(255,255,255,0.02);border-radius:var(--radius-sm);padding:14px;text-align:center}
+    .modal .stat .num{font-size:22px;font-weight:700;color:var(--gold-light)}
+    .modal .stat .lbl{font-size:11px;color:var(--text-muted);margin-top:4px}
+    .modal .modal-btn{padding:10px 22px;border-radius:var(--radius-sm);border:none;font-weight:600;font-size:13px;cursor:pointer;transition:0.3s;font-family:inherit}
+    .modal .modal-btn.primary{background:linear-gradient(135deg,var(--gold-dark),var(--gold-light));color:#0a0a0a}
+    .modal .modal-btn.primary:hover{box-shadow:var(--glow-gold)}
+    .modal .modal-btn.danger{background:rgba(233,69,96,0.15);border:1px solid rgba(233,69,96,0.3);color:#e94560}
+    .modal .modal-btn.secondary{background:rgba(255,255,255,0.05);border:1px solid var(--border-subtle);color:var(--text-secondary);margin-right:8px}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-subtle)}
+    .toggle-row:last-child{border-bottom:none}
+    .toggle-row .lbl{font-size:13px}
+    .toggle-row .sub{font-size:11px;color:var(--text-muted)}
+    .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+    .switch input{opacity:0;width:0;height:0}
+    .switch .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.1);border-radius:24px;transition:0.3s}
+    .switch .slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s}
+    .switch input:checked+.slider{background:var(--gold-light)}
+    .switch input:checked+.slider::before{transform:translateX(18px)}
+    .switch.wa input:checked+.slider{background:#25D366}
+    .modal-close{float:left;cursor:pointer;font-size:20px;color:var(--text-muted);transition:0.3s}
+    .modal-close:hover{color:#e94560}
+    .toast{position:fixed;bottom:24px;padding:12px 24px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;z-index:1000;animation:fadeInUp 0.3s ease;display:none}
+    .toast.success{background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#22c55e}
+    .toast.error{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444}
     .loading{padding:48px;text-align:center;color:var(--text-muted)}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     @media(max-width:768px){.sidebar{transform:translateX(100%)}.main{margin-right:0;padding:20px 16px;padding-top:68px}.header{flex-direction:column;gap:12px}.filter-btn,.channel-btn{font-size:11px;padding:4px 10px}th,td{padding:10px 12px;font-size:12px}}
     </style>
 </head>
@@ -85,6 +121,7 @@
         <a href="/dashboard/tracking"><i class="fas fa-search icon"></i> تتبع الشحنات</a>
         <a href="/dashboard/clients"><i class="fas fa-users icon"></i> العملاء</a>
         <div class="nav-label">🧠 الذكاء</div>
+        <a href="/dashboard/chat"><i class="fas fa-comments icon"></i> المحادثات الحية 💬</a>
         <a href="/dashboard/constellation" target="_blank"><i class="fas fa-globe icon"></i> Agent Constellation</a>
         <a href="/health"><i class="fas fa-heart icon"></i> صحة السيرفر</a>
         <div class="sidebar-social"><a href="https://facebook.com/royalchaussures" target="_blank" class="facebook" title="Facebook"><i class="fab fa-facebook-f"></i></a><a href="https://instagram.com/royalchaussures" target="_blank" class="instagram" title="Instagram"><i class="fab fa-instagram"></i></a><a href="https://wa.me/213659832426" target="_blank" class="whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a></div>
@@ -92,6 +129,11 @@
     </div>
     <div class="main">
         <div class="header"><h1>📦 جميع الطلبات</h1><a href="/dashboard"><i class="fas fa-arrow-right"></i> العودة</a></div>
+        <div class="action-bar">
+            <button class="action-btn ship-btn" onclick="showAutoShipPanel()"><i class="fas fa-truck"></i> 📦 تصدير ZR Express</button>
+            <button class="action-btn wa-btn" onclick="showWAConfirmPanel()"><i class="fab fa-whatsapp"></i> 💬 تأكيد WhatsApp</button>
+            <span id="autoShipStatus" style="font-size:11px;color:var(--text-muted);margin-right:4px"></span>
+        </div>
         <div class="channel-filter">
             <button class="channel-btn active" onclick="filterChannel('all')">🌐 الكل</button>
             <button class="channel-btn ch-whatsapp" onclick="filterChannel('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
@@ -137,6 +179,64 @@
     window.applyBulk=function(){if(!_selectedIds.length)return;var field=document.getElementById('bulkField').value,value=document.getElementById('bulkValue').value;fetch('/api/orders/bulk-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_ids:_selectedIds,field:field,value:value})}).then(function(r){return r.json()}).then(function(d){if(d.success){clearSelection();loadOrders();alert('✅ تم تحديث '+d.affected+' طلب')}else{alert('❌ فشل')}}).catch(function(e){alert('❌ خطأ')})}
     function loadOrders(){fetch('/api/orders').then(function(r){return r.json()}).then(function(d){if(!d.orders||!d.orders.length){document.getElementById('ordersBody').innerHTML='<tr><td colspan="8" class="loading">لا توجد طلبات</td></tr>';return}_allOrders=d.orders;applyAll()}).catch(function(e){document.getElementById('ordersBody').innerHTML='<tr><td colspan="8" class="loading" style="color:#ef4444">⚠️ فشل التحميل</td></tr>'})}
     document.addEventListener('DOMContentLoaded',function(){loadOrders();setInterval(loadOrders,60000);document.getElementById('serverUrl').textContent=window.location.origin});
+
+    function showToast(msg,tp){var t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast'}
+        t.textContent=msg;t.className='toast '+tp;document.body.appendChild(t);t.style.display='block'
+        setTimeout(function(){t.style.display='none'},4000)}
+
+    function showAutoShipPanel(){showModal(
+        '<h2>📦 ZR Express · التصدير التلقائي</h2>'+'<p class="sub">إرسال الطلبات المدفوعة إلى ZR Express للشحن</p>'+'<div class="stat-row"><div class="stat"><div class="num" id="shipCount">0</div><div class="lbl">تم شحنها</div></div><div class="stat"><div class="num" id="shipErrors">0</div><div class="lbl">أخطاء</div></div></div>'+'<div class="toggle-row"><div><div class="lbl">🤖 التصدير التلقائي</div><div class="sub">شحن الطلبات المدفوعة تلقائياً</div></div><label class="switch"><input type="checkbox" id="autoShipToggle" onchange="toggleAutoShip()"><span class="slider"></span></label></div>'+'<div style="margin-top:16px;display:flex;gap:8px"><button class="modal-btn primary" onclick="runAutoShip()"><i class="fas fa-play"></i> تشغيل الآن</button><button class="modal-btn secondary" onclick="closeModal()">إغلاق</button></div>',
+        function(){fetchAutoShipStatus()})
+        setTimeout(fetchAutoShipStatus,100)}
+
+    function showWAConfirmPanel(){showModal(
+        '<h2>💬 WhatsApp · تأكيد الطلبات</h2>'+'<p class="sub">إرسال رسالة تأكيد تلقائية عبر واتساب عند تأكيد الطلب</p>'+'<div class="stat-row"><div class="stat"><div class="num" id="waCount">0</div><div class="lbl">رسائل أُرسلت</div></div><div class="stat"><div class="num" id="waLast">-</div><div class="lbl">آخر إرسال</div></div></div>'+'<div class="toggle-row"><div><div class="lbl">🤖 الإرسال التلقائي</div><div class="sub">إرسال رسالة تلقائياً عند تغيير الحالة إلى Confirmé</div></div><label class="switch wa"><input type="checkbox" id="waConfirmToggle" onchange="toggleWAConfirm()"><span class="slider"></span></label></div>'+'<div style="margin-top:16px;display:flex;gap:8px"><button class="modal-btn primary" onclick="sendSelectedWA()"><i class="fab fa-whatsapp"></i> إرسال للمحدد</button><button class="modal-btn secondary" onclick="closeModal()">إغلاق</button></div>',
+        function(){fetchWAConfirmStatus()})
+        setTimeout(fetchWAConfirmStatus,100)}
+
+    function showModal(html,cb){var overlay=document.getElementById('modalOverlay');if(!overlay){overlay=document.createElement('div');overlay.id='modalOverlay';overlay.className='modal-overlay';overlay.onclick=function(e){if(e.target===overlay)closeModal()};document.body.appendChild(overlay)}
+        var m=document.createElement('div');m.className='modal';m.innerHTML='<span class="modal-close" onclick="closeModal()">✕</span>'+html
+        overlay.innerHTML='';overlay.appendChild(m);overlay.classList.add('show');if(cb)cb()}
+
+    function closeModal(){var o=document.getElementById('modalOverlay');if(o){o.classList.remove('show')}}
+
+    function fetchAutoShipStatus(){fetch('/api/orders/auto-ship/status').then(function(r){return r.json()}).then(function(d){
+        var c=document.getElementById('shipCount');if(c)c.textContent=d.orders_shipped||0
+        var e=document.getElementById('shipErrors');if(e)e.textContent=(d.errors||[]).length||0
+        var t=document.getElementById('autoShipToggle');if(t)t.checked=d.enabled
+        var st=document.getElementById('autoShipStatus');if(st)st.textContent=d.enabled?'🟢 التصدير التلقائي نشط':'⏸ التصدير التلقائي متوقف'})}
+
+    window.toggleAutoShip=function(){fetch('/api/orders/auto-ship/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json()}).then(function(d){
+        if(d.success){fetchAutoShipStatus();showToast(d.enabled?'✅ التصدير التلقائي نشط':'⏸ تم إيقاف التصدير التلقائي','success')}else{showToast('❌ فشل','error')}})}
+
+    window.runAutoShip=function(){var btn=document.querySelector('.modal-btn.primary');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري...'}
+        fetch('/api/orders/auto-ship/run',{method:'POST'}).then(function(r){return r.json()}).then(function(d){
+            if(d.success){showToast('✅ تم شحن '+d.shipped+' طلب'+(d.failed>0?'، فشل '+d.failed:'')+' إلى ZR Express','success')}else{showToast('❌ '+d.error,'error')}
+            fetchAutoShipStatus();loadOrders()
+        }).catch(function(e){showToast('❌ خطأ في التصدير','error')})
+        .finally(function(){if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-play"></i> تشغيل الآن'}})}
+
+    function fetchWAConfirmStatus(){fetch('/api/whatsapp/confirm/status').then(function(r){return r.json()}).then(function(d){
+        var c=document.getElementById('waCount');if(c)c.textContent=d.messages_sent||0
+        var l=document.getElementById('waLast');if(l)l.textContent=d.last_send?d.last_send.slice(0,16):'-'
+        var t=document.getElementById('waConfirmToggle');if(t)t.checked=d.enabled})}
+
+    window.toggleWAConfirm=function(){fetch('/api/whatsapp/confirm/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json()}).then(function(d){
+        if(d.success){fetchWAConfirmStatus();showToast(d.enabled?'✅ تأكيد WhatsApp تلقائي نشط':'⏸ تم إيقاف تأكيد WhatsApp','success')}else{showToast('❌ فشل','error')}})}
+
+    window.sendSelectedWA=function(){if(!_selectedIds.length){showToast('⚠️ اختر طلباً أولاً','error');return}
+        var btn=document.querySelector('.modal-btn.primary');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري...'}
+        var sent=0,failed=0
+        function sendNext(idx){if(idx>=_selectedIds.length){
+            showToast('✅ تم إرسال '+sent+' تأكيد'+(failed>0?'، فشل '+failed:''),'success')
+            fetchWAConfirmStatus();if(btn){btn.disabled=false;btn.innerHTML='<i class="fab fa-whatsapp"></i> إرسال للمحدد'};return}
+            fetch('/api/whatsapp/confirm/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:_selectedIds[idx]})})
+            .then(function(r){return r.json()}).then(function(d){if(d.success)sent++;else failed++})
+            .catch(function(){failed++})
+            .finally(function(){sendNext(idx+1)})}
+        sendNext(0)}
     </script>
+    <div class="toast" id="toast"></div>
+    <div class="modal-overlay" id="modalOverlay"></div>
 </body>
 </html>

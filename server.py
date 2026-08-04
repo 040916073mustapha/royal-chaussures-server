@@ -14,6 +14,7 @@ Designed for 24/7 operation on Render.com
 
 import requests
 import json
+import re
 import os
 import sys
 import sqlite3
@@ -21,6 +22,7 @@ import logging
 import hashlib
 import hmac
 import base64
+import random
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -65,6 +67,10 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "")
 SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-10")
 SHOPIFY_ORDERS_TOKEN = os.environ.get("SHOPIFY_ORDERS_TOKEN", "")
 SHOPIFY_CATALOG_TOKEN = os.environ.get("SHOPIFY_CATALOG_TOKEN", "")
+# Phase 3 globals
+AUTO_SHIP_STATUS = {"enabled": False, "last_ship_time": None, "orders_shipped": 0, "errors": []}
+AUTO_CONFIRM_WA = {"enabled": False, "trigger_status": "confirmed", "messages_sent": 0, "last_send": None}
+
 SHOPIFY_WEBHOOK_SECRET = os.getenv("SHOPIFY_WEBHOOK_SECRET", "")
 SHOPIFY_BASE = f"https://{SHOPIFY_STORE}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}"
 SHOPIFY_HEADERS_ORDERS = {"X-Shopify-Access-Token": SHOPIFY_ORDERS_TOKEN, "Content-Type": "application/json"}
@@ -786,8 +792,16 @@ def api_order_update_status(order_id):
         conn.commit()
         logger.info(f"[OrderDetail] Updated order {order_id} status to {status}")
 
-        # Also try Shopify admin API
-        # (Would need write_orders scope on token)
+        # AUTO-WHATSAPP: Send confirmation if enabled and status = confirmed/paid
+        if AUTO_CONFIRM_WA["enabled"] and status.lower() in ("confirmed", "paid", "confirmé"):
+            try:
+                shopify_orders = fetch_shopify_orders(status="any", limit=250)
+                shopify_order = next((o for o in shopify_orders if str(o.get("id")) == str(order_id)), None)
+                if shopify_order:
+                    send_confirmation_whatsapp(shopify_order)
+                    logger.info(f"[OrderDetail] WA auto-confirm sent for {order_id}")
+            except Exception as wa_err:
+                _log_safe(logger.warning, "WA auto-confirm failed", wa_err)
 
         return json_utf8({"success": True, "order_id": order_id, "status": status})
     except Exception as e:
@@ -1162,6 +1176,246 @@ def api_analytics():
     except Exception as e:
         _log_safe(logger.error, 'Analytics API error', e)
         return json.dumps({'success': False, 'error': _safe_str(e)})
+
+
+# ============================================================
+# PHASE 3: AUTO-SHIP + WHATSAPP CONFIRM + LIVE CHAT
+# ============================================================
+
+def _clean_phone(phone):
+    """Normalize phone to international format"""
+    if not phone:
+        return ""
+    clean = re.sub(r"[^0-9]", "", phone)
+    if not clean.startswith("213") and clean.startswith("0"):
+        clean = "213" + clean[1:]
+    elif not clean.startswith("213"):
+        clean = "213" + clean
+    return clean
+
+
+def zr_create_shipment(order):
+    """Create a shipment in ZR Express for an order"""
+    try:
+        if not ZR_API_KEY or not ZR_TENANT_ID:
+            return {"success": False, "error": "ZR API not configured"}
+        addr = order.get("shipping_address") or order.get("billing_address") or {}
+        customer = order.get("customer") or {}
+        phone = _clean_phone(addr.get("phone", "") or "")
+        items = order.get("line_items", [])
+        total = float(order.get("total_price", 0))
+        payload = {
+            "reference": order.get("name", f"ORDER-{order.get('id')}"),
+            "shopify_order_id": str(order.get("id")),
+            "customer_name": f"{customer.get('first_name','')} {customer.get('last_name','')}".strip(),
+            "customer_phone": phone,
+            "customer_address": f"{addr.get('address1','')} {addr.get('address2','')}".strip(),
+            "city": addr.get("city", ""),
+            "wilaya": addr.get("province", ""),
+            "total_amount": total,
+            "items": [{"sku": i.get("sku",""), "name": i.get("title",""), "qty": i.get("quantity",1),
+                       "price": float(i.get("price",0))} for i in items],
+            "currency": "DZD",
+            "notes": order.get("note", "")
+        }
+        headers = {"Content-Type": "application/json", "X-API-KEY": ZR_API_KEY, "X-TENANT-ID": ZR_TENANT_ID}
+        url = f"{ZR_BASE_URL}/parcels/create"
+        resp = requests.post(url, json=payload, headers=headers, timeout=30)
+        if resp.status_code in (200, 201):
+            data = resp.json()
+            return {"success": True, "parcel_id": data.get("id",""), "tracking": data.get("tracking_number",""), "response": data}
+        else:
+            return {"success": False, "error": f"ZR API returned {resp.status_code}: {resp.text[:300]}"}
+    except Exception as e:
+        return {"success": False, "error": _safe_str(e)}
+
+
+# ---- AUTO-SHIP ENDPOINTS ----
+
+@app.route('/api/orders/auto-ship/status')
+def api_auto_ship_status():
+    return json_utf8({
+        "enabled": AUTO_SHIP_STATUS["enabled"],
+        "last_ship_time": AUTO_SHIP_STATUS["last_ship_time"],
+        "orders_shipped": AUTO_SHIP_STATUS["orders_shipped"],
+        "errors": AUTO_SHIP_STATUS["errors"][-10:]
+    })
+
+
+@app.route('/api/orders/auto-ship/toggle', methods=['POST'])
+def api_auto_ship_toggle():
+    try:
+        data = request.get_json() or {}
+        enabled = data.get("enabled", not AUTO_SHIP_STATUS["enabled"])
+        AUTO_SHIP_STATUS["enabled"] = bool(enabled)
+        logger.info(f"[AutoShip] {'Enabled' if enabled else 'Disabled'}")
+        return json_utf8({"success": True, "enabled": AUTO_SHIP_STATUS["enabled"]})
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)})
+
+
+@app.route('/api/orders/auto-ship/run', methods=['POST'])
+def api_auto_ship_run():
+    try:
+        orders = fetch_shopify_orders(status="any", limit=50)
+        unfulfilled = [o for o in orders if o.get("fulfillment_status") != "fulfilled" and o.get("financial_status") == "paid"]
+        results = []
+        for order in unfulfilled:
+            result = zr_create_shipment(order)
+            if result["success"]:
+                AUTO_SHIP_STATUS["orders_shipped"] += 1
+                logger.info(f"[AutoShip] Shipped {order.get('name')} -> {result.get('tracking','')}")
+            else:
+                AUTO_SHIP_STATUS["errors"].append({"order": order.get("name"), "error": result.get("error","")})
+            results.append({"order_id": order.get("id"), "order_name": order.get("name"), **result})
+        AUTO_SHIP_STATUS["last_ship_time"] = datetime.utcnow().isoformat()
+        shipped = sum(1 for r in results if r["success"])
+        return json_utf8({"success": True, "shipped": shipped, "failed": len(results)-shipped, "results": results})
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)})
+
+
+@app.route('/api/orders/ship-single', methods=['POST'])
+def api_orders_ship_single():
+    try:
+        data = request.get_json() or {}
+        order_id = data.get("order_id", "").strip()
+        if not order_id:
+            return json_utf8({"success": False, "error": "order_id required"}, 400)
+        orders = fetch_shopify_orders(status="any", limit=250)
+        order = next((o for o in orders if str(o.get("id")) == str(order_id) or o.get("name","") == f"#{order_id}"), None)
+        if not order:
+            return json_utf8({"success": False, "error": "Order not found"}, 404)
+        result = zr_create_shipment(order)
+        return json_utf8({"success": result["success"], "order_id": order_id, **result})
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)})
+
+
+# ---- WHATSAPP CONFIRMATION ----
+
+def send_confirmation_whatsapp(order):
+    try:
+        addr = order.get("shipping_address") or order.get("billing_address") or {}
+        phone = _clean_phone(addr.get("phone", ""))
+        if not phone:
+            return {"success": False, "error": "No phone number"}
+        customer = order.get("customer") or {}
+        name = f"{customer.get('first_name','')} {customer.get('last_name','')}".strip() or "عميلنا العزيز"
+        items_summary = ", ".join([i.get("title","")[:30] for i in order.get("line_items", [])[:3]])
+        message = (
+            f"❤️ *Royal Chaussures* - تأكيد الطلب\n\n"
+            f"مرحباً {name}،\n"
+            f"✅ تم تأكيد طلبك *{order.get('name','')}*\n"
+            f"📦 المنتجات: {items_summary}\n"
+            f"💰 المبلغ: {order.get('total_price','0')} DZD\n"
+            f"🚚 سيتم شحنه قريباً عبر ZR Express\n\n"
+            f"شكراً لثقتك! 👠✨\n"
+            f"📍 الإمامة، تلمسان | 📞 0659832426"
+        )
+        sent = send_whatsapp_message(phone, message)
+        if sent:
+            AUTO_CONFIRM_WA["messages_sent"] += 1
+            AUTO_CONFIRM_WA["last_send"] = datetime.utcnow().isoformat()
+            logger.info(f"[WA Confirm] Sent to {phone} for {order.get('name')}")
+        return {"success": sent, "to": phone}
+    except Exception as e:
+        return {"success": False, "error": _safe_str(e)}
+
+
+@app.route('/api/whatsapp/confirm/status')
+def api_wa_confirm_status():
+    return json_utf8({
+        "enabled": AUTO_CONFIRM_WA["enabled"],
+        "trigger_status": AUTO_CONFIRM_WA["trigger_status"],
+        "messages_sent": AUTO_CONFIRM_WA["messages_sent"],
+        "last_send": AUTO_CONFIRM_WA["last_send"]
+    })
+
+
+@app.route('/api/whatsapp/confirm/toggle', methods=['POST'])
+def api_wa_confirm_toggle():
+    try:
+        data = request.get_json() or {}
+        enabled = data.get("enabled", not AUTO_CONFIRM_WA["enabled"])
+        AUTO_CONFIRM_WA["enabled"] = bool(enabled)
+        logger.info(f"[WA Confirm] {'Enabled' if enabled else 'Disabled'}")
+        return json_utf8({"success": True, "enabled": AUTO_CONFIRM_WA["enabled"]})
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)})
+
+
+@app.route('/api/whatsapp/confirm/send', methods=['POST'])
+def api_wa_confirm_send():
+    try:
+        data = request.get_json() or {}
+        order_id = data.get("order_id", "").strip()
+        if not order_id:
+            return json_utf8({"success": False, "error": "order_id required"}, 400)
+        orders = fetch_shopify_orders(status="any", limit=250)
+        order = next((o for o in orders if str(o.get("id")) == str(order_id) or o.get("name","") == f"#{order_id}"), None)
+        if not order:
+            return json_utf8({"success": False, "error": "Order not found"}, 404)
+        result = send_confirmation_whatsapp(order)
+        return json_utf8({"success": result["success"], "order_id": order_id, **result})
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)})
+
+
+# ---- LIVE CHAT CONSOLE ----
+
+@app.route('/dashboard/chat')
+def dashboard_chat():
+    """Live Chat Console page"""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'chat_console.html'), 'r', encoding='utf-8') as f:
+            html = f.read()
+        return render_template_string(html), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        _log_safe(logger.error, "Chat console template error", e)
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/api/messages')
+def api_messages():
+    """Get recent messages across all platforms"""
+    try:
+        limit = int(request.args.get("limit", 50))
+        platform = request.args.get("platform", "")
+        search = request.args.get("search", "").strip()
+        conn = get_db()
+        c = conn.cursor()
+        query = "SELECT * FROM messages"
+        params = []
+        conditions = []
+        if platform:
+            conditions.append("platform = ?")
+            params.append(platform)
+        if search:
+            conditions.append("(message LIKE ? OR reply LIKE ? OR sender_id LIKE ?)")
+            s = f"%{search}%"
+            params.extend([s, s, s])
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+        c.execute(query, params)
+        rows = c.fetchall()
+        conn.close()
+        messages = []
+        for r in rows:
+            messages.append({
+                "id": r["id"],
+                "platform": r["platform"],
+                "sender_id": r["sender_id"],
+                "message": r["message"],
+                "reply": r["reply"],
+                "created_at": r["created_at"]
+            })
+        return json_utf8({"success": True, "messages": messages, "count": len(messages)})
+    except Exception as e:
+        _log_safe(logger.error, "Messages API error", e)
+        return json_utf8({"success": False, "error": _safe_str(e)})
 
 
 if __name__ != '__main__':
