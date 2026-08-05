@@ -1,156 +1,279 @@
 {% extends "dashboard_base.html" %}
 {% block content %}
-<div x-data="{ orders:[], statusFilter:'', searchQuery:'', showAutoShip:false, showWAConfirm:false, shipStatus:{enabled:false,orders_shipped:0,errors:[]}, waStatus:{enabled:false,messages_sent:0}, selectedIds:[], loadOrders(){ let u='/api/orders?'; if(this.statusFilter) u+='status='+this.statusFilter; if(this.searchQuery) u+=(this.statusFilter?'&':'')+'search='+encodeURIComponent(this.searchQuery); fetch(u).then(r=>r.json()).then(d=>this.orders=d.orders||[]) }, updateStatus(id,s){ fetch('/api/orders/'+id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:s})}).then(r=>r.json()).then(d=>{if(d.success)this.loadOrders()}) }, toggleSelect(id){ let idx=this.selectedIds.indexOf(id); if(idx==-1) this.selectedIds.push(id); else this.selectedIds.splice(idx,1) }, selectAll(){ this.selectedIds=this.orders.map(o=>o.id) }, clearSel(){ this.selectedIds=[] }, loadShipStatus(){ fetch('/api/orders/auto-ship/status').then(r=>r.json()).then(d=>this.shipStatus=d) }, loadWAStatus(){ fetch('/api/whatsapp/confirm/status').then(r=>r.json()).then(d=>this.waStatus=d) }, toggleAutoShip(){ fetch('/api/orders/auto-ship/toggle',{method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).then(d=>{this.loadShipStatus()}) }, runAutoShip(){ fetch('/api/orders/auto-ship/run',{method:'POST'}).then(r=>r.json()).then(d=>{this.loadShipStatus();this.loadOrders();alert('✅ تم شحن '+d.shipped+' طلب'+(d.failed>0?'، فشل '+d.failed:''))}) }, toggleWAConfirm(){ fetch('/api/whatsapp/confirm/toggle',{method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).then(d=>{this.loadWAStatus()}) }, sendWAConfirm(id){ fetch('/api/whatsapp/confirm/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:id})}).then(r=>r.json()).then(d=>{this.loadWAStatus();alert(d.success?'✅ تم إرسال التأكيد بنجاح':'❌ '+ (d.error||'فشل الإرسال'))}) }, shipOrder(id){ fetch('/api/orders/ship-single',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:id})}).then(r=>r.json()).then(d=>{alert(d.success?'✅ تم التصدير لـ ZR':'❌ '+d.error)}) } }" x-init="loadOrders()">
-    <div class="flex justify-between items-center mb-4">
-        <h1 class="text-2xl font-bold">📦 إدارة الطلبات</h1>
-        <div class="flex gap-2 items-center">
-            <!-- Phase 3: ZR Express Button -->
-            <button @click="showAutoShip=true; loadShipStatus()" class="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600/30 transition flex items-center gap-2">
-                <i class="fas fa-truck"></i> 📦 ZR Express
+<div x-data="{ 
+        orders:[], 
+        statusFilter:'', 
+        searchQuery:'', 
+        showAutoShip:false, 
+        showWAConfirm:false, 
+        shipStatus:{enabled:false,orders_shipped:0,errors:[]}, 
+        waStatus:{enabled:false,messages_sent:0}, 
+        selectedIds:[], 
+        loadOrders(){ 
+            let u='/api/orders?'; 
+            if(this.statusFilter) u+='status='+this.statusFilter; 
+            if(this.searchQuery) u+=(this.statusFilter?'&':'')+'search='+encodeURIComponent(this.searchQuery); 
+            fetch(u).then(r=>r.json()).then(d=>this.orders=d.orders||[]) 
+        }, 
+        updateStatus(id,s){ 
+            fetch('/api/orders/'+id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:s})}).then(r=>r.json()).then(d=>{if(d.success)this.loadOrders()}) 
+        }, 
+        toggleSelect(id){ 
+            let idx=this.selectedIds.indexOf(id); 
+            if(idx==-1) this.selectedIds.push(id); 
+            else this.selectedIds.splice(idx,1) 
+        }, 
+        selectAll(){ 
+            if(this.selectedIds.length === this.orders.length) {
+                this.selectedIds = [];
+            } else {
+                this.selectedIds=this.orders.map(o=>o.id)
+            }
+        }, 
+        clearSel(){ this.selectedIds=[] }, 
+        loadShipStatus(){ fetch('/api/orders/auto-ship/status').then(r=>r.json()).then(d=>this.shipStatus=d) }, 
+        loadWAStatus(){ fetch('/api/whatsapp/confirm/status').then(r=>r.json()).then(d=>this.waStatus=d) }, 
+        toggleAutoShip(){ fetch('/api/orders/auto-ship/toggle',{method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).then(d=>{this.loadShipStatus()}) }, 
+        runAutoShip(){ fetch('/api/orders/auto-ship/run',{method:'POST'}).then(r=>r.json()).then(d=>{this.loadShipStatus();this.loadOrders();alert('✅ تم شحن '+d.shipped+' طلب'+(d.failed>0?'، فشل '+d.failed:''))}) }, 
+        toggleWAConfirm(){ fetch('/api/whatsapp/confirm/toggle',{method:'POST',headers:{'Content-Type':'application/json'}}).then(r=>r.json()).then(d=>{this.loadWAStatus()}) }, 
+        sendWAConfirm(id){ fetch('/api/whatsapp/confirm/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:id})}).then(r=>r.json()).then(d=>{this.loadWAStatus();alert(d.success?'✅ تم إرسال التأكيد بنجاح':'❌ '+ (d.error||'فشل الإرسال'))}) }, 
+        shipOrder(id){ fetch('/api/orders/ship-single',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:id})}).then(r=>r.json()).then(d=>{alert(d.success?'✅ تم التصدير لـ ZR':'❌ '+d.error)}) } 
+     }" x-init="loadOrders()">
+
+    <!-- Header & Action Bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl font-extrabold text-white tracking-tight font-serif flex items-center gap-2">
+                <span>إدارة الطلبات</span>
+                <span class="text-gold-400 text-lg">📦</span>
+            </h1>
+            <p class="text-xs text-gray-400 mt-1">معالجة وتتبع الشحنات والتأكيدات لعملاء Royal Chaussures</p>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="flex flex-wrap items-center gap-2.5">
+            <!-- ZR Express Button -->
+            <button @click="showAutoShip=true; loadShipStatus()" class="bg-sky-500/10 text-sky-300 border border-sky-500/30 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-sky-500/20 transition-all flex items-center gap-2 shadow-sm">
+                <i class="fas fa-truck text-sky-400"></i>
+                <span>ZR Express</span>
             </button>
-            <!-- Phase 3: WA Confirm Button -->
-            <button @click="showWAConfirm=true; loadWAStatus()" class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600/30 transition flex items-center gap-2">
-                <i class="fab fa-whatsapp"></i> 💬 تأكيد WhatsApp
+
+            <!-- WhatsApp Confirm Button -->
+            <button @click="showWAConfirm=true; loadWAStatus()" class="bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-all flex items-center gap-2 shadow-sm">
+                <i class="fab fa-whatsapp text-emerald-400 text-sm"></i>
+                <span>تأكيد WhatsApp</span>
             </button>
-            <select x-model="statusFilter" @change="loadOrders()" class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm">
-                <option value="">الكل</option>
-                <option value="Nouveau">جديد</option>
-                <option value="Confirme">مؤكد</option>
-                <option value="Livre">تم التوصيل</option>
-                <option value="Annule">ملغي</option>
+
+            <!-- Status Filter -->
+            <select x-model="statusFilter" @change="loadOrders()" class="bg-luxury-card border border-gold-500/20 text-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-gold-500/50">
+                <option value="">جميع الحالات</option>
+                <option value="Nouveau">جديد (Nouveau)</option>
+                <option value="Confirme">مؤكد (Confirmé)</option>
+                <option value="Livre">تم التوصيل (Livré)</option>
+                <option value="Annule">ملغي (Annulé)</option>
             </select>
-            <input type="text" x-model="searchQuery" @keyup.enter="loadOrders()" placeholder="بحث..." class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm w-48">
+
+            <!-- Search Field -->
+            <div class="relative">
+                <input type="text" x-model="searchQuery" @keyup.enter="loadOrders()" placeholder="بحث باسم الزبون أو الهاتف..." class="bg-luxury-card border border-gold-500/20 text-gray-200 text-xs rounded-xl py-2 pr-8 pl-3 w-44 md:w-56 focus:outline-none focus:border-gold-500/50 placeholder-gray-500">
+                <i class="fa-solid fa-magnifying-glass absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+            </div>
         </div>
     </div>
 
     <!-- ZR Express Auto-ship Modal -->
-    <div x-show="showAutoShip" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="showAutoShip=false">
-        <div class="bg-[#1a1a23] border border-[#2a2a35] rounded-xl p-6 max-w-md w-full mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold">📦 ZR Express</h2>
-                <button @click="showAutoShip=false" class="text-gray-500 hover:text-white text-xl">&times;</button>
-            </div>
-            <p class="text-sm text-gray-400 mb-4">إرسال الطلبات المدفوعة إلى ZR Express للشحن</p>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div class="bg-[#252530] rounded-lg p-4 text-center">
-                    <p class="text-2xl font-bold text-blue-400" x-text="shipStatus.orders_shipped"></p>
-                    <p class="text-xs text-gray-500">تم شحنها</p>
+    <div x-show="showAutoShip" x-cloak class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="showAutoShip=false">
+        <div class="bg-luxury-card border border-gold-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gold-500/10">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-truck text-sky-400"></i>
+                    <h2 class="text-base font-bold text-white font-serif">ربط وتصدير ZR Express</h2>
                 </div>
-                <div class="bg-[#252530] rounded-lg p-4 text-center">
-                    <p class="text-2xl font-bold text-red-400" x-text="shipStatus.errors?.length||0"></p>
-                    <p class="text-xs text-gray-500">أخطاء</p>
+                <button @click="showAutoShip=false" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            
+            <p class="text-xs text-gray-400 mb-5">تصدير الطلبات المؤكدة تلقائياً بنظام ZR Express الشحن السريع</p>
+            
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-luxury-bg border border-dark-border p-3.5 rounded-xl text-center">
+                    <p class="text-2xl font-black text-sky-400" x-text="shipStatus.orders_shipped"></p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">تم تصديرها</p>
+                </div>
+                <div class="bg-luxury-bg border border-dark-border p-3.5 rounded-xl text-center">
+                    <p class="text-2xl font-black text-rose-400" x-text="shipStatus.errors?.length||0"></p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">أخطاء التصدير</p>
                 </div>
             </div>
-            <div class="flex items-center justify-between py-3 border-t border-[#2a2a35]">
+
+            <div class="flex items-center justify-between py-3 px-4 bg-luxury-bg border border-dark-border rounded-xl mb-5">
                 <div>
-                    <p class="text-sm font-medium">🤖 التصدير التلقائي</p>
-                    <p class="text-xs text-gray-500">شحن الطلبات المدفوعة تلقائياً</p>
+                    <p class="text-xs font-bold text-gray-200">🤖 التصدير التلقائي</p>
+                    <p class="text-[10px] text-gray-500">شحن الطلبات فور تأكيدها</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" class="sr-only peer" :checked="shipStatus.enabled" @change="toggleAutoShip()">
-                    <div class="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    <div class="w-10 h-5 bg-dark-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500"></div>
                 </label>
             </div>
-            <button @click="runAutoShip()" class="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition flex items-center justify-center gap-2">
-                <i class="fas fa-play"></i> تشغيل الآن
+
+            <button @click="runAutoShip()" class="w-full bg-sky-600 hover:bg-sky-500 text-white rounded-xl px-4 py-2.5 text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20">
+                <i class="fas fa-play text-xs"></i> <span>تشغيل التصدير الآن</span>
             </button>
         </div>
     </div>
 
     <!-- WhatsApp Confirm Modal -->
-    <div x-show="showWAConfirm" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="showWAConfirm=false">
-        <div class="bg-[#1a1a23] border border-[#2a2a35] rounded-xl p-6 max-w-md w-full mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold">💬 تأكيد WhatsApp</h2>
-                <button @click="showWAConfirm=false" class="text-gray-500 hover:text-white text-xl">&times;</button>
-            </div>
-            <p class="text-sm text-gray-400 mb-4">إرسال رسالة تأكيد تلقائية عبر واتساب</p>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div class="bg-[#252530] rounded-lg p-4 text-center">
-                    <p class="text-2xl font-bold text-emerald-400" x-text="waStatus.messages_sent"></p>
-                    <p class="text-xs text-gray-500">رسائل أُرسلت</p>
+    <div x-show="showWAConfirm" x-cloak class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="showWAConfirm=false">
+        <div class="bg-luxury-card border border-gold-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gold-500/10">
+                <div class="flex items-center gap-2">
+                    <i class="fab fa-whatsapp text-emerald-400"></i>
+                    <h2 class="text-base font-bold text-white font-serif">تأكيد WhatsApp الأوتوماتيكي</h2>
                 </div>
-                <div class="bg-[#252530] rounded-lg p-4 text-center">
-                    <p class="text-xs text-gray-400 truncate" x-text="waStatus.last_send?.slice(0,10)||'-'"></p>
-                    <p class="text-xs text-gray-500">آخر إرسال</p>
+                <button @click="showWAConfirm=false" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+
+            <p class="text-xs text-gray-400 mb-5">إرسال رسائل تأكيد فورية للزبائن عبر حساب الواتساب</p>
+            
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-luxury-bg border border-dark-border p-3.5 rounded-xl text-center">
+                    <p class="text-2xl font-black text-emerald-400" x-text="waStatus.messages_sent"></p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">رسائل مرسلة</p>
+                </div>
+                <div class="bg-luxury-bg border border-dark-border p-3.5 rounded-xl text-center">
+                    <p class="text-xs font-bold text-gray-300 truncate mt-2" x-text="waStatus.last_send?.slice(0,10)||'-'"></p>
+                    <p class="text-[11px] text-gray-400 mt-1">آخر إرسال</p>
                 </div>
             </div>
-            <div class="flex items-center justify-between py-3 border-t border-[#2a2a35]">
+
+            <div class="flex items-center justify-between py-3 px-4 bg-luxury-bg border border-dark-border rounded-xl mb-5">
                 <div>
-                    <p class="text-sm font-medium">🤖 الإرسال التلقائي</p>
-                    <p class="text-xs text-gray-500">عند تغيير الحالة إلى Confirmé/Paid</p>
+                    <p class="text-xs font-bold text-gray-200">🤖 الإرسال الآلي</p>
+                    <p class="text-[10px] text-gray-500">عند تغيير حالة الطلب لـ Confirmé</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" class="sr-only peer" :checked="waStatus.enabled" @change="toggleWAConfirm()">
-                    <div class="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    <div class="w-10 h-5 bg-dark-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
                 </label>
             </div>
-            <div class="flex gap-2 mt-4">
-                <button @click="selectedIds.forEach(id=>sendWAConfirm(id))" :disabled="selectedIds.length===0" class="flex-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg px-4 py-2 text-sm font-medium hover:bg-emerald-500/30 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                    <i class="fab fa-whatsapp"></i> إرسال للمحدد
+
+            <div class="flex gap-2">
+                <button @click="selectedIds.forEach(id=>sendWAConfirm(id))" :disabled="selectedIds.length===0" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-4 py-2.5 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/20">
+                    <i class="fab fa-whatsapp"></i> إرسال للمحدد (<span x-text="selectedIds.length"></span>)
                 </button>
-                <button @click="showWAConfirm=false" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition">إغلاق</button>
+                <button @click="showWAConfirm=false" class="px-4 py-2.5 text-xs text-gray-400 hover:text-white transition">إغلاق</button>
             </div>
         </div>
     </div>
 
-    <!-- Orders Table -->
-    <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden">
-        <!-- Bulk actions -->
-        <div x-show="selectedIds.length>0" class="bg-[#252530] px-4 py-2 flex items-center gap-3 border-b border-[#2a2a35]">
-            <span class="text-sm text-royal-300" x-text="selectedIds.length+' محدد'"></span>
-            <button @click="selectedIds.forEach(id=>shipOrder(id))" class="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded hover:bg-blue-500/30">
-                <i class="fas fa-truck"></i> تصدير لـ ZR
-            </button>
-            <button @click="selectedIds.forEach(id=>sendWAConfirm(id))" class="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded hover:bg-emerald-500/30">
-                <i class="fab fa-whatsapp"></i> إرسال WhatsApp
-            </button>
-            <button @click="clearSel()" class="text-xs text-gray-500 hover:text-white">إلغاء</button>
+    <!-- Orders Table Container -->
+    <div class="bg-luxury-card rounded-2xl border border-gold-500/20 overflow-hidden shadow-xl">
+        
+        <!-- Bulk Actions Bar -->
+        <div x-show="selectedIds.length>0" class="bg-gold-500/10 px-5 py-3 flex items-center justify-between border-b border-gold-500/30">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-gold-400"></span>
+                <span class="text-xs font-bold text-gold-300" x-text="selectedIds.length+' طلبات محددة'"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button @click="selectedIds.forEach(id=>shipOrder(id))" class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/30 px-3 py-1.5 rounded-lg font-bold hover:bg-sky-500/30 transition">
+                    <i class="fas fa-truck"></i> تصدير لـ ZR
+                </button>
+                <button @click="selectedIds.forEach(id=>sendWAConfirm(id))" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-500/30 transition">
+                    <i class="fab fa-whatsapp"></i> واتساب
+                </button>
+                <button @click="clearSel()" class="text-xs text-gray-400 hover:text-white px-2 py-1">إلغاء التحديد</button>
+            </div>
         </div>
-        <table class="w-full text-sm">
-            <thead class="bg-[#252530] text-gray-400">
-                <tr>
-                    <th class="p-3 w-10"><input type="checkbox" @change="selectAll()" class="accent-royal-500"></th>
-                    <th class="p-3 text-right">الزبون</th>
-                    <th class="p-3 text-right">المنتج</th>
-                    <th class="p-3 text-right">الولاية</th>
-                    <th class="p-3 text-right">المجموع</th>
-                    <th class="p-3 text-right">الحالة</th>
-                    <th class="p-3 text-right">التاريخ</th>
-                    <th class="p-3 text-center">إجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                <template x-for="o in orders" :key="o.id">
-                    <tr class="border-t border-[#2a2a35] hover:bg-[#252530]/50">
-                        <td class="p-3"><input type="checkbox" :checked="selectedIds.includes(o.id)" @change="toggleSelect(o.id)" class="accent-royal-500"></td>
-                        <td class="p-3"><p x-text="o.customer||'-'" class="font-medium"></p><p x-text="o.phone||''" class="text-xs text-gray-500"></p></td>
-                        <td class="p-3"><p x-text="o.product"></p><p x-text="o.variant" class="text-xs text-gray-500"></p></td>
-                        <td class="p-3 text-gray-400" x-text="o.wilaya||'-'"></td>
-                        <td class="p-3" x-text="(o.total||0).toLocaleString()+' د.ج'"></td>
-                        <td class="p-3"><span class="text-xs px-2 py-1 rounded" :class="{'bg-emerald-500/20 text-emerald-400':o.status=='Confirme','bg-yellow-500/20 text-yellow-400':o.status=='Nouveau','bg-red-500/20 text-red-400':o.status=='Annule','bg-blue-500/20 text-blue-400':o.status=='Livre'}" x-text="o.status"></span></td>
-                        <td class="p-3 text-gray-400 text-xs" x-text="o.date"></td>
-                        <td class="p-3 text-center">
-                            <div class="flex gap-1 justify-center">
-                                <select @change="updateStatus(o.id, $event.target.value)" class="bg-[#1a1a23] border border-[#2a2a35] rounded text-xs px-2 py-1">
-                                    <option value="Nouveau">جديد</option>
-                                    <option value="Confirme">تأكيد</option>
-                                    <option value="Livre">توصيل</option>
-                                    <option value="Annule">إلغاء</option>
-                                </select>
-                                <button @click="shipOrder(o.id)" class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded hover:bg-blue-500/30" title="تصدير لـ ZR">
-                                    <i class="fas fa-truck"></i>
-                                </button>
-                                <button @click="sendWAConfirm(o.id)" class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded hover:bg-emerald-500/30" title="إرسال WhatsApp">
-                                    <i class="fab fa-whatsapp"></i>
-                                </button>
-                            </div>
+
+        <!-- Table View -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse">
+                <thead>
+                    <tr class="bg-luxury-bg border-b border-gold-500/20 text-gold-400 text-xs font-serif uppercase tracking-wider">
+                        <th class="p-4 w-10 text-center"><input type="checkbox" @change="selectAll()" class="accent-gold-500 rounded"></th>
+                        <th class="p-4">الزبون والهاتف</th>
+                        <th class="p-4">المنتج والمقاس</th>
+                        <th class="p-4">الولاية</th>
+                        <th class="p-4">المجموع</th>
+                        <th class="p-4">الحالة</th>
+                        <th class="p-4">التاريخ</th>
+                        <th class="p-4 text-center">إجراءات سريعة</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-dark-border/60 text-xs">
+                    <template x-for="o in orders" :key="o.id">
+                        <tr class="hover:bg-luxury-hover/60 transition-colors group">
+                            <td class="p-4 text-center">
+                                <input type="checkbox" :checked="selectedIds.includes(o.id)" @change="toggleSelect(o.id)" class="accent-gold-500 rounded">
+                            </td>
+                            
+                            <!-- Customer & Phone -->
+                            <td class="p-4">
+                                <p x-text="o.customer||'زبون'" class="font-bold text-gray-100 group-hover:text-gold-300 transition-colors text-sm"></p>
+                                <p x-text="o.phone||'-'" class="text-[11px] text-gray-400 mt-0.5 tracking-wider dir-ltr text-right"></p>
+                            </td>
+
+                            <!-- Product -->
+                            <td class="p-4">
+                                <p x-text="o.product" class="font-semibold text-gray-200"></p>
+                                <p x-text="o.variant" class="text-[11px] text-gray-400 mt-0.5"></p>
+                            </td>
+
+                            <!-- Wilaya -->
+                            <td class="p-4 font-medium text-gray-300" x-text="o.wilaya||'-'"></td>
+
+                            <!-- Total -->
+                            <td class="p-4 font-extrabold text-gold-300 text-sm" x-text="(o.total||0).toLocaleString()+' د.ج'"></td>
+
+                            <!-- Status Badge -->
+                            <td class="p-4">
+                                <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold border inline-block" 
+                                      :class="{
+                                        'bg-emerald-500/10 text-emerald-400 border-emerald-500/30': o.status=='Confirme',
+                                        'bg-yellow-500/10 text-yellow-400 border-yellow-500/30': o.status=='Nouveau',
+                                        'bg-rose-500/10 text-rose-400 border-rose-500/30': o.status=='Annule',
+                                        'bg-sky-500/10 text-sky-400 border-sky-500/30': o.status=='Livre'
+                                      }" 
+                                      x-text="o.status">
+                                </span>
+                            </td>
+
+                            <!-- Date -->
+                            <td class="p-4 text-gray-400 text-[11px]" x-text="o.date"></td>
+
+                            <!-- Actions -->
+                            <td class="p-4 text-center">
+                                <div class="flex items-center gap-1.5 justify-center">
+                                    <select @change="updateStatus(o.id, $event.target.value)" class="bg-luxury-bg border border-dark-border text-gray-200 text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-gold-500/50">
+                                        <option value="Nouveau" :selected="o.status=='Nouveau'">جديد</option>
+                                        <option value="Confirme" :selected="o.status=='Confirme'">تأكيد</option>
+                                        <option value="Livre" :selected="o.status=='Livre'">توصيل</option>
+                                        <option value="Annule" :selected="o.status=='Annule'">إلغاء</option>
+                                    </select>
+                                    
+                                    <button @click="shipOrder(o.id)" class="bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 border border-sky-500/30 w-7 h-7 rounded-lg flex items-center justify-center transition" title="تصدير لـ ZR Express">
+                                        <i class="fas fa-truck text-xs"></i>
+                                    </button>
+
+                                    <button @click="sendWAConfirm(o.id)" class="bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/30 w-7 h-7 rounded-lg flex items-center justify-center transition" title="إرسال تأكيد WhatsApp">
+                                        <i class="fab fa-whatsapp text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <!-- Empty State -->
+                    <tr x-show="orders.length===0">
+                        <td colspan="8" class="p-12 text-center text-gray-500">
+                            <i class="fa-solid fa-inbox text-3xl mb-2 opacity-30"></i>
+                            <p class="text-xs">لا توجد طلبات مسجلة حالياً وفق خيارات البحث</p>
                         </td>
                     </tr>
-                </template>
-                <tr x-show="orders.length===0"><td colspan="8" class="p-8 text-center text-gray-500">لا توجد طلبات</td></tr>
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
