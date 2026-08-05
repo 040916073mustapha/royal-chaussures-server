@@ -11,10 +11,10 @@
      }" 
      x-init="fetch('/api/products').then(r=>r.json()).then(d=>{ products=d.products||[]; loading=false; }).catch(()=>loading=false)">
     
-    <!-- Top Header & Actions -->
+    <!-- Top Header & Search -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-royal-600/20 border border-royal-500/30 flex items-center justify-center text-royal-400">
+            <div class="w-10 h-10 rounded-xl bg-royal-600/20 border border-royal-500/30 flex items-center justify-center text-royal-400 shadow-sm">
                 <i class="fa-solid fa-shoe-prints text-lg"></i>
             </div>
             <div>
@@ -37,7 +37,7 @@
     <div x-show="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <template x-for="i in 8">
             <div class="bg-dark-card border border-dark-border rounded-2xl p-4 animate-pulse">
-                <div class="aspect-[4/3] bg-dark-hover rounded-xl mb-4"></div>
+                <div class="h-44 bg-dark-hover rounded-xl mb-4"></div>
                 <div class="h-4 bg-dark-hover rounded w-3/4 mb-2"></div>
                 <div class="h-3 bg-dark-hover rounded w-1/2 mb-4"></div>
                 <div class="h-5 bg-dark-hover rounded w-1/3"></div>
@@ -50,42 +50,42 @@
         <template x-for="p in filteredProducts" :key="p.id">
             <div class="bg-dark-card rounded-2xl border border-dark-border/80 overflow-hidden hover:border-royal-500/50 hover:shadow-xl hover:shadow-royal-950/30 transition-all duration-300 flex flex-col group">
                 
-                <!-- Image Container -->
-                <div class="aspect-[4/3] bg-dark-bg relative overflow-hidden flex items-center justify-center border-b border-dark-border/40">
+                <!-- Image Container (Fixed Height) -->
+                <div class="relative w-full h-48 bg-dark-bg overflow-hidden flex items-center justify-center border-b border-dark-border/40">
                     <img :src="p.image" 
                          :alt="p.title" 
                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
                          x-show="p.image">
                     
                     <div x-show="!p.image" class="flex flex-col items-center justify-center text-gray-600">
-                        <i class="fa-solid fa-shoe-prints text-4xl mb-1 opacity-40"></i>
+                        <i class="fa-solid fa-shoe-prints text-3xl mb-1 opacity-40"></i>
                         <span class="text-[11px] font-medium text-gray-600">لا توجد صورة</span>
                     </div>
 
-                    <!-- Floating Stock Badge -->
-                    <div class="absolute top-3 left-3 bg-dark-bg/80 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg">
-                        <span class="w-1.5 h-1.5 rounded-full" :class="p.stock > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'"></span>
-                        <span class="text-[11px] font-bold text-gray-200" x-text="p.stock + ' قطعة'"></span>
+                    <!-- Floating Stock Badge (Right Aligned for RTL) -->
+                    <div class="absolute top-3 right-3 bg-dark-bg/85 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
+                        <span class="w-2 h-2 rounded-full" :class="p.stock > 0 ? 'bg-emerald-400' : 'bg-rose-500'"></span>
+                        <span class="text-xs font-bold text-gray-200" x-text="p.stock + ' قطعة'"></span>
                     </div>
                 </div>
 
-                <!-- Product Body Info -->
-                <div class="p-4 flex flex-col justify-between flex-1">
+                <!-- Product Content Body -->
+                <div class="p-4 flex flex-col justify-between flex-1 gap-3">
                     <div>
                         <h3 class="font-bold text-gray-100 text-base leading-snug group-hover:text-royal-300 transition-colors line-clamp-1" x-text="p.title"></h3>
                         
                         <div class="flex items-center gap-2 mt-2">
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-dark-bg border border-dark-border text-gray-400">
-                                <i class="fa-solid fa-layer-group text-[10px] text-royal-400"></i>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-dark-bg border border-dark-border text-gray-300">
+                                <i class="fa-solid fa-layer-group text-[11px] text-royal-400"></i>
                                 <span x-text="p.variants + ' مقاسات'"></span>
                             </span>
                         </div>
                     </div>
 
-                    <!-- Price Footer -->
-                    <div class="mt-4 pt-3 border-t border-dark-border/50 flex items-center justify-between">
-                        <span class="text-xs text-gray-500 font-medium">السعر</span>
-                        <span class="text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-royal-300 via-pink-400 to-rose-300" 
+                    <!-- Price Footer (Clear spacing, No clipping) -->
+                    <div class="pt-3 border-t border-dark-border/60 flex items-center justify-between">
+                        <span class="text-xs text-gray-400 font-medium">السعر:</span>
+                        <span class="text-base font-extrabold text-royal-300" 
                               x-text="(p.price_min==p.price_max ? p.price_min.toLocaleString() : p.price_min.toLocaleString()+' - '+p.price_max.toLocaleString()) + ' د.ج'">
                         </span>
                     </div>
@@ -95,7 +95,7 @@
         </template>
     </div>
 
-    <!-- Empty / No Results State -->
+    <!-- Empty State -->
     <div x-show="!loading && filteredProducts.length === 0" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center max-w-md mx-auto my-12 shadow-xl">
         <div class="w-16 h-16 rounded-2xl bg-dark-hover border border-dark-border flex items-center justify-center mx-auto mb-4 text-gray-500 text-2xl">
             <i class="fa-solid fa-boxes-spin"></i>
