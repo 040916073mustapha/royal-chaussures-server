@@ -381,15 +381,21 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
 
     try:
         headers = {"Authorization": "Bearer " + AI_API_KEY, "Content-Type": "application/json"}
+        # Log the content type being sent (str for text, list for vision)
+        user_content_type = type(user_content).__name__
+        user_content_preview = str(user_content)[:200] if isinstance(user_content, list) else str(user_content)[:100]
+        logger.info(f"[AI] user_content type={user_content_type} preview={user_content_preview}")
+        logger.info(f"[AI] Sending to {AI_API_URL} model={AI_MODEL}")
         payload = {
             "model": AI_MODEL,
             "messages": messages,
             "max_tokens": 500,
             "temperature": 0.7
         }
-        logger.info(f"[AI] Sending to {AI_API_URL} model={AI_MODEL}")
         resp = requests.post(AI_API_URL, json=payload, headers=headers, timeout=40)
-        logger.info(f"[AI] Response {resp.status_code} in {resp.elapsed.total_seconds():.1f}s")
+        status_info = f"[AI] Response {resp.status_code} in {resp.elapsed.total_seconds():.1f}s"
+        logger.info(status_info)
+        logger.info(f"[AI] Response text (first 800): {resp.text[:800]}")
         if resp.status_code == 200:
             reply = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
             if reply:
@@ -398,9 +404,11 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
                 return reply
             logger.warning("Empty AI reply content")
         else:
-            logger.error("AI API error: " + str(resp.status_code) + " " + resp.text[:500])
+            logger.error("AI API error: " + str(resp.status_code) + " " + resp.text[:2000])
     except requests.exceptions.Timeout:
         logger.error(f"[AI] TIMEOUT after 40s — model={AI_MODEL}")
+    except requests.exceptions.ConnectionError as ce:
+        logger.error(f"[AI] CONNECTION ERROR: {ce}")
     except Exception as e:
         logger.error("AI reply error: " + _safe_str(e))
     return "Merci de nous contacter! Nous reviendrons vers vous bientot."
