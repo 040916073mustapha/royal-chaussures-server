@@ -3,38 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RC - Dashboard</title>
+    <title>RC - Royal Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Tajawal', 'Plus Jakarta Sans', 'sans-serif'],
+                        sans: ['Tajawal', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
                     },
                     colors: {
-                        royal: {
-                            50: "#fdf2f8",
-                            100: "#fce7f3",
-                            200: "#fbcfe8",
-                            300: "#f9a8d4",
-                            400: "#f472b6",
-                            500: "#db2777",
-                            600: "#be185d",
-                            700: "#9d174d",
-                            800: "#831843",
-                            900: "#500724"
+                        gold: {
+                            100: "#FDF8E2",
+                            200: "#F9EBB0",
+                            300: "#E6CA65",
+                            400: "#D4AF37",
+                            500: "#C5A059",
+                            600: "#A37F38",
+                            700: "#7E5F24",
                         },
-                        dark: {
-                            bg: "#090A0F",
-                            card: "#12141D",
-                            border: "#1E2230",
-                            hover: "#1A1D2B"
+                        luxury: {
+                            bg: "#0B0B0C",
+                            card: "#141416",
+                            border: "#26262A",
+                            hover: "#1D1D21"
                         }
                     }
                 }
@@ -44,80 +42,78 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body class="bg-dark-bg text-gray-200 font-sans antialiased selection:bg-royal-500 selection:text-white" x-data="app()">
+<body class="bg-luxury-bg text-gray-200 font-sans antialiased selection:bg-gold-500 selection:text-black" x-data="app()">
     <div class="flex h-screen overflow-hidden">
         
-        <!-- Sidebar -->
-        <aside class="w-64 bg-dark-card border-l border-dark-border/80 p-5 flex flex-col justify-between shadow-2xl relative z-20">
+        <!-- Luxury Sidebar -->
+        <aside class="w-64 bg-luxury-card border-l border-gold-500/20 p-5 flex flex-col justify-between shadow-2xl relative z-20">
             <div>
-                <!-- Brand Header -->
-                <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-dark-border/60">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-royal-600 via-pink-500 to-rose-400 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-royal-600/30 ring-1 ring-white/20">
-                        RC
+                <!-- Royal Brand Header -->
+                <div class="flex flex-col items-center justify-center pt-2 pb-5 mb-6 border-b border-gold-500/20 text-center">
+                    <div class="w-11 h-11 rounded-full bg-gradient-to-b from-gold-300 via-gold-400 to-gold-600 flex items-center justify-center text-black font-serif font-black text-xl shadow-lg shadow-gold-500/10 border border-gold-200/40 mb-2">
+                        👑
                     </div>
-                    <div>
-                        <h1 class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-gray-200 to-royal-300 bg-clip-text text-transparent">
-                            RC
-                        </h1>
-                        <p class="text-[11px] font-medium text-gray-500 tracking-wide uppercase">SaaS Dashboard</p>
-                    </div>
+                    <h1 class="font-serif text-lg font-bold tracking-widest text-gold-400">
+                        ROYAL CHAUSSURES
+                    </h1>
+                    <p class="text-[10px] font-medium text-gray-400 tracking-wider uppercase mt-0.5">SaaS Luxury Dashboard</p>
                 </div>
 
                 <!-- Navigation Links -->
                 <nav class="space-y-1.5">
-                    <a href="/dashboard" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gradient-to-r from-royal-600/25 to-pink-600/10 text-royal-300 border border-royal-500/30 shadow-md shadow-royal-950/40' if active == 'dashboard' else 'text-gray-400 hover:bg-dark-hover hover:text-gray-100 border border-transparent' }}">
-                        <i class="fa-solid fa-chart-pie text-base w-5 text-center"></i>
+                    <a href="/dashboard" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'dashboard' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
+                        <i class="fa-solid fa-chart-pie text-sm w-5 text-center text-gold-400"></i>
                         <span>لوحة التحكم</span>
                     </a>
 
-                    <a href="/dashboard/orders" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gradient-to-r from-royal-600/25 to-pink-600/10 text-royal-300 border border-royal-500/30 shadow-md shadow-royal-950/40' if active == 'orders' else 'text-gray-400 hover:bg-dark-hover hover:text-gray-100 border border-transparent' }}">
-                        <i class="fa-solid fa-box-archive text-base w-5 text-center"></i>
+                    <a href="/dashboard/orders" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'orders' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
+                        <i class="fa-solid fa-box-archive text-sm w-5 text-center text-gold-400"></i>
                         <span>الطلبات</span>
                     </a>
 
-                    <a href="/dashboard/products" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gradient-to-r from-royal-600/25 to-pink-600/10 text-royal-300 border border-royal-500/30 shadow-md shadow-royal-950/40' if active == 'products' else 'text-gray-400 hover:bg-dark-hover hover:text-gray-100 border border-transparent' }}">
-                        <i class="fa-solid fa-shoe-prints text-base w-5 text-center"></i>
+                    <a href="/dashboard/products" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'products' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
+                        <i class="fa-solid fa-shoe-prints text-sm w-5 text-center text-gold-400"></i>
                         <span>المنتجات</span>
                     </a>
 
-                    <a href="/dashboard/clients" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gradient-to-r from-royal-600/25 to-pink-600/10 text-royal-300 border border-royal-500/30 shadow-md shadow-royal-950/40' if active == 'clients' else 'text-gray-400 hover:bg-dark-hover hover:text-gray-100 border border-transparent' }}">
-                        <i class="fa-solid fa-users text-base w-5 text-center"></i>
+                    <a href="/dashboard/clients" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'clients' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
+                        <i class="fa-solid fa-users text-sm w-5 text-center text-gold-400"></i>
                         <span>العملاء</span>
                     </a>
 
                     <div class="pt-4 pb-1">
-                        <div class="text-[10px] uppercase font-extrabold text-gray-500 px-3 tracking-widest flex items-center gap-2">
+                        <div class="text-[10px] uppercase font-bold text-gold-500/70 px-3 tracking-widest flex items-center gap-2">
                             <span>الذكاء الاصطناعي</span>
-                            <div class="h-[1px] flex-1 bg-dark-border/60"></div>
+                            <div class="h-[1px] flex-1 bg-gold-500/20"></div>
                         </div>
                     </div>
 
-                    <a href="/dashboard/chat" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gradient-to-r from-royal-600/25 to-pink-600/10 text-royal-300 border border-royal-500/30 shadow-md shadow-royal-950/40' if active == 'chat' else 'text-gray-400 hover:bg-dark-hover hover:text-gray-100 border border-transparent' }}">
-                        <i class="fa-solid fa-comments text-base w-5 text-center"></i>
+                    <a href="/dashboard/chat" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'chat' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
+                        <i class="fa-solid fa-comments text-sm w-5 text-center text-gold-400"></i>
                         <span>المحادثات الحية</span>
                     </a>
 
-                    <a href="/dashboard/constellation" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gradient-to-r from-royal-600/25 to-pink-600/10 text-royal-300 border border-royal-500/30 shadow-md shadow-royal-950/40' if active == 'constellation' else 'text-gray-400 hover:bg-dark-hover hover:text-gray-100 border border-transparent' }}">
-                        <i class="fa-solid fa-network-wired text-base w-5 text-center"></i>
+                    <a href="/dashboard/constellation" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'constellation' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
+                        <i class="fa-solid fa-network-wired text-sm w-5 text-center text-gold-400"></i>
                         <span>Agent Constellation</span>
                     </a>
 
-                    <a href="/dashboard/settings" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gradient-to-r from-royal-600/25 to-pink-600/10 text-royal-300 border border-royal-500/30 shadow-md shadow-royal-950/40' if active == 'settings' else 'text-gray-400 hover:bg-dark-hover hover:text-gray-100 border border-transparent' }}">
-                        <i class="fa-solid fa-sliders text-base w-5 text-center"></i>
+                    <a href="/dashboard/settings" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'settings' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
+                        <i class="fa-solid fa-sliders text-sm w-5 text-center text-gold-400"></i>
                         <span>الإعدادات</span>
                     </a>
                 </nav>
             </div>
 
             <!-- Footer Info -->
-            <div class="pt-4 border-t border-dark-border/60">
-                <div class="bg-dark-bg/60 p-3 rounded-xl border border-dark-border/40 text-center">
+            <div class="pt-4 border-t border-gold-500/20">
+                <div class="bg-luxury-bg p-3 rounded-xl border border-gold-500/20 text-center">
                     <div class="flex items-center justify-center gap-2 mb-1">
                         <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-gold-400"></span>
                         </span>
-                        <span id="serverUrl" class="text-[11px] font-semibold text-emerald-400">Online</span>
+                        <span id="serverUrl" class="text-[11px] font-semibold text-gold-300">Online</span>
                     </div>
                     <p class="text-[11px] font-medium text-gray-500">RC Agent v2.0</p>
                 </div>
@@ -125,7 +121,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto p-8 bg-dark-bg relative">
+        <main class="flex-1 overflow-y-auto p-8 bg-luxury-bg relative">
             {% block content %}{% endblock %}
         </main>
 
