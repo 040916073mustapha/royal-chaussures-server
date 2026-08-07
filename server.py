@@ -447,12 +447,25 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
 
 # ????????? Facebook Messenger Reply ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
+def save_message_db(platform, sender_id, message, reply):
+    """Save a message and its reply to the database for dashboard display"""
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT INTO messages (platform, sender_id, message, reply) VALUES (?,?,?,?)",
+                  (platform, sender_id, str(message)[:1000], str(reply)[:1000]))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"save_message_db error: {_safe_str(e)}")
+
 def send_fb_reply(sender_id, user_message, image_url=''):
     try:
         reply_text = generate_ai_reply(user_message, sender_id, image_url)
         page_token = get_fb_page_token()
         if not page_token:
             logger.warning("No page token, skipping FB reply")
+            save_message_db("messenger", sender_id, user_message or "[Image]", "[No page token]")
             return
         url = f"https://graph.facebook.com/v18.0/me/messages?access_token={page_token}"
         payload = {"recipient": {"id": sender_id}, "message": {"text": reply_text}}
@@ -462,6 +475,8 @@ def send_fb_reply(sender_id, user_message, image_url=''):
             logger.info(f"FB reply sent to {sender_id}: {reply_text[:60]}...")
         else:
             logger.warning(f"FB send failed ({resp.status_code}): {resp.text[:300]}")
+        # Always save to DB regardless of send success
+        save_message_db("messenger", sender_id, user_message or "[Image]", reply_text)
     except Exception as e:
         logger.error(f"send_fb_reply error: {_safe_str(e)}")
 
@@ -483,6 +498,7 @@ def send_ig_reply(sender_id, user_message, image_url=''):
 
         if not ig_token:
             logger.warning("No token available for Instagram reply")
+            save_message_db("instagram", sender_id, user_message or "[Image]", "[No token]")
             return
 
         # Instagram DMs use /me/messages with a Page Token
@@ -498,6 +514,7 @@ def send_ig_reply(sender_id, user_message, image_url=''):
             if 'does not exist' in err_body or 'capability' in err_body.lower():
                 logger.info("Instagram reply needs 'Instagram Graph API' product.")
                 logger.info("Fix: Add Instagram Graph API in Meta Developer App.")
+        save_message_db("instagram", sender_id, user_message or "[Image]", reply_text)
     except Exception as e:
         logger.error(f"send_ig_reply error: {_safe_str(e)}")
 # ????????? WhatsApp Reply ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -507,6 +524,7 @@ def send_whatsapp_reply(to_number, user_message, image_url=''):
         reply_text = generate_ai_reply(user_message, to_number, image_url)
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
             logger.warning("WhatsApp credentials not set")
+            save_message_db("whatsapp", to_number, user_message or "[Image]", "[WA not configured]")
             return
         url = f"https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
         headers = {"Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}", "Content-Type": "application/json"}
@@ -521,6 +539,7 @@ def send_whatsapp_reply(to_number, user_message, image_url=''):
             logger.info(f"WA reply sent to {to_number}: {reply_text[:60]}...")
         else:
             logger.warning(f"WA send failed ({resp.status_code}): {resp.text[:200]}")
+        save_message_db("whatsapp", to_number, user_message or "[Image]", reply_text)
     except Exception as e:
         logger.error(f"send_whatsapp_reply error: {_safe_str(e)}")
 
