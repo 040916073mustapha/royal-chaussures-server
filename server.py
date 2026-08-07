@@ -332,8 +332,10 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
         logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
     system_prompt = os.getenv(
-        "AI_SYSTEM_PROMPT",
-        "[1. ROYAL IDENTITY]\n"
+        "SYSTEM_PROMPT",
+        os.getenv(
+            "AI_SYSTEM_PROMPT",
+            "[1. ROYAL IDENTITY]\n"
         "I represent Royal Chaussures, a REAL luxury women's footwear boutique in Tlemcen, Algeria. I am an AI Customer Support Agent. I provide customer service: product information, sizing advice, order inquiries, shipping rates, and store hours. I do NOT handle payments, login credentials, or sensitive personal data.\n"
         "- Boutique: https://royalchaussures.com/\n"
         "- Phone: +213659832426\n"
