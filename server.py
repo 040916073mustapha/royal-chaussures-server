@@ -158,37 +158,46 @@ def shopify_api(method="GET", endpoint="products.json", params=None, token_type=
 
 
 def search_shopify_products(query=""):
-    """Search products by name/query and return formatted results."""
+    "Search products by name/query and return formatted results with EUROPEAN SIZES only."
     params = {"limit": 5, "status": "active"}
     if query:
         params["title"] = query
     data = shopify_api("GET", "products.json", params)
     if not data or "products" not in data:
-        return "Ï╣Ï░Ï▒Ïº┘ïÏî ┘ä┘à ÏúÏ¬┘à┘â┘å ┘à┘å Ï¼┘äÏ¿ Ïº┘ä┘à┘åÏ¬Ï¼ÏºÏ¬ Ï¡Ïº┘ä┘èÏº┘ï. ­ƒøì´©Å"
+        return "\u0639\u0630\u0631\u0627\u064b\u060c \u0644\u0645 \u0623\u062a\u0645\u0643\u0646 \u0645\u0646 \u062c\u0644\u0628 \u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a \u062d\u0627\u0644\u064a\u0627\u064b. \U0001f6cd\ufe0f"
     products = data["products"]
     if not products:
-        return "┘åÏ╣Ï¬Ï░Ï▒Ïî ┘äÏº Ï¬┘êÏ¼Ï» ┘à┘åÏ¬Ï¼ÏºÏ¬ ┘àÏ¬ÏºÏ¡Ï® Ï¬ÏÀÏºÏ¿┘é ÏÀ┘äÏ¿┘â Ï¡Ïº┘ä┘èÏº┘ï. ­ƒÿè"
-    result_lines = ["­ƒøì´©Å **Ïº┘ä┘à┘åÏ¬Ï¼ÏºÏ¬ Ïº┘ä┘àÏ¬┘ê┘üÏ▒Ï®:**\n"]
+        return "\u0646\u0639\u062a\u0630\u0631\u060c \u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0646\u062a\u062c\u0627\u062a \u0645\u062a\u0627\u062d\u0629 \u062a\u0637\u0627\u0628\u0642 \u0637\u0644\u0628\u0643 \u062d\u0627\u0644\u064a\u0627\u064b. \U0001f622"
+    result_lines = ["\U0001f6cd\ufe0f **\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a \u0627\u0644\u0645\u062a\u0648\u0641\u0631\u0629:**\n"]
     for p in products[:3]:
         title = p["title"]
         variants = p.get("variants", [])
         price_min = min(float(v.get("price", 0)) for v in variants) if variants else 0
         price_max = max(float(v.get("price", 0)) for v in variants) if variants else 0
-        price_str = f"{int(price_min)} Ï».Ï¼" if price_min == price_max else f"{int(price_min)} - {int(price_max)} Ï».Ï¼"
+        price_str = f"{int(price_min)} \u062f.\u062c" if price_min == price_max else f"{int(price_min)} - {int(price_max)} \u062f.\u062c"
         img_url = (p.get("images") or [{}])[0].get("src", "")
-        # Count available stock
-        in_stock = sum(1 for v in variants if int(v.get("inventory_quantity", 0)) > 0)
-        total_vars = len(variants)
-        stock_info = f"Ô£à ┘àÏ¬┘ê┘üÏ▒ {in_stock} ┘à┘éÏºÏ│" if in_stock > 0 else "ÔØî ┘å┘üÏ» Ïº┘ä┘àÏ«Ï▓┘ê┘å"
-        result_lines.append(f"ÔÇó **{title}**")
-        result_lines.append(f"  Ïº┘äÏ│Ï╣Ï▒: {price_str}")
-        result_lines.append(f"  Ïº┘ä┘àÏ«Ï▓┘ê┘å: {stock_info} ({in_stock}/{total_vars})")
+        # Extract European sizes from options, NOT from variant titles/inventory
+        sizes = []
+        options = p.get("options", [])
+        for opt in options:
+            if opt.get("name", "").lower() in ("size", "taille", "\u0627\u0644\u0645\u0642\u0627\u0633", "\u0645\u0642\u0627\u0633"):
+                sizes = [v for v in opt.get("values", []) if v.replace(" ", "").replace("\u200e","").isdigit()]
+                break
+        if not sizes:
+            sizes = []
+            for v in variants:
+                vt = v.get("title", "").strip()
+                if vt.replace(" ", "").isdigit():
+                    sizes.append(vt)
+            sizes = sorted(set(sizes), key=lambda x: float(x.replace(" ", "")))
+        size_str = "\u060c ".join(sizes) if sizes else "36 - 41"
+        result_lines.append(f"\u2022 **{title}**")
+        result_lines.append(f"  \u0627\u0644\u0633\u0639\u0631: {price_str}")
+        result_lines.append(f"  \u0627\u0644\u0645\u0642\u0627\u0633\u0627\u062a \u0627\u0644\u0623\u0648\u0631\u0648\u0628\u064a\u0629: {size_str}")
         if img_url:
             result_lines.append(f"  {img_url}")
         result_lines.append("")
     return "\n".join(result_lines)
-
-
 def check_product_inventory(product_query, size=None, color=None):
     """Check if a specific product/size/color is in stock."""
     params = {"limit": 5, "status": "active"}
@@ -367,56 +376,23 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
     if not AI_API_KEY:
         logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
-    system_prompt = os.getenv(
-        "AI_SYSTEM_PROMPT",
-        "[1. ROYAL IDENTITY]\n"
-        "I represent Royal Chaussures, a REAL luxury women's footwear boutique in Tlemcen, Algeria. I am an AI Customer Support Agent. I provide customer service: product information, sizing advice, order inquiries, shipping rates, and store hours. I do NOT handle payments, login credentials, or sensitive personal data.\n"
-        "- Boutique: https://royalchaussures.com/\n"
-        "- Phone: +213659832426\n"
-        "- Location: Imama (à côté primaire Hasnaoui), Tlemcen.\n"
-        "- Hours: Sat-Thu 09:00-20:00, Fri 16:00-20:00.\n\n"
-        "[2. INVENTORY & SHOPIFY]\n"
-        "- I have REAL-TIME access to all products, prices, sizes, colors, and stock via the Shopify API.\n"
-        "- The inventory data is appended automatically below in [SHOPIFY INVENTORY DATA]. I MUST use this data to answer accurately.\n"
-        "- If a customer asks about products, prices, sizes, or availability — answer directly from the inventory data.\n"
-        "- If the customer wants something not listed in inventory, politely say it's currently unavailable.\n"
-        "- For order confirmations, ask for: full name, phone number, wilaya, product+color+size, quantity, and delivery preference (Home or Desk pickup).\n\n"
-        "[3. LANGUAGES]\n"
-        "- I reply in the same language the customer uses: Arabic فصحى, Algerian Darija دارجة, French, or English.\n"
-        "- My tone is warm, professional, elegant, and welcoming. I match the 'Élégance Moderne' spirit of the brand.\n"
-        "- In Darija: be natural and friendly — use terms like 'ختي', 'سيدي', 'واش راك', 'شحال', 'هاداك'.\n\n"
-        "[4. DELIVERY RATES - SHIPPING PRICE LIST (per wilaya)]\n"
-        "- Tlemcen (all municipalities/Ghazaouet/Maghnia/Remchi): Home 500 DZD.\n"
-        "- Algiers: Home 650 DZD / Bureau 450 DZD.\n"
-        "- Ain Temouchent: Home 650 DZD / Bureau 500 DZD.\n"
-        "- Oran, Mascara, Mostaganem, Sidi Bel Abbes: Home 700 DZD / Bureau 500 DZD.\n"
-        "- Blida, Tiaret, Medea, Tissemsilt, Chlef, Ain Defla, Relizane, Saida: Home 750 DZD / Bureau 500 DZD.\n"
-        "- Oum El Bouaghi, Batna, Bejaia, Bouira, Tizi Ouzou, Jijel, Setif, Skikda, Guelma, Constantine, Bordj Bou Arreridj, Boumerdes, Khenchela, Souk Ahras, Tipaza, Mila: Home 800 DZD / Bureau 500 DZD.\n"
-        "- Annaba, El Tarf: Home 850 DZD / Bureau 500 DZD.\n"
-        "- Tebessa: Home 900 DZD / Bureau 500 DZD.\n"
-        "- Msila, Laghouat, Biskra, Djelfa, Ouled Djellal: Home 950 DZD / Bureau 650 DZD.\n"
-        "- El Bayadh, Naama, Ghardaia: Home 1000 DZD / Bureau 600 DZD.\n"
-        "- Ouargla, El Oued, Touggourt, El Meniaa, El M'Ghair: Home 1000 DZD / Bureau 700 DZD.\n"
-        "- Bechar: Home 1100 DZD / Bureau 700 DZD.\n"
-        "- Beni Abbes: Home 1200 DZD / Bureau 950 DZD.\n"
-        "- Adrar, Timimoun: Home 1400 DZD / Bureau 950 DZD.\n"
-        "- Tamanrasset, In Salah, In Guezzam: Home 1600 DZD / Bureau 1110 DZD.\n"
-        "- Payment: Cash on delivery (Paiement à la livraison) only.\n"
-        "- Delivery: 1-3 days across all 58 wilayas via ZR Express.\n\n"
-        "[5. POLICIES]\n"
-        "- Exchange/return within 7 days if item is unused and in original packaging.\n"
-        "- Size exchange allowed.\n"
-        "- Promotions only announced on social media.\n"
-        "- I do NOT process payments, store passwords, or collect payment details.\n"
-        "- I will NOT ask for: passwords, credit cards, bank info, or any payment instrument.\n\n"
-        "[6. ESCALATION RULES]\n"
-        "- Complex/complaint issues: respond politely and append EXACTLY this at the END of your response:\n"
-        "  ⚠️ [ESCALATE] Reason: [describe the issue in detail]\n"
-        "- Normal product/price/size questions: DO NOT escalate, answer directly.\n"
-        "- Order complaints, delivery issues, refund requests: ESCALATE.\n"
-        "- If the customer asks something outside my scope, ESCALATE.\n"
-        "- IMPORTANT: Remove the [ESCALATE] marker from the customer-facing reply before sending (the backend handles this). Just include it in your raw response."
-    )
+    # Read system prompt from file (prompt.txt), fallback to env var, then to hardcoded default
+    _prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt.txt")
+    system_prompt = ""
+    try:
+        with open(_prompt_path, "r", encoding="utf-8") as f:
+            system_prompt = f.read().strip()
+        logger.info(f"[PROMPT] Loaded system prompt from {_prompt_path} ({len(system_prompt)} chars)")
+    except FileNotFoundError:
+        system_prompt = os.getenv("AI_SYSTEM_PROMPT", "")
+        if system_prompt:
+            logger.info("[PROMPT] Loaded system prompt from env var AI_SYSTEM_PROMPT")
+        else:
+            system_prompt = (
+                "[1. ROYAL IDENTITY]\n"
+                "I represent Royal Chaussures...\n"
+            )
+            logger.info("[PROMPT] Using hardcoded default system prompt")
 
     # Pre-call Shopify inventory — always fetch live data for full context
     shopify_context = ""
@@ -434,6 +410,14 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
     messages = [{"role": "system", "content": system_prompt + shopify_context}]
     for msg in history[-8:]:
         messages.append(msg)
+    # Add context flag: is this the first user message in this conversation?
+    is_first_message = len([m for m in history if m["role"] == "user"]) <= 1
+    if is_first_message:
+        shopify_context += "\n\n[CONVERSATION STATE: FIRST MESSAGE — Welcome the customer warmly.]"
+    else:
+        shopify_context += "\n\n[CONVERSATION STATE: CONTINUING — Do NOT welcome again, continue naturally.]"
+    # Rebuild system prompt with updated context
+    messages[0] = {"role": "system", "content": system_prompt + shopify_context}
     # Build user content: plain string for text-only, OpenAI standard array for text+image
     user_message = user_message or ""
     if isinstance(image_url, str) and image_url.strip():
