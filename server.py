@@ -402,12 +402,12 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(search_shopify_products, "")
             try:
-                live_inventory = future.result(timeout=3)
+                live_inventory = future.result(timeout=5)
                 if live_inventory:
                     shopify_context = "\n\n[SHOPIFY INVENTORY DATA - LIVE]\n" + live_inventory + "\n[END INVENTORY DATA]\n"
                     logger.info("Live inventory appended to AI context (size " + str(len(live_inventory)) + " chars)")
             except concurrent.futures.TimeoutError:
-                logger.warning("Inventory fetch timed out (>3s), continuing without inventory data")
+                logger.warning("Inventory fetch timed out (>5s), continuing without inventory data")
     except Exception as inv_err:
         logger.warning(f"Inventory fetch failed (non-critical), continuing: {_safe_str(inv_err)}")
 
