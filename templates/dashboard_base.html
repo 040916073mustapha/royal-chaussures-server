@@ -3,129 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RC - Royal Dashboard</title>
+    <title>RC Agents — ONE BRAIN . MANY HANDS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script>
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Tajawal', 'sans-serif'],
-                        serif: ['Cinzel', 'serif'],
+                        sans: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
                     },
                     colors: {
-                        gold: {
-                            100: "#FDF8E2",
-                            200: "#F9EBB0",
-                            300: "#E6CA65",
-                            400: "#D4AF37",
-                            500: "#C5A059",
-                            600: "#A37F38",
-                            700: "#7E5F24",
+                        neon: {
+                            purple: '#A855F7',
+                            'purple-dark': '#7C3AED',
+                            cyan: '#06B6D4',
+                            'cyan-dark': '#0891B2',
+                            pink: '#EC4899',
                         },
-                        luxury: {
-                            bg: "#0B0B0C",
-                            card: "#141416",
-                            border: "#26262A",
-                            hover: "#1D1D21"
+                        slate: {
+                            750: '#1E293B',
+                            850: '#0F172A',
+                            950: '#020617',
+                        },
+                        rc: {
+                            bg: '#0A0A0F',
+                            card: '#111118',
+                            'card-hover': '#1A1A25',
+                            border: '#1E1E30',
+                            'border-glow': '#2E2E50',
+                            text: '#94A3B8',
+                            'text-bright': '#E2E8F0',
                         }
+                    },
+                    boxShadow: {
+                        'neon-purple': '0 0 15px -3px rgba(168,85,247,0.3)',
+                        'neon-cyan': '0 0 15px -3px rgba(6,182,212,0.3)',
+                        'neon-lg': '0 0 40px -8px rgba(168,85,247,0.15)',
                     }
                 }
             }
         }
         document.documentElement.classList.add("dark");
     </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        @keyframes wave-move {
+            0% { d: path("M0,50 C20,20 40,80 60,50 C80,20 100,80 120,50 C140,20 160,80 180,50"); }
+            50% { d: path("M0,50 C20,80 40,20 60,50 C80,80 100,20 120,50 C140,80 160,20 180,50"); }
+            100% { d: path("M0,50 C20,20 40,80 60,50 C80,20 100,80 120,50 C140,20 160,80 180,50"); }
+        }
+        .neuron-pulse { animation: pulse-glow 2s ease-in-out infinite; }
+        .sidebar-scroll::-webkit-scrollbar { width: 3px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.3); border-radius: 10px; }
+        .card-hover-glow:hover { box-shadow: 0 0 25px -5px rgba(168,85,247,0.15), 0 0 0 1px rgba(168,85,247,0.2); }
+        .bg-grid { background-image: 
+            linear-gradient(rgba(168,85,247,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(168,85,247,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
 </head>
-<body class="bg-luxury-bg text-gray-200 font-sans antialiased selection:bg-gold-500 selection:text-black" x-data="app()">
-    <div class="flex h-screen overflow-hidden">
+<body class="bg-rc-bg text-rc-text antialiased font-sans" x-data="app()">
+    <div class="flex h-screen overflow-hidden bg-grid relative">
         
-        <!-- Luxury Sidebar -->
-        <aside class="w-64 bg-luxury-card border-l border-gold-500/20 p-5 flex flex-col justify-between shadow-2xl relative z-20">
-            <div>
-                <!-- Royal Brand Header -->
-                <div class="flex flex-col items-center justify-center pt-2 pb-5 mb-6 border-b border-gold-500/20 text-center">
-                    <div class="w-11 h-11 rounded-full bg-gradient-to-b from-gold-300 via-gold-400 to-gold-600 flex items-center justify-center text-black font-serif font-black text-xl shadow-lg shadow-gold-500/10 border border-gold-200/40 mb-2">
-                        👑
+        <!-- Scanline effect overlay -->
+        <div class="pointer-events-none fixed inset-0 z-50 opacity-[0.03]" style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px);"></div>
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-rc-card border-l border-rc-border/60 flex flex-col justify-between shadow-2xl relative z-20 shrink-0">
+            <div class="flex flex-col h-full">
+                <!-- Brand Header -->
+                <div class="px-5 pt-6 pb-4 border-b border-rc-border/40 text-center relative overflow-hidden">
+                    <!-- Neural glow bg -->
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-neon-purple/5 rounded-full blur-3xl"></div>
+                    
+                    <!-- Octopus Icon SVG -->
+                    <div class="relative mx-auto mb-2 w-12 h-12">
+                        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+                            <defs>
+                                <linearGradient id="octoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#A855F7"/>
+                                    <stop offset="100%" stop-color="#06B6D4"/>
+                                </linearGradient>
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="2" result="blur"/>
+                                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                </filter>
+                            </defs>
+                            <!-- Octopus body -->
+                            <ellipse cx="50" cy="42" rx="20" ry="18" fill="url(#octoGrad)" opacity="0.9" filter="url(#glow)"/>
+                            <!-- Eyes -->
+                            <circle cx="42" cy="38" r="5" fill="#0A0A0F"/>
+                            <circle cx="58" cy="38" r="5" fill="#0A0A0F"/>
+                            <circle cx="43" cy="36" r="2" fill="#06B6D4"/>
+                            <circle cx="59" cy="36" r="2" fill="#06B6D4"/>
+                            <!-- Tentacles left -->
+                            <path d="M32 48 Q25 65 18 70 Q12 75 16 78" stroke="url(#octoGrad)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.9"/>
+                            <path d="M36 52 Q28 68 22 76 Q18 82 22 84" stroke="url(#octoGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+                            <path d="M40 55 Q34 70 30 80" stroke="url(#octoGrad)" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+                            <!-- Tentacles right -->
+                            <path d="M68 48 Q75 65 82 70 Q88 75 84 78" stroke="url(#octoGrad)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.9"/>
+                            <path d="M64 52 Q72 68 78 76 Q82 82 78 84" stroke="url(#octoGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+                            <path d="M60 55 Q66 70 70 80" stroke="url(#octoGrad)" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+                            <!-- Neural pulses -->
+                            <circle cx="50" cy="30" r="2" fill="#A855F7" class="neuron-pulse" style="animation-delay:0s"/>
+                            <circle cx="30" cy="50" r="1.5" fill="#06B6D4" class="neuron-pulse" style="animation-delay:0.5s"/>
+                            <circle cx="70" cy="50" r="1.5" fill="#06B6D4" class="neuron-pulse" style="animation-delay:1s"/>
+                        </svg>
                     </div>
-                    <h1 class="font-serif text-lg font-bold tracking-widest text-gold-400">
-                        ROYAL CHAUSSURES
+                    <h1 class="font-sans text-base font-bold tracking-wider">
+                        <span class="bg-gradient-to-r from-neon-purple to-neon-cyan bg-clip-text text-transparent">RC AGENTS</span>
                     </h1>
-                    <p class="text-[10px] font-medium text-gray-400 tracking-wider uppercase mt-0.5">SaaS Luxury Dashboard</p>
+                    <p class="text-[9px] font-mono text-gray-500 tracking-[0.2em] uppercase mt-0.5">ONE BRAIN . MANY HANDS</p>
                 </div>
 
-                <!-- Navigation Links -->
-                <nav class="space-y-1.5">
-                    <a href="/dashboard" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'dashboard' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
-                        <i class="fa-solid fa-chart-pie text-sm w-5 text-center text-gold-400"></i>
-                        <span>لوحة التحكم</span>
-                    </a>
+                <!-- Navigation -->
+                <nav class="flex-1 overflow-y-auto sidebar-scroll px-3 py-3 space-y-0.5">
+                    <template x-for="item in navItems" :key="item.id">
+                        <div>
+                            <template x-if="item.separator">
+                                <div class="pt-4 pb-1.5">
+                                    <div class="text-[9px] uppercase font-semibold text-gray-600 px-3 tracking-widest">{{ item.label }}</div>
+                                </div>
+                            </template>
+                            <template x-if="!item.separator">
+                                <a :href="item.href"
+                                   class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-transparent"
+                                   :class="activeNav === item.id 
+                                     ? 'bg-neon-purple/10 text-neon-purple border-neon-purple/30 shadow-[0_0_12px_-4px_rgba(168,85,247,0.2)]' 
+                                     : 'text-gray-400 hover:text-gray-200 hover:bg-rc-card-hover/50 hover:border-rc-border/30'">
+                                    <i :class="item.icon" class="w-5 text-center text-sm"></i>
+                                    <span x-text="item.label"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+                </nav>
 
-                    <a href="/dashboard/orders" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'orders' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
-                        <i class="fa-solid fa-box-archive text-sm w-5 text-center text-gold-400"></i>
-                        <span>الطلبات</span>
-                    </a>
-
-                    <a href="/dashboard/products" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'products' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
-                        <i class="fa-solid fa-shoe-prints text-sm w-5 text-center text-gold-400"></i>
-                        <span>المنتجات</span>
-                    </a>
-
-                    <a href="/dashboard/clients" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'clients' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
-                        <i class="fa-solid fa-users text-sm w-5 text-center text-gold-400"></i>
-                        <span>العملاء</span>
-                    </a>
-
-                    <div class="pt-4 pb-1">
-                        <div class="text-[10px] uppercase font-bold text-gold-500/70 px-3 tracking-widest flex items-center gap-2">
-                            <span>الذكاء الاصطناعي</span>
-                            <div class="h-[1px] flex-1 bg-gold-500/20"></div>
+                <!-- AI Brain Status Card -->
+                <div class="px-4 pb-4 pt-2" @click="$refs.brainCard.classList.toggle('ring-2'); $refs.brainCard.classList.toggle('ring-neon-purple/30')">
+                    <div x-ref="brainCard" class="bg-gradient-to-r from-rc-card-hover/80 to-rc-card border border-rc-border/60 rounded-xl p-3.5 transition-all duration-300 cursor-pointer hover:shadow-neon-purple group relative overflow-hidden">
+                        <!-- Glow on hover -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-neon-purple/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="relative flex items-center gap-3">
+                            <!-- Brain icon with wave -->
+                            <div class="relative w-9 h-9 shrink-0">
+                                <div class="absolute inset-0 bg-neon-purple/10 rounded-lg border border-neon-purple/20 flex items-center justify-center">
+                                    <i class="fa-solid fa-brain text-neon-purple text-sm"></i>
+                                </div>
+                                <!-- Tiny wave bars -->
+                                <div class="absolute -bottom-1 left-0 right-0 flex justify-center gap-[2px]">
+                                    <span class="w-0.5 h-2 bg-neon-cyan/60 rounded-full animate-pulse" style="animation-delay:0s;animation-duration:0.8s"></span>
+                                    <span class="w-0.5 h-3 bg-neon-cyan/80 rounded-full animate-pulse" style="animation-delay:0.2s;animation-duration:0.7s"></span>
+                                    <span class="w-0.5 h-1.5 bg-neon-cyan/60 rounded-full animate-pulse" style="animation-delay:0.4s;animation-duration:0.9s"></span>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-semibold text-gray-200">AI Brain</span>
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)] animate-pulse"></span>
+                                </div>
+                                <p class="text-[10px] font-mono text-gray-500 mt-0.5">Online · DeepSeek V4</p>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] font-semibold text-emerald-400/80">ACTIVE</span>
+                                <i class="fa-solid fa-angle-right text-[10px] text-gray-600 group-hover:text-gray-400 transition-colors"></i>
+                            </div>
                         </div>
                     </div>
-
-                    <a href="/dashboard/chat" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'chat' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
-                        <i class="fa-solid fa-comments text-sm w-5 text-center text-gold-400"></i>
-                        <span>المحادثات الحية</span>
-                    </a>
-
-                    <a href="/dashboard/constellation" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'constellation' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
-                        <i class="fa-solid fa-network-wired text-sm w-5 text-center text-gold-400"></i>
-                        <span>Agent Constellation</span>
-                    </a>
-
-                    <a href="/dashboard/settings" class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {{ 'bg-gold-500/15 text-gold-300 border border-gold-500/40 shadow-sm' if active == 'settings' else 'text-gray-400 hover:bg-luxury-hover hover:text-gold-200 border border-transparent' }}">
-                        <i class="fa-solid fa-sliders text-sm w-5 text-center text-gold-400"></i>
-                        <span>الإعدادات</span>
-                    </a>
-                </nav>
-            </div>
-
-            <!-- Footer Info -->
-            <div class="pt-4 border-t border-gold-500/20">
-                <div class="bg-luxury-bg p-3 rounded-xl border border-gold-500/20 text-center">
-                    <div class="flex items-center justify-center gap-2 mb-1">
-                        <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-gold-400"></span>
-                        </span>
-                        <span id="serverUrl" class="text-[11px] font-semibold text-gold-300">Online</span>
-                    </div>
-                    <p class="text-[11px] font-medium text-gray-500">RC Agent v2.0</p>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto p-8 bg-luxury-bg relative">
-            {% block content %}{% endblock %}
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto relative">
+            <div class="p-6 lg:p-8">
+                {% block content %}{% endblock %}
+            </div>
         </main>
 
     </div>
-    <script>function app(){return{init(){}}}</script>
+    <script>
+    function app() {
+        return {
+            activeNav: 'overview',
+            navItems: [
+                { id: 'overview', label: 'Overview', icon: 'fa-solid fa-chart-pie', href: '/dashboard' },
+                { id: 'orders', label: 'Orders', icon: 'fa-solid fa-box-archive', href: '/dashboard/orders' },
+                { id: 'customers', label: 'Customers', icon: 'fa-solid fa-users', href: '/dashboard/clients' },
+                { id: 'products', label: 'Products', icon: 'fa-solid fa-tag', href: '/dashboard/products' },
+                { separator: true, label: 'INTELLIGENCE' },
+                { id: 'agents', label: 'AI Agents', icon: 'fa-solid fa-network-wired', href: '/dashboard/agents' },
+                { id: 'chat', label: 'Live Chat', icon: 'fa-solid fa-comments', href: '/dashboard/chat' },
+                { id: 'analytics', label: 'Analytics', icon: 'fa-solid fa-chart-line', href: '/dashboard/analytics' },
+                { separator: true, label: 'OPERATIONS' },
+                { id: 'marketing', label: 'Marketing', icon: 'fa-solid fa-bullhorn', href: '/dashboard/marketing' },
+                { id: 'inventory', label: 'Inventory', icon: 'fa-solid fa-warehouse', href: '/dashboard/inventory' },
+                { id: 'shipping', label: 'Shipping', icon: 'fa-solid fa-truck', href: '/dashboard/shipments' },
+                { id: 'automations', label: 'Automations', icon: 'fa-solid fa-robot', href: '/dashboard/auto-ship' },
+                { separator: true, label: 'SYSTEM' },
+                { id: 'integrations', label: 'Integrations', icon: 'fa-solid fa-plug', href: '/dashboard/constellation' },
+                { id: 'settings', label: 'Settings', icon: 'fa-solid fa-sliders', href: '/dashboard/settings' },
+            ],
+            init() {
+                // Auto-set active nav from URL
+                const path = window.location.pathname;
+                const found = this.navItems.find(i => !i.separator && path.startsWith(i.href));
+                if (found) this.activeNav = found.id;
+            }
+        };
+    }
+    </script>
 </body>
 </html>
