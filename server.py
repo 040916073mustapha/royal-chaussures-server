@@ -610,6 +610,29 @@ def process_whatsapp_entries(entries):
                     threading.Thread(target=send_whatsapp_reply, args=(sender, text, image_url), daemon=True).start()
 
 
+# ????????? App Secret (for X-Hub-Signature-256 verification) ??????????????????????????????
+META_APP_SECRET = os.getenv("META_APP_SECRET", "")
+
+
+def verify_webhook_signature(request_body, signature_header):
+    """
+    Verify X-Hub-Signature-256 header against request body using META_APP_SECRET.
+    Returns True if valid or if signature/app_secret is not configured (soft fail).
+    """
+    if not META_APP_SECRET or not signature_header:
+        return True  # soft pass if not configured
+    try:
+        expected_signature = "sha256=" + hmac.new(
+            META_APP_SECRET.encode("utf-8"),
+            request_body,
+            hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(expected_signature, signature_header)
+    except Exception as e:
+        logger.warning(f"[WEBHOOK] Signature verification error: {e}")
+        return True  # soft pass on error to avoid breaking webhook
+
+
 # ????????? Main Webhook ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 # Meta sends ALL subscribed objects (Messenger, Instagram, WhatsApp)
 # to the SAME webhook URL (/webhook). The 'object' field differentiates them.
@@ -630,6 +653,14 @@ def webhook():
 
     # --- POST: Process incoming message ---
     logger.info("Webhook POST received")
+
+    # Verify X-Hub-Signature-256 (soft fail if missing/unconfigured)
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    raw_body = request.get_data()
+    if not verify_webhook_signature(raw_body, signature):
+        logger.warning(f"[WEBHOOK] Invalid signature! Possible tampering.")
+        return json_utf8({"status": "signature_mismatch"}), 403
+
     data = request.get_json(silent=True)
     if not data:
         return json_utf8({"status": "ok"})
