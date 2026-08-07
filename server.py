@@ -286,6 +286,42 @@ _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templa
 app = Flask(__name__, template_folder=_TEMPLATE_DIR, static_folder=_STATIC_DIR, static_url_path='/static')
 app.secret_key = os.urandom(24).hex()
 
+# ????????? Dashboard HTTP Basic Auth ??????????????????????????????????????????????????????????????????????????????????
+DASHBOARD_USER = os.getenv("DASHBOARD_USER", "").strip()
+DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
+_DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
+
+# Paths that should NEVER require auth (webhooks, public APIs)
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/api/chatbot")
+
+
+@app.before_request
+def require_auth_for_dashboard():
+    """
+    Apply HTTP Basic Auth to all /dashboard/* and /api/* paths,
+    except whitelisted safe paths (webhooks, health, etc.).
+    Soft-fail if DASHBOARD_USER/DASHBOARD_PASS not set in env.
+    """
+    if not _DASHBOARD_AUTH_ENABLED:
+        return  # auth not configured, allow all
+    path = request.path.rstrip("/")
+    # Allow GET requests for webhook verification (hub.mode=subscribe)
+    if request.method == "GET" and request.args.get("hub.mode") == "subscribe":
+        return
+    # Allow safe paths (webhooks, health, etc.)
+    for safe in _AUTH_SAFE_PATHS:
+        if path == safe or path.startswith(safe + "/"):
+            return
+    # Block /dashboard/* and /api/*
+    if path.startswith("/dashboard") or path.startswith("/api"):
+        auth = request.authorization
+        if not auth or auth.username != DASHBOARD_USER or auth.password != DASHBOARD_PASS:
+            return Response(
+                "Authentication required",
+                401,
+                {"WWW-Authenticate": 'Basic realm="Royal Chaussures Dashboard"'}
+            )
+
 
 @app.after_request
 def set_utf8_headers(response):
