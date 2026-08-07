@@ -791,19 +791,19 @@ def api_shipments():
 
 @app.route('/dashboard')
 def dashboard():
-    return render_template("dashboard.html", active="dashboard")
+    return render_template("dashboard.html", active="dashboard", ai_model=AI_MODEL)
 
 @app.route('/dashboard/orders')
 def dashboard_orders():
-    return render_template("orders.html", active="orders")
+    return render_template("orders.html", active="orders", ai_model=AI_MODEL)
 
 @app.route('/dashboard/products')
 def dashboard_products():
-    return render_template("products.html", active="products")
+    return render_template("products.html", active="products", ai_model=AI_MODEL)
 
 @app.route('/dashboard/clients')
 def dashboard_clients():
-    return render_template("clients.html", active="clients")
+    return render_template("clients.html", active="clients", ai_model=AI_MODEL)
 
 @app.route('/dashboard/settings')
 def dashboard_settings():
@@ -838,7 +838,7 @@ def dashboard_settings():
             "last_update": "منذ ساعة"
         }
     }
-    return render_template("dashboard_settings.html", active="settings", settings=settings_data)
+    return render_template("dashboard_settings.html", active="settings", settings=settings_data, ai_model=AI_MODEL)
 
 @app.route('/')
 def index():
