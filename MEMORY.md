@@ -7,7 +7,7 @@
 | العنصر | القيمة |
 |--------|--------|
 | **Tag** | `v2.0-rc-agents-dark-neon-complete` |
-| **Commit** | `ee9bd2a` |
+| **Commit** | `6a42649` |
 | **التاريخ** | 7 أغسطس 2026 |
 | **الحالة** | ✅ Production — Dashboard + Messenger + WhatsApp + Instagram |
 
@@ -16,7 +16,12 @@
 - **لوحة تحكم (Dashboard)**: إحصائيات المبيعات، إدارة الطلبات، المنتجات
 - **Live Chat Inbox**: محادثات حية من جميع القنوات مع auto-refresh
 - **Sidebar ذكي**: AlpineJS x-for مع dynamic navItems
-- **Settings page**: يعرض `Qwen/Qwen3-VL-30B-A3B-Instruct` (ثابت مطابق لـ AI_MODEL env var)
+- **System Prompt من ملف**: `prompt.txt` يُقرأ بدل Environment Variable (لا انكسار بعد الآن)
+- **ذكاء المحادثة**: ترحيب فقط في أول رسالة، جمع بيانات Step-by-Step
+- **مقاسات أوروبية**: 36-41 من Shopify Options (لا تظهر كميات المخزون كمقاسات)
+- **لا Meta-Explanation**: الـ AI يرد طبيعياً بدون شرح خطوات النظام
+- **Dashboard Basic Auth**: before_request يحمي `/dashboard/*` و `/api/*`
+- **Settings page**: يعرض `Qwen/Qwen3-VL-30B-A3B-Instruct`
 - **إصلاح خطأ 500**: {{ item.label }} → x-text="item.label" (Jinja2/AlpineJS conflict)
 - **🔐 X-Hub-Signature-256**: التحقق من HMAC-SHA256 للتوقيع (Meta App Secret)
 
