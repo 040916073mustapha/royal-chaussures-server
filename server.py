@@ -450,14 +450,18 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
 def save_message_db(platform, sender_id, message, reply):
     """Save a message and its reply to the database for dashboard display"""
     try:
-        conn = sqlite3.connect(_DB_PATH)
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
         c = conn.cursor()
         c.execute("INSERT INTO messages (platform, sender_id, message, reply) VALUES (?,?,?,?)",
                   (platform, sender_id, str(message)[:1000], str(reply)[:1000]))
         conn.commit()
         conn.close()
+        logger.info(f"[DB] Saved {platform} msg from {sender_id[:20] if sender_id else 'unknown'}: {str(message)[:40]}...")
     except Exception as e:
-        logger.warning(f"save_message_db error: {_safe_str(e)}")
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"[DB ERROR] save_message_db FAILED: {_safe_str(e)}")
+        logger.error(f"[DB ERROR] Traceback:\n{tb}")
 
 def send_fb_reply(sender_id, user_message, image_url=''):
     try:
@@ -476,9 +480,14 @@ def send_fb_reply(sender_id, user_message, image_url=''):
         else:
             logger.warning(f"FB send failed ({resp.status_code}): {resp.text[:300]}")
         # Always save to DB regardless of send success
+        logger.info(f"[DB] Attempting to save FB msg from {sender_id[:20]}...")
         save_message_db("messenger", sender_id, user_message or "[Image]", reply_text)
+        logger.info(f"[DB] Successfully saved FB msg from {sender_id[:20]}")
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         logger.error(f"send_fb_reply error: {_safe_str(e)}")
+        logger.error(f"send_fb_reply traceback:\n{tb}")
 
 
 # ????????? Instagram Reply ????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -514,9 +523,14 @@ def send_ig_reply(sender_id, user_message, image_url=''):
             if 'does not exist' in err_body or 'capability' in err_body.lower():
                 logger.info("Instagram reply needs 'Instagram Graph API' product.")
                 logger.info("Fix: Add Instagram Graph API in Meta Developer App.")
+        logger.info(f"[DB] Attempting to save IG msg from {sender_id[:20]}...")
         save_message_db("instagram", sender_id, user_message or "[Image]", reply_text)
+        logger.info(f"[DB] Successfully saved IG msg from {sender_id[:20]}")
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         logger.error(f"send_ig_reply error: {_safe_str(e)}")
+        logger.error(f"send_ig_reply traceback:\n{tb}")
 # ????????? WhatsApp Reply ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 def send_whatsapp_reply(to_number, user_message, image_url=''):
@@ -539,9 +553,14 @@ def send_whatsapp_reply(to_number, user_message, image_url=''):
             logger.info(f"WA reply sent to {to_number}: {reply_text[:60]}...")
         else:
             logger.warning(f"WA send failed ({resp.status_code}): {resp.text[:200]}")
+        logger.info(f"[DB] Attempting to save WA msg from {str(to_number)[:20]}...")
         save_message_db("whatsapp", to_number, user_message or "[Image]", reply_text)
+        logger.info(f"[DB] Successfully saved WA msg from {str(to_number)[:20]}")
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         logger.error(f"send_whatsapp_reply error: {_safe_str(e)}")
+        logger.error(f"send_whatsapp_reply traceback:\n{tb}")
 
 
 # ????????? Process common Messenger-style webhook payload ????????????????????????????????????????????????
