@@ -1,6 +1,6 @@
 {% extends "dashboard_base.html" %}
 {% block content %}
-<div x-data="{ messages:[], conversations:{}, activeConv:null, filter:'all', search:'', loadMsgs(){ fetch('/api/messages?limit=100').then(r=>r.json()).then(d=>{ if(d.success){ this.messages=d.messages; this.buildConvs() } }) }, buildConvs(){ let c={}; this.messages.forEach(m=>{ let k=m.sender_id+'@@'+m.platform; if(!c[k]) c[k]={sender_id:m.sender_id,platform:m.platform,messages:[],last_time:null,unread:0}; c[k].messages.push(m); if(!c[k].last_time||m.created_at>c[k].last_time) c[k].last_time=m.created_at; if(!m.reply) c[k].unread++ }); this.conversations=c }, toggleIntervention(e){ let enabled=e.target.checked; if(enabled) fetch('/api/agent/switch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:'customer_support'})}) }, sendReply(){ if(!this.activeConv) return; let parts=this.activeConv.split('@@'); let sid=parts[0], plat=parts[1]; let text=document.getElementById('replyInput')?.value; if(!text) return; fetch('/api/agent/route-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,platform:plat,uid:sid})}).then(()=>{ document.getElementById('replyInput').value=''; this.loadMsgs(); if(plat==='whatsapp') fetch('/api/whatsapp/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:sid,text:text})}) }) } }" x-init="loadMsgs(); setInterval(()=>loadMsgs(),10000)">
+<div x-data="{ messages:[], conversations:{}, activeConv:null, filter:'all', search:'', loadMsgs(){ fetch('/api/messages?limit=100').then(r=>r.json()).then(d=>{ if(d.success){ this.messages=d.messages; this.buildConvs() } }) }, buildConvs(){ let c={}; this.messages.forEach(m=>{ let k=m.sender_id+'@@'+m.platform; if(!c[k]) c[k]={sender_id:m.sender_id,platform:m.platform,messages:[],last_time:null,unread:0,display_name:null}; c[k].messages.push(m); if(!c[k].last_time||m.created_at>c[k].last_time) c[k].last_time=m.created_at; if(!m.reply) c[k].unread++ }); this.conversations=c; this.fetchNames() }, fetchNames(){ Object.values(this.conversations).forEach(c=>{ if(c.platform!='whatsapp'&&!c.display_name){ fetch('/api/profile?sender_id='+c.sender_id+'&platform='+c.platform).then(r=>r.json()).then(d=>{ if(d.success&&d.name) c.display_name=d.name }).catch(()=>{ c.display_name=c.sender_id.slice(0,16) }) } }) }, toggleIntervention(e){ let enabled=e.target.checked; if(enabled) fetch('/api/agent/switch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:'customer_support'})}) }, sendReply(){ if(!this.activeConv) return; let parts=this.activeConv.split('@@'); let sid=parts[0], plat=parts[1]; let text=document.getElementById('replyInput')?.value; if(!text) return; fetch('/api/agent/route-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,platform:plat,uid:sid})}).then(()=>{ document.getElementById('replyInput').value=''; this.loadMsgs(); if(plat==='whatsapp') fetch('/api/whatsapp/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:sid,text:text})}) }) } }" x-init="loadMsgs(); setInterval(()=>loadMsgs(),10000)">
     <div class="flex justify-between items-center mb-4">
         <h1 class="text-2xl font-bold">💬 المحادثات الحية <span class="text-sm text-gray-500 font-normal">Live Inbox</span></h1>
         <div class="flex gap-2">
@@ -22,18 +22,18 @@
                 <span class="text-xs text-emerald-400 flex items-center gap-1"><span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> مباشر</span>
             </div>
             <div class="flex-1 overflow-y-auto">
-                <template x-for="(conv, key) in Object.entries(conversations).filter(([k,v])=>filter=='all'||v.platform==filter).filter(([k,v])=>!search||v.sender_id.includes(search)).sort((a,b)=>b[1].last_time?.localeCompare(a[1].last_time||''))" :key="key">
-                    <div @click="activeConv=key" class="px-4 py-3 border-b border-[#2a2a35] cursor-pointer transition" :class="activeConv==key?'bg-royal-600/10 border-r-2 border-royal-500':'hover:bg-[#252530]'">
+                <template x-for="conv in Object.values(conversations).filter(c=>filter=='all'||c.platform==filter).filter(c=>!search||c.sender_id.includes(search)).sort((a,b)=>b.last_time?.localeCompare(a.last_time||''))" :key="conv.sender_id+conv.platform">
+                    <div @click="activeConv=conv.sender_id+'@@'+conv.platform" class="px-4 py-3 border-b border-[#2a2a35] cursor-pointer transition" :class="activeConv==conv.sender_id+'@@'+conv.platform?'bg-royal-600/10 border-r-2 border-royal-500':'hover:bg-[#252530]'">
                         <div class="flex justify-between items-center">
-                            <p class="text-sm font-medium truncate" x-text="conv.sender_id.slice(0,16)"></p>
+                            <p class="text-sm font-medium truncate" x-text="conv.display_name||conv.sender_id.slice(0,16)"></p>
                             <span class="text-xs text-gray-500" x-text="conv.last_time?.slice(5,16)||''"></span>
                         </div>
                         <div class="flex items-center gap-1 mt-1">
                             <span class="w-1.5 h-1.5 rounded-full" :class="conv.unread>0?'bg-rose-500':'bg-transparent'"></span>
-                            <p class="text-xs text-gray-500 truncate" x-text="conv.messages[conv.messages.length-1]?.message?.slice(0,40)||''"></p>
+                            <p class="text-xs text-gray-500 truncate" x-text="(conv.messages[conv.messages.length-1]?.message||'').slice(0,40)"></p>
                         </div>
                         <div class="text-[10px] text-gray-600 mt-1">
-                            <span :class="{'text-emerald-400':v.platform=='whatsapp','text-blue-400':v.platform=='messenger','text-pink-400':v.platform=='instagram'}" x-text="conv.platform"></span>
+                            <span :class="{'text-emerald-400':conv.platform=='whatsapp','text-blue-400':conv.platform=='messenger','text-pink-400':conv.platform=='instagram'}" x-text="conv.platform"></span>
                             <span x-text="' · '+conv.messages.length+' رسالة'"></span>
                         </div>
                     </div>
