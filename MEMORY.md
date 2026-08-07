@@ -7,7 +7,7 @@
 | العنصر | القيمة |
 |--------|--------|
 | **Tag** | `v2.0-rc-agents-dark-neon-complete` |
-| **Commit** | `6a42649` |
+| **Commit** | `e8da910` |
 | **التاريخ** | 7 أغسطس 2026 |
 | **الحالة** | ✅ Production — Dashboard + Messenger + WhatsApp + Instagram |
 
