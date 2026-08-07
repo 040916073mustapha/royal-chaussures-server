@@ -2,7 +2,36 @@
 
 > آخر تحديث: 7 أغسطس 2026
 
-## 🏆 GOLDEN RELEASE — RC Agent v1.0 (Meta-Approved)
+## 🏆 GOLDEN RELEASE v2 — RC Agent v1.2 (Omnichannel Production Ready)
+
+| العنصر | القيمة |
+|--------|--------|
+| **Tag** | `v1.2-omnichannel-production-ready` |
+| **Commit** | `c62a9c7` |
+| **التاريخ** | 7 أغسطس 2026 |
+| **الحالة** | ✅ Production — Messenger, WhatsApp, Instagram + Live Dashboard |
+
+### ✨ ميزات جديدة في v1.2 (بالإضافة إلى v1.0)
+- **Live Chat Dashboard**: `/dashboard/chat` — عرض المحادثات الحية من جميع القنوات
+- **save_message_db()**: تخزين كل رسالة ورد في SQLite (`messages` table) فورياً
+- **/api/messages**: API لجلب المحادثات مع فلترة بالمنصة والبحث
+- **/api/profile**: جلب اسم المستخدم من Facebook Graph API (يعرض اسم العميل بدل ID)
+- **fetchNames()**: AlpineJS يطلب أسماء المستخدمين تلقائياً بعد تحميل المحادثات
+- **Logging محسّن**: `[DB]` markers + traceback كامل عند الخطأ
+- **Intervention Mode**: تفعيل/إيقاف الردود التلقائية لكل محادثة
+- **Auto-refresh**: تحديث المحادثات كل 10 ثوانٍ
+
+### ✅ اختبار شامل — 7 أغسطس 2026
+- 📱 **Messenger**: ✅ وصول + رد + حفظ في Dashboard
+- 💚 **WhatsApp**: ✅ وصول + رد + حفظ في Dashboard
+- 📸 **Instagram**: ✅ وصول + رد + حفظ في Dashboard
+- 🖥️ **Live Chat**: ✅ أسماء العملاء + نص الرسائل + توقيت
+- 🛍️ **Shopify**: ✅ جلب المنتجات والأسعار قبل كل رد
+- 🏙️ **ZR Express**: ✅ 58 ولاية بأسعار مضبوطة
+
+---
+
+## 🏆 GOLDEN RELEASE v1 — RC Agent v1.0 (Meta-Approved)
 
 | العنصر | القيمة |
 |--------|--------|
@@ -47,7 +76,15 @@ else:
 
 ## 🔄 كيفية الرجوع للنسخة الذهبية في أي وقت
 
-في حالة حدوث خطأ مستقبلاً:
+### للرجوع لـ v1.2 (Omnichannel كاملة):
+```bash
+git checkout tags/v1.2-omnichannel-production-ready -- server.py templates/chat_console.html
+git commit -m "[HOTFIX] Revert to golden release v1.2 omnichannel"
+git push
+# ثم Deploy على Render (Manual Deploy → Deploy latest commit)
+```
+
+### للرجوع لـ v1.0 (النسخة الأساسية المستقرة):
 ```bash
 git checkout tags/v1.0-stable-meta-approved -- server.py
 git commit -m "[HOTFIX] Revert to golden release v1.0"
@@ -84,14 +121,19 @@ git push
 - `generate_ai_reply` — يبني الـ payload (نص/صورة)
 - `process_messaging_entries` — استخراج صور FB/IG
 - `process_whatsapp_entries` — استخراج صور WA
-- دوال الإرسال `send_*_reply` — فقط تمرير `image_url`
+- `save_message_db()` — حفظ الرسائل في SQLite للـ Dashboard
+- `send_fb_reply` / `send_ig_reply` / `send_whatsapp_reply` — مع `save_message_db()` بعد الرد
+- `/api/messages` — API جلب المحادثات (فلترة + بحث)
+- `/api/profile` — API جلب اسم FB Profile
+- دوال الإرسال `send_*_reply` — تمرير `image_url` + حفظ في DB
 
 **لا تلمس أبداً:**
 - دوال Webhook الأساسية (`/webhook`, `/whatsapp/webhook`)
 - `process_messaging_entries` الأساسية (غير استخراج الصور)
 - `upsert_order_from_shopify`
-- كود قاعدة البيانات
+- كود قاعدة البيانات (`init_db`, `upsert_order_from_shopify`)
 - كود التعامل مع Shopify API
+- **تذكر**: `save_message_db()` كتبتها لخدمة الـ Dashboard فقط — لا تخلطها مع `CONVERSATION_MEMORY` (RAM)
 
 ## 🏪 Royal Chaussures
 - متجر أحذية وإكسسوارات نسائية
