@@ -2,6 +2,36 @@
 
 > آخر تحديث: 7 أغسطس 2026
 
+## 🏆 GOLDEN RELEASE v3 — RC Agent v2.0 (Dark Neon Cyberpunk Complete)
+
+| العنصر | القيمة |
+|--------|--------|
+| **Tag** | `v2.0-rc-agents-dark-neon-complete` |
+| **Commit** | `ee9bd2a` |
+| **التاريخ** | 7 أغسطس 2026 |
+| **الحالة** | ✅ Production — Dashboard + Messenger + WhatsApp + Instagram |
+
+### ✨ ميزات v2.0 (Dark Neon Cyberpunk)
+- **تصميم RC AGENTS Dark Neon Cyberpunk** — واجهة مبهرة كاملة
+- **لوحة تحكم (Dashboard)**: إحصائيات المبيعات، إدارة الطلبات، المنتجات
+- **Live Chat Inbox**: محادثات حية من جميع القنوات مع auto-refresh
+- **Sidebar ذكي**: AlpineJS x-for مع dynamic navItems
+- **Settings page**: يعرض `Qwen/Qwen3-VL-30B-A3B-Instruct` (ثابت مطابق لـ AI_MODEL env var)
+- **إصلاح خطأ 500**: {{ item.label }} → x-text="item.label" (Jinja2/AlpineJS conflict)
+- **🔐 X-Hub-Signature-256**: التحقق من HMAC-SHA256 للتوقيع (Meta App Secret)
+
+### ✅ اختبار شامل — 7 أغسطس 2026
+- 📱 **Messenger**: ✅
+- 💚 **WhatsApp**: ✅
+- 📸 **Instagram**: ✅
+- 🖥️ **Live Chat Dashboard**: ✅
+- 🛍️ **Shopify**: ✅
+- 🏙️ **ZR Express**: ✅ 58 ولاية
+- **Settings Page**: ✅ تعرض الموديل الصحيح
+- **🔐 Webhook Security**: ✅ X-Hub-Signature-256 verification
+
+---
+
 ## 🏆 GOLDEN RELEASE v2 — RC Agent v1.2 (Omnichannel Production Ready)
 
 | العنصر | القيمة |
