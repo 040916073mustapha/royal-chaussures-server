@@ -130,7 +130,7 @@
                         <div>
                             <template x-if="item.separator">
                                 <div class="pt-4 pb-1.5">
-                                    <div class="text-[9px] uppercase font-semibold text-gray-600 px-3 tracking-widest">{{ item.label }}</div>
+                                    <div class="text-[9px] uppercase font-semibold text-gray-600 px-3 tracking-widest" x-text="item.label"></div>
                                 </div>
                             </template>
                             <template x-if="!item.separator">
