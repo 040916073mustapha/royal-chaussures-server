@@ -683,7 +683,21 @@ def webhook():
     # Verify X-Hub-Signature-256 (soft fail if missing/unconfigured)
     signature = request.headers.get("X-Hub-Signature-256", "")
     raw_body = request.get_data()
+
+    # DEBUG: Log signature details
+    secret_status = "SET" if META_APP_SECRET else "MISSING"
+    sig_status = "PRESENT" if signature else "MISSING"
+    logger.info(f"[WEBHOOK] SIG DEBUG: secret={secret_status}, header_sig={sig_status}, body_len={len(raw_body)}, sig_preview={signature[:50] if signature else 'N/A'}")
+
     if not verify_webhook_signature(raw_body, signature):
+        # DEBUG: Log expected vs actual
+        if META_APP_SECRET and signature:
+            expected_sig = "sha256=" + hmac.new(
+                META_APP_SECRET.encode("utf-8"),
+                raw_body,
+                hashlib.sha256
+            ).hexdigest()
+            logger.warning(f"[WEBHOOK] SIG MISMATCH: expected={expected_sig[:60]}..., received={signature[:60]}...")
         logger.warning(f"[WEBHOOK] Invalid signature! Possible tampering.")
         return json_utf8({"status": "signature_mismatch"}), 403
 
