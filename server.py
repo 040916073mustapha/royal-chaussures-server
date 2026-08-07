@@ -397,13 +397,19 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
     # Pre-call Shopify inventory — always fetch live data for full context
     shopify_context = ""
     try:
-        logger.info("Fetching live Shopify inventory...")
-        live_inventory = search_shopify_products("")
-        if live_inventory:
-            shopify_context = "\n\n[SHOPIFY INVENTORY DATA - LIVE]\n" + live_inventory + "\n[END INVENTORY DATA]\n"
-            logger.info("Live inventory appended to AI context")
+        logger.info("Fetching live Shopify inventory (3s timeout)...")
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(search_shopify_products, "")
+            try:
+                live_inventory = future.result(timeout=3)
+                if live_inventory:
+                    shopify_context = "\n\n[SHOPIFY INVENTORY DATA - LIVE]\n" + live_inventory + "\n[END INVENTORY DATA]\n"
+                    logger.info("Live inventory appended to AI context (size " + str(len(live_inventory)) + " chars)")
+            except concurrent.futures.TimeoutError:
+                logger.warning("Inventory fetch timed out (>3s), continuing without inventory data")
     except Exception as inv_err:
-        logger.warning(f"Inventory fetch failed (non-critical): {_safe_str(inv_err)}")
+        logger.warning(f"Inventory fetch failed (non-critical), continuing: {_safe_str(inv_err)}")
 
     # Build messages with conversation history
     history = get_conversation(sender_id)
