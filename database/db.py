@@ -21,15 +21,83 @@ _local = threading.local()
 
 def get_db():
     """الحصول على اتصال بقاعدة البيانات (لكل thread connection منفصل)"""
+    global DB_PATH
     if not hasattr(_local, "connection") or _local.connection is None:
-        _local.connection = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
-        _local.connection.row_factory = sqlite3.Row
-        _local.connection.execute("PRAGMA journal_mode=WAL")
-        _local.connection.execute("PRAGMA busy_timeout=10000")
-        _local.connection.execute("PRAGMA synchronous=NORMAL")
-        _local.connection.execute("PRAGMA foreign_keys=ON")
-        _local.connection.execute("PRAGMA cache_size=-8000")
+        _local.connection = _connect_or_repair(DB_PATH)
     return _local.connection
+
+
+def _connect_or_repair(db_path):
+    """محاولة الاتصال بقاعدة البيانات، وإذا كانت تالفة يتم حذفها وإعادة إنشائها"""
+    # التحقق من صحة الملف قبل الاتصال
+    import time as _time
+    _check_and_remove_corrupted(db_path)
+    
+    for attempt in range(3):
+        try:
+            conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=10000")
+            conn.execute("PRAGMA synchronous=NORMAL")
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.execute("PRAGMA cache_size=-8000")
+            # اختبار بسيط
+            conn.execute("SELECT 1")
+            # إذا كانت قاعدة البيانات جديدة (بدون جداول)، أنشئها
+            try:
+                conn.execute("SELECT count(*) FROM users").fetchone()
+            except sqlite3.OperationalError:
+                print("[DB] Fresh database detected, initializing tables...")
+                _init_tables(conn)
+            return conn
+        except sqlite3.DatabaseError as e:
+            print(f"[DB] Database corrupted (attempt {attempt+1}): {e}")
+            try:
+                conn.close()
+            except:
+                pass
+            _time.sleep(0.5 * (attempt + 1))
+            _check_and_remove_corrupted(db_path)
+    
+    # بعد 3 محاولات — ننشئ من الصفر
+    print(f"[DB] Creating fresh database (after 3 failed attempts)...")
+    conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=10000")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA cache_size=-8000")
+    _init_tables(conn)
+    return conn
+
+
+def _check_and_remove_corrupted(db_path):
+    """فحص وحذف الملفات التالفة"""
+    import time
+    # إغلاق أي اتصال قديم
+    if hasattr(_local, "connection") and _local.connection is not None:
+        try:
+            _local.connection.close()
+        except:
+            pass
+        _local.connection = None
+        time.sleep(0.3)
+    
+    # حذف الملفات
+    for p in [db_path, db_path + "-wal", db_path + "-shm"]:
+        if os.path.exists(p):
+            for retry in range(3):
+                try:
+                    os.remove(p)
+                    print(f"[DB] Removed: {os.path.basename(p)}")
+                    break
+                except Exception as e:
+                    if retry < 2:
+                        time.sleep(0.5)
+                    else:
+                        print(f"[DB] Could not remove {os.path.basename(p)}: {e}")
 
 
 def close_db():
@@ -43,23 +111,41 @@ def close_db():
         _local.connection = None
 
 
-def init_db():
-    """تهيئة قاعدة البيانات — إنشاء الجداول من schema.sql"""
-    db = get_db()
+def _init_tables(db):
+    """إنشاء الجداول من schema.sql (داخلي)"""
     schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
-    
     if os.path.exists(schema_path):
         with open(schema_path, "r", encoding="utf-8") as f:
             schema_sql = f.read()
-        db.executescript(schema_sql)
-        db.commit()
-        print(f"[DB] Database initialized")
-        print(f"[DB] Path: {DB_PATH}")
-    else:
-        print(f"[DB] Schema file not found at {schema_path}")
-    
-    # إنشاء مستخدم افتراضي للمحل إن لم يكن موجود
+        try:
+            db.executescript(schema_sql)
+            db.commit()
+        except Exception as e:
+            print(f"[DB] Schema execution error: {e}")
     _seed_default_users(db)
+
+
+def init_db():
+    """تهيئة قاعدة البيانات — إنشاء الجداول من schema.sql (آمن، اتصال منفصل)"""
+    try:
+        # نستخدم اتصالاً منفصلاً لا يعتمد على _local
+        conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=10000")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("PRAGMA cache_size=-8000")
+        # إنشاء الجداول
+        _init_tables(conn)
+        conn.close()
+        # الآن نخزن الاتصال في _local للاستخدام العادي
+        db = get_db()
+        print(f"[DB] Database initialized at {DB_PATH}")
+    except Exception as e:
+        import traceback
+        print(f"[DB] Init error (non-fatal): {e}")
+        traceback.print_exc()
 
 
 def _seed_default_users(db):

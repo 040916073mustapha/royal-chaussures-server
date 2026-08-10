@@ -300,6 +300,42 @@ app.secret_key = os.urandom(24).hex()
 # ?? Zero impact on existing webhooks/meta routes
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# ========== إصلاح قاعدة البيانات أولاً إن كانت تالفة ==========
+import glob as _glob
+_db_path = os.environ.get("STORE_DB_PATH", 
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "royal_store.db"))
+_db_dir = os.path.dirname(_db_path)
+# حذف أي ملفات WAL/SHM عالقة من جلسات سابقة
+for _ext in ["-wal", "-shm"]:
+    for _f in _glob.glob(os.path.join(_db_dir, "*" + _ext)):
+        try:
+            os.remove(_f)
+            logger.info(f"[Store POS] Cleaned stale {_f}")
+        except:
+            pass
+# اختبار قاعدة البيانات — إن كانت تالفة، احذفها
+import sqlite3 as _sqlite3
+try:
+    _test_con = _sqlite3.connect(_db_path, timeout=5)
+    _test_con.execute("SELECT 1")
+    _test_con.close()
+    logger.info("[Store POS] DB integrity check passed")
+except Exception as _db_err:
+    logger.warning(f"[Store POS] DB corrupted ({_db_err}), rebuilding...")
+    try:
+        _test_con.close()
+    except:
+        pass
+    try:
+        os.remove(_db_path)
+        for _ext in ["-wal", "-shm"]:
+            _p = _db_path + _ext
+            if os.path.exists(_p):
+                os.remove(_p)
+        logger.info("[Store POS] Corrupted DB deleted, will be recreated")
+    except Exception as _del_err:
+        logger.error(f"[Store POS] Could not delete corrupted DB: {_del_err}")
+# ==============================================================
 try:
     from database.db import init_db as init_store_db
     init_store_db()
@@ -314,7 +350,8 @@ try:
     app.teardown_appcontext(lambda exc: close_store_db() if callable(close_store_db) else None)
     logger.info("[Store POS] DB teardown handler registered")
 except Exception as e:
-    logger.warning(f"[Store POS] Blueprint registration skipped: {e}")
+    import traceback as _tb
+    logger.warning(f"[Store POS] Blueprint registration skipped: {e}\n{_tb.format_exc()}")
 # ====================================================================
 
 # ????????? Dashboard HTTP Basic Auth ??????????????????????????????????????????????????????????????????????????????????
