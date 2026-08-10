@@ -1,47 +1,10 @@
-# Python
-__pycache__/
-*.py[cod]
-*.db
-*.sqlite3
+# Secrets — DO NOT COMMIT
+all api.txt
+github api.txt
+shopify read wreit product api.txt
+get_inventory.py
+webhook_server.py
 .env
-*.egg-info/
-dist/
-build/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Temp / Test files
-cookie*.txt
-ngrok_*.txt
-ngrok_*.json
-test_*.py
-check_*.py
-*_debug.py
-*_test.py
-debug_*.py
-final_test*.py
-
-# Scripts (not needed in cloud)
-scripts/
-customer_support/
-
-# Local workspace files
-AGENTS.md
-SOUL.md
-TOOLS.md
-USER.md
-IDENTITY.md
-HEARTBEAT.md
-openclaw-workspace-state.json
+*.env
+royal_store.db
+royal_orders.db
