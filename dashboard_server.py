@@ -1,0 +1,2406 @@
+#!/usr/bin/env python3
+"""
+Royal Chaussures Dashboard — نظام إدارة الطلبات والمخزون
+=========================================================
+يربط بين Shopify → ZR Express → OpenClaw → WhatsApp/FB/IG
+مع واجهة تحكم ويب وقاعدة بيانات SQLite
+"""
+
+import requests
+import json
+import os
+import sys
+import sqlite3
+import hashlib
+import hmac
+import threading
+import time
+from datetime import datetime, timedelta
+from functools import wraps
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify, session, redirect, url_for, render_template, render_template_string
+
+# استيراد دوال ZR Express (lookup customer + territory)
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_ZR_CLIENT_PATH = os.path.join(_SCRIPT_DIR, 'scripts', 'zr_express_client.py')
+if os.path.exists(_ZR_CLIENT_PATH):
+    import importlib.util
+    _zr_spec = importlib.util.spec_from_file_location('zr_express_client', _ZR_CLIENT_PATH)
+    zr_client = importlib.util.module_from_spec(_zr_spec)
+    _zr_spec.loader.exec_module(zr_client)
+
+# تحميل المتغيرات من .env
+load_dotenv()
+
+app = Flask(__name__,
+    static_folder=os.path.join(os.path.dirname(__file__), 'render_deploy', 'static'),
+    static_url_path='/static')
+app.secret_key = os.urandom(24).hex()
+
+# ========== الإعدادات ==========
+
+# --- Shopify ---
+SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "rwqchh-na")
+SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-10")
+SHOPIFY_ORDERS_TOKEN = os.getenv("SHOPIFY_ORDERS_TOKEN", "")
+SHOPIFY_BASE = f"https://{SHOPIFY_STORE}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}"
+SHOPIFY_HEADERS = {"X-Shopify-Access-Token": SHOPIFY_ORDERS_TOKEN, "Content-Type": "application/json"}
+SHOPIFY_STORE_LOCATION_ID = 113958715756
+
+# --- OpenClaw Gateway ---
+OPENCLAW_API_URL = "http://127.0.0.1:18789/v1/chat/completions"
+OPENCLAW_TOKEN = "40bc9b…a793"
+
+# --- WhatsApp ---
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = "1212786725251029"
+
+# --- ZR Express ---
+ZR_BASE_URL = os.getenv("ZR_BASE_URL", "https://api.zrexpress.app/api/v1")
+ZR_TENANT_ID = os.getenv("ZR_TENANT_ID", "")
+ZR_SECRET_KEY = os.getenv("ZR_SECRET_KEY", os.getenv("ZR_API_KEY", ""))
+ZR_API_KEY = ZR_SECRET_KEY
+
+# --- Dashboard Credentials ---
+DASHBOARD_USER = "admin"
+DASHBOARD_PASS_HASH = hashlib.sha256("RoyalChaussures2026!".encode()).hexdigest()
+
+# ========== قاعدة البيانات ==========
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "orders.db")
+
+def init_db():
+    """إنشاء جداول قاعدة البيانات"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    # جدول الطلبات
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shopify_order_id TEXT UNIQUE,
+            order_name TEXT,
+            customer_name TEXT,
+            customer_phone TEXT,
+            customer_platform TEXT DEFAULT 'shopify',
+            total_amount REAL,
+            currency TEXT DEFAULT 'DZD',
+            status TEXT DEFAULT 'pending',
+            fulfillment_status TEXT DEFAULT 'unfulfilled',
+            items TEXT,
+            shipping_address TEXT,
+            zr_tracking_number TEXT,
+            zr_parcel_id TEXT,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT DEFAULT (datetime('now','+1 hour'))
+        )
+    """)
+
+    # جدول رسائل الإشعارات
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER,
+            platform TEXT,
+            recipient TEXT,
+            message TEXT,
+            status TEXT DEFAULT 'sent',
+            sent_at TEXT DEFAULT (datetime('now','+1 hour')),
+            FOREIGN KEY (order_id) REFERENCES orders(id)
+        )
+    """)
+
+    # جدول سجل API
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS api_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            endpoint TEXT,
+            method TEXT,
+            status_code INTEGER,
+            response TEXT,
+            created_at TEXT DEFAULT (datetime('now','+1 hour'))
+        )
+    """)
+
+    # جدول المحادثات (AI Agents مع الزبائن)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER,
+            platform TEXT DEFAULT 'whatsapp',
+            sender_id TEXT,
+            customer_message TEXT,
+            ai_response TEXT,
+            agent_used TEXT DEFAULT 'customer_support',
+            message_role TEXT DEFAULT 'customer',
+            created_at TEXT DEFAULT (datetime('now','+1 hour')),
+            FOREIGN KEY (order_id) REFERENCES orders(id)
+        )
+    """)
+
+    # التحقق من وجود الأعمدة الجديدة في جدول orders (آمن للتحديث)
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN current_agent TEXT DEFAULT 'customer_support'")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN auto_reply INTEGER DEFAULT 1")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN shopify_tracking_updated INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN whatsapp_sent INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN customer_platform_id TEXT DEFAULT ''")
+    except:
+        pass
+
+    conn.commit()
+    conn.close()
+    print("✅ Database initialized: orders.db (with conversations & agent fields)")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# ========== المصادقة ==========
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login_page"))
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        pw_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        if username == DASHBOARD_USER and pw_hash == DASHBOARD_PASS_HASH:
+            session["logged_in"] = True
+            session["username"] = username
+            return redirect(url_for("dashboard"))
+        return render_template_string(LOGIN_HTML, error="⚠️ اسم المستخدم أو كلمة السر غير صحيحة")
+    return render_template_string(LOGIN_HTML, error="")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
+
+# ========== دوال Shopify ==========
+
+def shopify_request(endpoint, method="GET", data=None):
+    """إرسال طلب إلى Shopify API"""
+    url = f"{SHOPIFY_BASE}/{endpoint}"
+    try:
+        if method == "GET":
+            r = requests.get(url, headers=SHOPIFY_HEADERS, timeout=15)
+        elif method == "POST":
+            r = requests.post(url, json=data, headers=SHOPIFY_HEADERS, timeout=15)
+        elif method == "PUT":
+            r = requests.put(url, json=data, headers=SHOPIFY_HEADERS, timeout=15)
+        else:
+            return None, "Unsupported method"
+
+        if r.status_code in (200, 201):
+            return r.json(), None
+        return None, f"Shopify error {r.status_code}: {r.text[:200]}"
+    except Exception as e:
+        return None, str(e)
+
+def sync_orders_from_shopify():
+    """جلب آخر الطلبات من Shopify وتخزينها في قاعدة البيانات"""
+    data, error = shopify_request(f"orders.json?status=any&limit=50&order=created_at DESC")
+    if error:
+        print(f"❌ Sync orders error: {error}")
+        return False
+
+    conn = get_db()
+    count = 0
+    for order in data.get("orders", []):
+        customer = order.get("customer", {}) or {}
+        line_items = order.get("line_items", [])
+
+        # تجهيز بيانات المنتجات
+        items_summary = []
+        for item in line_items:
+            items_summary.append({
+                "name": item.get("title", ""),
+                "quantity": item.get("quantity", 1),
+                "price": item.get("price", "0"),
+                "sku": item.get("sku", ""),
+                "variant_id": item.get("variant_id")
+            })
+
+        shipping = order.get("shipping_address", {}) or {}
+
+        try:
+            c = conn.cursor()
+            c.execute("""
+                INSERT OR REPLACE INTO orders
+                (shopify_order_id, order_name, customer_name, customer_phone,
+                 total_amount, currency, status, fulfillment_status,
+                 items, shipping_address, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                str(order["id"]),
+                order.get("name", ""),
+                f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+                customer.get("phone", "") or shipping.get("phone", ""),
+                float(order.get("total_price", 0)),
+                order.get("currency", "DZD"),
+                order.get("financial_status", "pending"),
+                order.get("fulfillment_status") or "unfulfilled",
+                json.dumps(items_summary, ensure_ascii=False),
+                json.dumps(shipping, ensure_ascii=False),
+                order.get("created_at", "")
+            ))
+            count += c.rowcount
+        except Exception as e:
+            print(f"⚠️ DB insert error for order {order.get('name')}: {e}")
+
+    conn.commit()
+    conn.close()
+    print(f"✅ Synced {count} orders from Shopify")
+    return True
+
+# ========== دوال ZR Express ==========
+
+def create_zr_shipment(order_data):
+    """إنشاء شحنة في ZR Express مع lookup تلقائي للعميل والمنطقة"""
+    # قراءة المفاتيح مباشرة من ملف .env إذا os.getenv فشل
+    _key = os.getenv("ZR_SECRET_KEY", "")
+    if not _key:
+        _key = os.getenv("ZR_API_KEY", "")
+    if not _key:
+        # القراءة المباشرة من ملف .env
+        _env_paths = [os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'),
+                      r'C:\Users\Micro-Tech\.openclaw\workspace-shipment\scripts\.env']
+        for _p in _env_paths:
+            if os.path.exists(_p):
+                with open(_p, 'r', encoding='utf-8') as _f:
+                    for _line in _f:
+                        _line = _line.strip()
+                        if _line.startswith('ZR_SECRET_KEY='):
+                            _key = _line.split('=', 1)[1].strip().strip('"').strip("'")
+                            break
+                        if _line.startswith('ZR_API_KEY='):
+                            _key = _line.split('=', 1)[1].strip().strip('"').strip("'")
+                if _key:
+                    break
+    _tenant = os.getenv("ZR_TENANT_ID", "")
+    if not _tenant:
+        for _p in [_env_paths[0], _env_paths[1]]:
+            if os.path.exists(_p):
+                with open(_p, 'r', encoding='utf-8') as _f:
+                    for _line in _f:
+                        if _line.startswith('ZR_TENANT_ID='):
+                            _tenant = _line.split('=', 1)[1].strip().strip('"').strip("'")
+                            break
+                if _tenant:
+                    break
+    _base = os.getenv("ZR_BASE_URL", "https://api.zrexpress.app/api/v1")
+
+    if not _key or not _tenant:
+        return None, "⚠️ ZR_SECRET_KEY أو ZR_TENANT_ID غير مضبطين. تأكد من ملف .env"
+
+    url = f"{_base}/parcels"
+    headers = {
+        "X-Api-Key": _key,
+        "X-Tenant": _tenant,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    # استخراج بيانات الشحن من الطلب
+    customer_name = order_data.get("customer_name", "")
+    customer_phone = order_data.get("customer_phone", "")
+    shipping_addr = order_data.get("shipping_address", {})
+    if isinstance(shipping_addr, str):
+        try:
+            shipping_addr = json.loads(shipping_addr)
+        except:
+            shipping_addr = {}
+
+    wilaya = shipping_addr.get("province", "") or shipping_addr.get("city", "Alger")
+    commune = shipping_addr.get("city", "") or shipping_addr.get("district", "Alger Centre")
+    street = shipping_addr.get("address1", "") or shipping_addr.get("street", "")
+
+    # وصف المنتجات
+    items = order_data.get("items", [])
+    if isinstance(items, str):
+        try:
+            items = json.loads(items)
+        except:
+            items = []
+    product_names = [i.get("name", i.get("title", "")) for i in (items or [])]
+    description = "، ".join(product_names)[:200] or "Royal Chaussures Product"
+
+    total = int(float(order_data.get("total_amount", 0)))
+    if total <= 0:
+        total = 3500
+
+    # معالجة رقم الهاتف (إضافة رمز الجزائر)
+    phone = customer_phone.strip()
+    if phone.startswith("0"):
+        phone = f"+213{phone[1:]}"
+    elif not phone.startswith("+"):
+        phone = f"+213{phone}"
+
+    # ========== Lookup تلقائي للعميل والمنطقة ==========
+    customer_id = "e28547c8-7811-4e53-83f5-1c874258049a"  # Default customer
+    city_id = "8c97a133-681b-4da4-8466-2f6110557fa2"  # Default: Alger centre
+    district_id = "d134c182-7dac-4655-9d9b-bbdb62aa2ec4"  # Default: Alger wilaya
+    customers = []
+    try:
+        # البحث عن العميل في قاعدة ZR
+        cust_resp = requests.post(
+            f"{_base}/customers/search",
+            json={"pageNumber": 1, "pageSize": 50},
+            headers=headers,
+            timeout=10
+        )
+        if cust_resp.status_code == 200:
+            customers = cust_resp.json().get("items", [])
+            phone_clean = phone.strip()
+            for c in customers:
+                cp = c.get("phone", {})
+                c_phone = cp.get("number1", "") if isinstance(cp, dict) else str(cp)
+                if phone_clean in c_phone or c_phone in phone_clean:
+                    customer_id = c["id"]
+                    break
+            if not customer_id or customer_id == "e28547c8-7811-4e53-83f5-1c874258049a":
+                for c in customers:
+                    if customer_name.lower().strip() in c.get("name", "").lower().strip():
+                        customer_id = c["id"]
+                        break
+    except Exception:
+        pass
+
+    # البحث عن المنطقة من territory_mapping.json
+    try:
+        _map_paths = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts', 'territory_mapping.json'),
+            r'C:\Users\Micro-Tech\.openclaw\workspace-shipment\scripts\territory_mapping.json'
+        ]
+        for _map_path in _map_paths:
+            if os.path.exists(_map_path):
+                with open(_map_path, 'r', encoding='utf-8') as _f:
+                    _tmap = json.load(_f)
+                w_lower = wilaya.strip().lower() if wilaya else ""
+                c_lower = commune.strip().lower() if commune else ""
+                _found_commune = None
+                _found_wilaya = None
+                if c_lower in _tmap.get("communes", {}):
+                    _found_commune = _tmap["communes"][c_lower]
+                if not _found_commune:
+                    for name, data in _tmap.get("communes", {}).items():
+                        if c_lower in name or name in c_lower:
+                            _found_commune = data
+                            break
+                if _found_commune:
+                    city_id = _found_commune["id"]
+                    district_id = _found_commune["parentId"]
+                if w_lower in _tmap.get("wilayas", {}):
+                    _found_wilaya = _tmap["wilayas"][w_lower]
+                if _found_wilaya:
+                    district_id = _found_wilaya
+                    if not _found_commune:
+                        city_id = _found_wilaya
+                break
+    except Exception:
+        pass
+
+    # بناء payload
+    customer_payload = {
+        "name": customer_name,
+        "phone": {"number1": phone},
+    }
+    if customer_id:
+        customer_payload["customerId"] = customer_id
+    else:
+        customer_payload["customerId"] = "e28547c8-7811-4e53-83f5-1c874258049a"
+
+    deliv_addr = {
+        "street": street,
+        "city": wilaya.title() if wilaya else "Alger",
+        "district": commune.title() if commune else "Alger Centre",
+        "postalCode": "",
+        "country": "algeria",
+    }
+    if district_id:
+        deliv_addr["cityTerritoryId"] = district_id
+    else:
+        deliv_addr["cityTerritoryId"] = "d134c182-7dac-4655-9d9b-bbdb62aa2ec4"
+    if city_id:
+        deliv_addr["districtTerritoryId"] = city_id
+    else:
+        deliv_addr["districtTerritoryId"] = "8c97a133-681b-4da4-8466-2f6110557fa2"
+
+    payload = {
+        "customer": customer_payload,
+        "deliveryAddress": deliv_addr,
+        "orderedProducts": [
+            {
+                "unitPrice": 0,
+                "quantity": 1,
+                "productName": description[:100],
+                "stockType": "none",
+            }
+        ],
+        "amount": total,
+        "description": description,
+        "deliveryType": "home",
+        "externalId": order_data.get("order_name", f"ORD{order_data.get('id', '')}"),
+    }
+
+    try:
+        import json as _zrj
+        _zr_debug_msg = json.dumps({
+            'has_customerId': 'customerId' in str(payload.get('customer', {})),
+            'customerId_val': str(payload.get('customer', {}).get('customerId', 'MISSING')),
+            'key_exists': bool(_key),
+            'tenant_exists': bool(_tenant),
+            'payload_preview': str(payload)[:200]
+        }, ensure_ascii=False)
+        try:
+            with open(r'C:\Users\Micro-Tech\.openclaw\workspace\zr_debug_payload.json', 'w', encoding='utf-8') as _f:
+                _f.write(_zr_debug_msg)
+        except:
+            pass
+        
+        _zr_payload_str = json.dumps(payload, ensure_ascii=False)
+        headers['Content-Length'] = str(len(_zr_payload_str.encode('utf-8')))
+        resp = requests.post(url, data=_zr_payload_str.encode('utf-8'), headers=headers, timeout=15)
+        if resp.status_code in (200, 201):
+            result = resp.json()
+            return result, None
+        else:
+            return None, f"ZR API error {resp.status_code}: {resp.text[:300]}"
+    except Exception as e:
+        return None, str(e)
+
+# ========== دوال OpenClaw AI Agents ==========
+
+AVAILABLE_AGENTS = {
+    "customer_support": {
+        "model": "openclaw/customer_support",
+        "label": "🧑‍💼 خدمة العملاء",
+        "description": "الرد على استفسارات الزبائن، المنتجات، الطلبات"
+    },
+    "shipment_and_status_manager": {
+        "model": "openclaw/shipment_and_status_manager",
+        "label": "📦 الشحن والتتبع",
+        "description": "متابعة حالة الشحن، التوصيل، أرقام التتبع"
+    }
+}
+
+
+def call_openclaw_agent(agent_key, user_message, customer_id):
+    """استدعاء AI Agent معين عبر OpenClaw Gateway"""
+    agent = AVAILABLE_AGENTS.get(agent_key, AVAILABLE_AGENTS["customer_support"])
+
+    system_context = ""
+    if agent_key == "customer_support":
+        system_context = (
+            "أنت موظف خدمة عملاء في متجر **Royal Chaussures**، متجر جزائري للأحذية والإكسسوارات النسائية. "
+            "تتحدث باللهجة الجزائرية الدارجة بطريقة لطيفة ومحترمة. "
+            "هدفك مساعدة الزبون وبيع المنتجات."
+        )
+    elif agent_key == "shipment_and_status_manager":
+        system_context = (
+            "أنت مسؤول الشحن في متجر **Royal Chaussures**. "
+            "مهمتك متابعة حالة الطلبات والشحنات. "
+            "تتحدث باللهجة الجزائرية الدارجة. "
+            "قدم معلومات دقيقة عن وقت التوصيل ورقم التتبع إن وجد."
+        )
+
+    payload = {
+        "model": agent["model"],
+        "messages": [
+            {"role": "system", "content": system_context},
+            {"role": "user", "content": user_message}
+        ],
+        "user": f"dashboard:customer:{customer_id}"
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENCLAW_TOKEN}"
+    }
+
+    try:
+        r = requests.post(OPENCLAW_API_URL, json=payload, headers=headers, timeout=30)
+        if r.status_code == 200:
+            result = r.json()
+            return result["choices"][0]["message"]["content"], None
+        return None, f"Gateway error: {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def get_available_agents():
+    """قائمة الـ agents المتاحة"""
+    return [
+        {"key": key, **info}
+        for key, info in AVAILABLE_AGENTS.items()
+    ]
+
+
+def log_conversation(order_id, platform, sender_id, customer_msg, ai_response, agent_used):
+    """تسجيل محادثة في قاعدة البيانات"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO conversations
+        (order_id, platform, sender_id, customer_message, ai_response, agent_used)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (order_id, platform, sender_id, customer_msg, ai_response, agent_used))
+    conn.commit()
+    conn.close()
+
+
+def get_conversation_history(order_id, limit=20):
+    """جلب سجل المحادثات لطلب معين"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM conversations
+        WHERE order_id = ?
+        ORDER BY created_at ASC
+        LIMIT ?
+    """, (order_id, limit))
+    convs = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return convs
+
+
+# ========== دوال الإشعارات ==========
+
+def send_whatsapp_notification(phone, message):
+    """إرسال إشعار واتساب للزبون"""
+    if not WHATSAPP_ACCESS_TOKEN:
+        return False
+
+    url = f"https://graph.facebook.com/v21.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "text",
+        "text": {"body": message}
+    }
+
+    try:
+        r = requests.post(url, json=payload, headers=headers, timeout=15)
+        return r.status_code in (200, 201)
+    except:
+        return False
+
+# ========== دوال الإحصائيات ==========
+
+def get_dashboard_stats():
+    """جلب إحصائيات اللوحة"""
+    conn = get_db()
+    c = conn.cursor()
+
+    stats = {}
+
+    # عدد الطلبات الكلي
+    c.execute("SELECT COUNT(*) FROM orders")
+    stats["total_orders"] = c.fetchone()[0]
+
+    # حسب الحالة
+    c.execute("SELECT status, COUNT(*) FROM orders GROUP BY status")
+    stats["by_status"] = {row[0]: row[1] for row in c.fetchall()}
+
+    # حسب التنفيذ
+    c.execute("SELECT fulfillment_status, COUNT(*) FROM orders GROUP BY fulfillment_status")
+    stats["by_fulfillment"] = {row[0]: row[1] for row in c.fetchall()}
+
+    # طلبات اليوم
+    today = datetime.now().strftime("%Y-%m-%d")
+    c.execute("SELECT COUNT(*) FROM orders WHERE created_at LIKE ?", (f"{today}%",))
+    stats["today_orders"] = c.fetchone()[0]
+
+    # آخر 5 طلبات
+    c.execute("""
+        SELECT order_name, customer_name, total_amount, status, created_at
+        FROM orders ORDER BY created_at DESC LIMIT 5
+    """)
+    stats["recent_orders"] = [dict(row) for row in c.fetchall()]
+
+    conn.close()
+    return stats
+
+# ========== دوال السيرفر ==========
+
+def sync_background():
+    """مزامنة الطلبات في الخلفية كل 5 دقائق"""
+    while True:
+        try:
+            sync_orders_from_shopify()
+        except Exception as e:
+            print(f"⚠️ Background sync error: {e}")
+        time.sleep(300)  # 5 دقائق
+
+# ========== واجهة برمجة التطبيقات (API Endpoints) ==========
+
+@app.route("/api/orders", methods=["GET"])
+@require_auth
+def api_get_orders():
+    """جلب الطلبات مع إمكانية التصفية"""
+    conn = get_db()
+    c = conn.cursor()
+
+    status_filter = request.args.get("status", "")
+    limit = int(request.args.get("limit", 50))
+
+    if status_filter:
+        c.execute("""
+            SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC LIMIT ?
+        """, (status_filter, limit))
+    else:
+        c.execute("""
+            SELECT * FROM orders ORDER BY created_at DESC LIMIT ?
+        """, (limit,))
+
+    orders = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    for order in orders:
+        if order.get("items"):
+            try:
+                order["items"] = json.loads(order["items"])
+            except:
+                pass
+        if order.get("shipping_address"):
+            try:
+                order["shipping_address"] = json.loads(order["shipping_address"])
+            except:
+                pass
+
+    return jsonify(orders)
+
+
+@app.route("/api/orders/<order_id>", methods=["GET"])
+@app.route("/api/orders/<int:order_id>/", methods=["GET"])
+@require_auth
+def api_get_order(order_id):
+    """جلب تفاصيل طلب معين (int id أو shopify id string)"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM orders WHERE shopify_order_id = ? OR id = ?", (str(order_id) if not isinstance(order_id, int) else "", order_id))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    order = dict(order)
+    if order.get("items"):
+        try:
+            order["items"] = json.loads(order["items"])
+        except:
+            pass
+    if order.get("shipping_address"):
+        try:
+            order["shipping_address"] = json.loads(order["shipping_address"])
+        except:
+            pass
+
+    return jsonify(order)
+
+
+@app.route("/api/orders/<int:order_id>/status", methods=["PUT"])
+@require_auth
+def api_update_status(order_id):
+    """تحديث حالة الطلب"""
+    data = request.get_json()
+    new_status = data.get("status", "")
+
+    if new_status not in ("pending", "confirmed", "processing", "shipped", "delivered", "cancelled"):
+        return jsonify({"error": "Invalid status"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE orders SET status = ?, updated_at = datetime('now','+1 hour') WHERE id = ?",
+              (new_status, order_id))
+    conn.commit()
+
+    # جلب معلومات الزبون للإشعار
+    c.execute("SELECT customer_name, customer_phone, order_name FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    # إرسال إشعار واتساب إذا كان هناك رقم
+    if order and order["customer_phone"]:
+        status_msgs = {
+            "confirmed": f"✅ مرحباً {order['customer_name']}! طلبك {order['order_name']} تم تأكيده. سنبدأ تجهيزه قريباً 🚀",
+            "processing": f"📦 مرحباً {order['customer_name']}! طلبك {order['order_name']} قيد التجهيز في المستودع 🔧",
+            "shipped": f"🚚 مرحباً {order['customer_name']}! طلبك {order['order_name']} تم شحنه. سنرسل لك رقم التتبع قريباً 📍",
+            "delivered": f"🎉 مرحباً {order['customer_name']}! طلبك {order['order_name']} تم توصيله. نتمنى أن ينال إعجابك ❤️👠"
+        }
+        if new_status in status_msgs:
+            send_whatsapp_notification(order["customer_phone"], status_msgs[new_status])
+
+    return jsonify({"success": True, "status": new_status})
+
+
+@app.route("/api/sync", methods=["POST"])
+@require_auth
+def api_sync():
+    """مزامنة يدوية مع Shopify"""
+    success = sync_orders_from_shopify()
+    return jsonify({"success": success})
+
+
+@app.route("/api/stats", methods=["GET"])
+@require_auth
+def api_stats():
+    """إحصائيات اللوحة"""
+    return jsonify(get_dashboard_stats())
+
+
+@app.route("/api/notify/<int:order_id>", methods=["POST"])
+@require_auth
+def api_notify(order_id):
+    """إرسال إشعار يدوي للزبون"""
+    data = request.get_json()
+    message = data.get("message", "")
+
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT customer_phone, customer_name, order_name FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order or not order["customer_phone"]:
+        return jsonify({"error": "Order or phone not found"}), 404
+
+    full_msg = f"👋 مرحباً {order['customer_name']}!\n{message}\n—— Royal Chaussures 👠"
+    success = send_whatsapp_notification(order["customer_phone"], full_msg)
+
+    return jsonify({"success": success, "sent_to": order["customer_phone"]})
+
+# ========== API Endpoints للـ Agents ==========
+
+@app.route("/api/agents", methods=["GET"])
+@require_auth
+def api_get_agents():
+    """جلب قائمة الـ Agents المتاحة"""
+    return jsonify({"agents": get_available_agents()})
+
+
+@app.route("/api/orders/<int:order_id>/conversations", methods=["GET"])
+@require_auth
+def api_get_conversations(order_id):
+    """جلب سجل محادثات طلب معين"""
+    limit = int(request.args.get("limit", 20))
+    convs = get_conversation_history(order_id, limit)
+    return jsonify({"conversations": convs, "count": len(convs)})
+
+
+@app.route("/api/orders/<int:order_id>/agent", methods=["GET", "PUT"])
+@require_auth
+def api_order_agent(order_id):
+    """جلب أو تغيير الـ Agent المسؤول عن الطلب"""
+    conn = get_db()
+    c = conn.cursor()
+
+    if request.method == "PUT":
+        data = request.get_json()
+        new_agent = data.get("agent", "")
+
+        if new_agent not in AVAILABLE_AGENTS:
+            conn.close()
+            return jsonify({"error": f"Invalid agent. Available: {list(AVAILABLE_AGENTS.keys())}"}), 400
+
+        c.execute("UPDATE orders SET current_agent = ?, updated_at = datetime('now','+1 hour') WHERE id = ?",
+                  (new_agent, order_id))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "agent": new_agent, "label": AVAILABLE_AGENTS[new_agent]["label"]})
+
+    # GET
+    c.execute("SELECT id, order_name, current_agent, auto_reply FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    return jsonify({
+        "order_id": order["id"],
+        "order_name": order["order_name"],
+        "current_agent": order["current_agent"],
+        "agent_label": AVAILABLE_AGENTS.get(order["current_agent"], {}).get("label", "غير معروف"),
+        "auto_reply": bool(order["auto_reply"])
+    })
+
+
+@app.route("/api/orders/<int:order_id>/auto_reply", methods=["PUT"])
+@require_auth
+def api_toggle_auto_reply(order_id):
+    """تفعيل/إيقاف الرد الآلي للطلب"""
+    data = request.get_json()
+    enabled = data.get("enabled", True)
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE orders SET auto_reply = ?, updated_at = datetime('now','+1 hour') WHERE id = ?",
+              (1 if enabled else 0, order_id))
+    conn.commit()
+    conn.close()
+
+    status = "مفعل" if enabled else "متوقف"
+    return jsonify({"success": True, "auto_reply": enabled, "status_text": status})
+
+
+@app.route("/api/orders/<int:order_id>/simulate_chat", methods=["POST"])
+@require_auth
+def api_simulate_chat(order_id):
+    """محاكاة رد الـ Agent على رسالة زبون (اختبار)"""
+    data = request.get_json()
+    message = data.get("message", "")
+
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, order_name, current_agent, customer_name, customer_platform_id FROM orders WHERE id = ?",
+              (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    agent_key = order["current_agent"] or "customer_support"
+    response, error = call_openclaw_agent(agent_key, message, order_id)
+
+    if error:
+        return jsonify({"error": error}), 500
+
+    # تسجيل المحادثة
+    log_conversation(order_id, "dashboard", str(order["id"]), message, response, agent_key)
+
+    return jsonify({
+        "success": True,
+        "order_id": order_id,
+        "order_name": order["order_name"],
+        "agent_used": agent_key,
+        "agent_label": AVAILABLE_AGENTS.get(agent_key, {}).get("label", agent_key),
+        "customer_message": message,
+        "ai_response": response
+    })
+
+
+@app.route("/api/orders/<int:order_id>/ship", methods=["POST"])
+@require_auth
+def api_create_zr_shipment(order_id):
+    """إنشاء شحنة ZR Express لطلب معين"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    order_dict = dict(order)
+    import traceback as _zrtb
+    try:
+        result, error = create_zr_shipment(order_dict)
+    except Exception as _zre:
+        return jsonify({"success": False, "error": f"Exception in create_zr_shipment: {_zre}", "trace": _zrtb.format_exc()}), 500
+
+    if error:
+        return jsonify({"success": False, "error": error}), 400
+
+    # حفظ رقم التتبع في قاعدة البيانات
+    tracking = result.get("trackingNumber", result.get("tracking", ""))
+    parcel_id = result.get("id", result.get("parcelId", ""))
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE orders
+        SET zr_tracking_number = ?, zr_parcel_id = ?, status = 'shipped',
+            updated_at = datetime('now','+1 hour')
+        WHERE id = ?
+    """, (tracking, parcel_id, order_id))
+    conn.commit()
+    conn.close()
+
+    # رفع التتبع لـ Shopify
+    shopify_tracking_updated = False
+    shopify_order_id = order_dict.get("shopify_order_id", "")
+    if shopify_order_id:
+        try:
+            shop_url = f"https://{SHOPIFY_STORE}.myshopify.com/admin/api/2024-10"
+            fulfillment_payload = {
+                "fulfillment": {
+                    "location_id": None,  # سيتم اختيار أول location
+                    "tracking_number": tracking or parcel_id or "",
+                    "tracking_url": f"https://zrexpress.app/track/{tracking}" if tracking else "",
+                    "tracking_company": "ZR Express",
+                    "line_items_by_fulfillment_order": []
+                }
+            }
+            # جلب fulfillment orders الخاصة بالطلب
+            fo_resp = requests.get(
+                f"{shop_url}/orders/{shopify_order_id}/fulfillment_orders.json",
+                headers=SHOPIFY_HEADERS, timeout=10
+            )
+            if fo_resp.status_code == 200:
+                fo_data = fo_resp.json().get("fulfillment_orders", [])
+                if fo_data:
+                    fulfillment_payload["fulfillment"]["location_id"] = fo_data[0].get("assigned_location_id")
+                    fulfillment_payload["fulfillment"]["line_items_by_fulfillment_order"] = [
+                        {"fulfillment_order_id": fo["id"]} for fo in fo_data
+                    ]
+                    # إنشاء fulfillment
+                    f_resp = requests.post(
+                        f"{shop_url}/fulfillments.json",
+                        json=fulfillment_payload, headers=SHOPIFY_HEADERS, timeout=10
+                    )
+                    if f_resp.status_code in (200, 201):
+                        shopify_tracking_updated = True
+        except Exception:
+            pass
+
+    # إرسال إشعار واتساب للزبون
+    whatsapp_sent = False
+    if order["customer_phone"]:
+        tracking_msg = (
+            f"🚚 مرحباً {order['customer_name']}!\n"
+            f"طلبك {order['order_name']} تم شحنه عبر ZR Express.\n"
+            f"📦 رقم التتبع: {tracking or parcel_id or 'سيتم توفيره قريباً'}\n"
+            f"شكراً لثقتك في Royal Chaussures 👠❤️"
+        )
+        try:
+            whatsapp_sent = send_whatsapp_notification(order["customer_phone"], tracking_msg)
+        except Exception:
+            pass
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE orders
+        SET shopify_tracking_updated = ?, whatsapp_sent = ?,
+            updated_at = datetime('now','+1 hour')
+        WHERE id = ?
+    """, (1 if shopify_tracking_updated else 0, 1 if whatsapp_sent else 0, order_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "message": "✅ تم إنشاء الشحنة بنجاح!",
+        "tracking": tracking or "",
+        "parcel_id": parcel_id,
+        "shopify_tracking_updated": shopify_tracking_updated,
+        "whatsapp_sent": whatsapp_sent,
+        "zr_response": result
+    })
+
+
+# ========== واجهة المستخدم (HTML) ==========
+
+@app.route("/")
+@require_auth
+def dashboard():
+    """الصفحة الرئيسية"""
+    stats = get_dashboard_stats()
+    agents = get_available_agents()
+    return render_template_string(DASHBOARD_HTML, stats=stats, agents=agents)
+
+
+@app.route("/premium")
+@require_auth
+def dashboard_premium():
+    """لوحة التحكم البريميوم (Premium)"""
+    import os as _os
+    tmpl_dir = _os.path.join(_os.path.dirname(__file__), "templates")
+    html_path = _os.path.join(tmpl_dir, "dashboard_premium.html")
+    if _os.path.exists(html_path):
+        return render_template_string(open(html_path, "r", encoding="utf-8").read())
+    return "⚠️ الملف غير موجود: dashboard_premium.html", 404
+
+
+@app.route("/orders")
+@require_auth
+def orders_page():
+    """صفحة جميع الطلبات"""
+    import os as _os
+    tmpl_dir = _os.path.join(_os.path.dirname(__file__), "templates")
+    html_path = _os.path.join(tmpl_dir, "orders.html")
+    if _os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return render_template_string(f.read(), agents=get_available_agents())
+    return "<h1>Page not found</h1>", 404
+
+
+@app.route("/orders/<int:order_id>")
+@require_auth
+def order_detail_page(order_id):
+    """صفحة تفاصيل الطلب مع سجل المحادثة"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+
+    if not order:
+        conn.close()
+        return "الطلب غير موجود", 404
+
+    c.execute("SELECT * FROM conversations WHERE order_id = ? ORDER BY created_at ASC", (order_id,))
+    conversations = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    order = dict(order)
+    order_items = []
+    if order.get("items"):
+        try:
+            parsed = json.loads(order["items"]) if isinstance(order["items"], str) else order["items"]
+            order_items = parsed if isinstance(parsed, list) else []
+        except:
+            order_items = []
+
+    import os as _os
+    tmpl_dir = _os.path.join(_os.path.dirname(__file__), "templates")
+    html_path = _os.path.join(tmpl_dir, "order_detail.html")
+    if _os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return render_template_string(f.read(), order=order, order_items=order_items, conversations=conversations, agents=get_available_agents())
+    return "<h1>Page not found</h1>", 404
+
+
+LOGIN_HTML = """<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — تسجيل الدخول</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+        body::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 30% 50%, rgba(201,169,110,0.03) 0%, transparent 60%);
+        }
+        .login-card {
+            position: relative;
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 24px;
+            padding: 48px; width: 420px; max-width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .logo { text-align: center; margin-bottom: 40px; }
+        .logo .icon { width: 64px; height: 64px; margin: 0 auto 16px; background: linear-gradient(135deg, #c9a96e, #a88848); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .logo h1 { font-family: 'Playfair Display', serif; color: #f5f0eb; font-size: 26px; font-weight: 600; letter-spacing: 0.5px; }
+        .logo p { color: #666; margin-top: 8px; font-size: 13px; letter-spacing: 0.3px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: #999; margin-bottom: 8px; font-size: 13px; letter-spacing: 0.3px; }
+        input {
+            width: 100%; padding: 14px 16px; border-radius: 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+            color: #f5f0eb; font-size: 15px; outline: none; transition: 0.3s; font-family: 'Inter', sans-serif;
+        }
+        input::placeholder { color: #444; }
+        input:focus { border-color: #c9a96e; box-shadow: 0 0 30px rgba(201,169,110,0.1); }
+        button {
+            width: 100%; padding: 14px; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, #c9a96e, #a88848);
+            color: #0a0a0a; font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: 0.3s; margin-top: 8px; font-family: 'Inter', sans-serif; letter-spacing: 0.5px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(201,169,110,0.2); }
+        .error { color: #e74c3c; text-align: center; margin-bottom: 16px; font-size: 13px; }
+        .footer { text-align: center; margin-top: 32px; color: #333; font-size: 11px; letter-spacing: 0.3px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">
+            <div class="icon">👠</div>
+            <h1>Royal Chaussures</h1>
+            <p><i class="fas fa-gem" style="color:#c9a96e;font-size:12px"></i> لوحة التحكم — Dashboard</p>
+        </div>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label><i class="fas fa-user" style="color:#c9a96e;width:16px"></i> اسم المستخدم</label>
+                <input type="text" name="username" placeholder="admin" required>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock" style="color:#c9a96e;width:16px"></i> كلمة السر</label>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit">الدخول <i class="fas fa-arrow-left"></i></button>
+        </form>
+        <div class="footer">Royal Chaussures &copy; 2026 &mdash; نظام إدارة الطلبات</div>
+    </div>
+</body>
+</html>
+"""
+
+DASHBOARD_HTML = """<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Royal Chaussures — لوحة التحكم</title>
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#111111">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Royal Admin">
+    <!-- Fonts: Playfair Display + Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6.5.2 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Chart.js 4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+    <style>
+/* ===== QUIET LUXURY — Design System ===== */
+:root {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-elevated: #181818;
+  --bg-card: #1a1a1a;
+  --bg-glass: rgba(255,255,255,0.04);
+  --bg-glass-strong: rgba(255,255,255,0.08);
+  --text-primary: #f5f0eb;
+  --text-secondary: #a09890;
+  --text-muted: #6a6560;
+  --gold: #c9a96e;
+  --gold-light: #e0c992;
+  --gold-dark: #a88848;
+  --gold-glow: rgba(201,169,110,0.15);
+  --border: rgba(255,255,255,0.07);
+  --border-gold: rgba(201,169,110,0.2);
+  --shadow: 0 8px 40px rgba(0,0,0,0.5);
+  --shadow-sm: 0 4px 16px rgba(0,0,0,0.3);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 24px;
+  --sidebar-width: 260px;
+  --accent-red: #dc3545;
+  --accent-green: #2baf6b;
+  --accent-blue: #3b82f6;
+  --accent-purple: #8b5cf6;
+  --accent-cyan: #22d3ee;
+  --accent-amber: #f59e0b;
+  --font-heading: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f5f0eb;
+  --bg-secondary: #ffffff;
+  --bg-elevated: #fafafa;
+  --bg-card: #ffffff;
+  --bg-glass: rgba(0,0,0,0.03);
+  --bg-glass-strong: rgba(0,0,0,0.06);
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #999999;
+  --gold: #b8860b;
+  --gold-light: #d4a843;
+  --gold-dark: #8b6508;
+  --gold-glow: rgba(184,134,11,0.12);
+  --border: rgba(0,0,0,0.08);
+  --border-gold: rgba(184,134,11,0.2);
+  --shadow: 0 8px 32px rgba(0,0,0,0.08);
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background var(--transition), color var(--transition);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection { background: var(--gold-glow); color: var(--gold); }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* ===== Sidebar ===== */
+.sidebar {
+  position: fixed; right: 0; top: 0;
+  width: var(--sidebar-width); height: 100vh;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  padding: 28px 16px;
+  display: flex; flex-direction: column; z-index: 100;
+  transition: transform var(--transition);
+}
+
+.sidebar .brand {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 8px; margin-bottom: 6px;
+}
+
+.sidebar .brand-icon {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; box-shadow: 0 4px 12px var(--gold-glow);
+}
+
+.sidebar .brand-text h2 {
+  font-family: var(--font-heading);
+  font-size: 18px; color: var(--text-primary);
+  font-weight: 600; line-height: 1.2;
+}
+
+.sidebar .brand-text .subtitle {
+  font-size: 10px; color: var(--text-muted);
+  letter-spacing: 1.5px; text-transform: uppercase;
+}
+
+.sidebar .nav-section { margin-top: 32px; flex: 1; }
+
+.sidebar .nav-label {
+  font-size: 9px; text-transform: uppercase;
+  letter-spacing: 1.8px; color: var(--text-muted);
+  margin-bottom: 10px; padding: 0 16px;
+}
+
+.sidebar a.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px; border-radius: var(--radius-sm);
+  color: var(--text-secondary); text-decoration: none;
+  margin-bottom: 3px; transition: all var(--transition);
+  font-size: 14px; font-weight: 400;
+  position: relative;
+}
+
+.sidebar a.nav-item i {
+  width: 20px; text-align: center;
+  font-size: 16px; color: var(--text-muted);
+  transition: color var(--transition);
+}
+
+.sidebar a.nav-item:hover {
+  background: var(--bg-glass);
+  color: var(--text-primary);
+}
+
+.sidebar a.nav-item:hover i { color: var(--gold); }
+
+.sidebar a.nav-item.active {
+  background: var(--gold-glow);
+  color: var(--gold);
+  border: 1px solid var(--border-gold);
+}
+
+.sidebar a.nav-item.active i { color: var(--gold); }
+
+.sidebar .sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 12px; display: flex; flex-direction: column; gap: 2px;
+}
+
+.sidebar .sidebar-footer a {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; border-radius: var(--radius-sm);
+  color: var(--text-muted); text-decoration: none;
+  font-size: 13px; transition: all var(--transition);
+}
+
+.sidebar .sidebar-footer a:hover {
+  color: var(--text-primary); background: var(--bg-glass);
+}
+
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  z-index: 99;
+}
+
+.mobile-menu-btn {
+  display: none; position: fixed; top: 14px; right: 14px;
+  z-index: 101; width: 42px; height: 42px;
+  border-radius: 12px; border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text-primary);
+  font-size: 18px; cursor: pointer;
+  align-items: center; justify-content: center;
+  transition: all var(--transition);
+  backdrop-filter: blur(12px);
+}
+
+/* ===== Main Layout ===== */
+.main {
+  margin-right: var(--sidebar-width);
+  padding: 32px 40px; min-height: 100vh;
+}
+
+/* ===== Page Header ===== */
+.page-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 28px;
+  flex-wrap: wrap; gap: 16px;
+}
+
+.page-header .header-left h1 {
+  font-family: var(--font-heading);
+  font-size: 28px; font-weight: 600;
+  color: var(--text-primary); letter-spacing: -0.3px;
+}
+
+.page-header .header-left p {
+  color: var(--text-secondary);
+  font-size: 14px; margin-top: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.page-header .header-actions {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--radius-sm);
+  border: none; cursor: pointer;
+  font-family: var(--font-body); font-size: 13px;
+  font-weight: 500; transition: all var(--transition);
+  text-decoration: none; white-space: nowrap;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  color: #fff;
+}
+
+.btn-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px var(--gold-glow);
+}
+
+.btn-outline {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+.btn-glass {
+  background: var(--bg-glass); border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-glass:hover { background: var(--bg-glass-strong); color: var(--text-primary); }
+
+.btn-sm { padding: 7px 16px; font-size: 12px; }
+
+.btn-icon {
+  width: 38px; height: 38px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ===== Theme Toggle ===== */
+.theme-toggle {
+  width: 38px; height: 38px; border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-glass); color: var(--text-secondary);
+  font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+
+.theme-toggle:hover { background: var(--bg-glass-strong); color: var(--gold); }
+
+/* ===== Stats Grid ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px; margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px; position: relative; overflow: hidden;
+  transition: all var(--transition);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  opacity: 0.7;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: var(--gold-dark);
+}
+
+.stat-card .stat-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--gold-glow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--gold); margin-bottom: 14px;
+}
+
+.stat-card .number {
+  font-family: var(--font-heading);
+  font-size: 32px; font-weight: 700;
+  color: var(--text-primary); line-height: 1;
+}
+
+.stat-card .label {
+  color: var(--text-muted); font-size: 13px; margin-top: 8px;
+}
+
+.stat-card .trend {
+  font-size: 11px; margin-top: 8px;
+  display: flex; align-items: center; gap: 4px;
+}
+
+.trend-up { color: var(--accent-green); }
+.trend-down { color: var(--accent-red); }
+
+/* ===== Glass Sections ===== */
+.glass-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px; margin-bottom: 28px;
+}
+
+.glass-section .section-header {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 20px;
+  flex-wrap: wrap; gap: 12px;
+}
+
+.glass-section .section-title {
+  font-family: var(--font-heading);
+  font-size: 18px; font-weight: 600;
+  color: var(--text-primary);
+  display: flex; align-items: center; gap: 10px;
+}
+
+.glass-section .section-title i { color: var(--gold); font-size: 18px; }
+
+/* ===== Charts Grid ===== */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px; margin-bottom: 28px;
+}
+
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px; transition: all var(--transition);
+}
+
+.chart-card:hover { border-color: var(--border-gold); }
+
+.chart-card .chart-title {
+  font-family: var(--font-heading);
+  font-size: 15px; font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.chart-card .chart-title i { color: var(--gold); }
+
+.chart-card canvas { max-height: 260px; }
+
+/* ===== Table ===== */
+.table-wrapper { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; }
+
+th {
+  text-align: right; padding: 14px 16px;
+  color: var(--text-muted); font-size: 11px;
+  font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 14px; color: var(--text-primary);
+  transition: background var(--transition);
+}
+
+[data-theme="light"] td { border-bottom: 1px solid rgba(0,0,0,0.04); }
+
+tr:hover td { background: var(--bg-glass); }
+
+tr:last-child td { border-bottom: none; }
+
+/* ===== Badges ===== */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+}
+
+.badge-pending { background: rgba(245,158,11,0.12); color: var(--accent-amber); }
+.badge-confirmed { background: rgba(59,130,246,0.12); color: var(--accent-blue); }
+.badge-processing { background: rgba(139,92,246,0.12); color: var(--accent-purple); }
+.badge-shipped { background: rgba(34,211,238,0.12); color: var(--accent-cyan); }
+.badge-delivered { background: rgba(43,175,107,0.12); color: var(--accent-green); }
+.badge-cancelled { background: rgba(220,53,69,0.12); color: var(--accent-red); }
+
+/* ===== PWA Banner ===== */
+.pwa-banner {
+  display: none; align-items: center; gap: 12px;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  color: #fff; padding: 12px 20px;
+  border-radius: var(--radius-sm); margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.pwa-banner.show { display: flex; }
+
+.pwa-banner .pwa-close {
+  margin-right: auto; background: rgba(255,255,255,0.2);
+  border: none; color: #fff; width: 28px; height: 28px;
+  border-radius: 50%; cursor: pointer; font-size: 14px;
+  transition: background var(--transition);
+}
+
+.pwa-banner .pwa-close:hover { background: rgba(255,255,255,0.35); }
+
+.install-btn { display: none; }
+.install-btn.show { display: inline-flex; }
+
+/* ===== Notification Badge ===== */
+.notif-badge {
+  display: none; position: absolute; top: -2px; left: -2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent-red); color: #fff;
+  font-size: 10px; font-weight: 700;
+  align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(220,53,69,0.4);
+}
+
+.notif-badge.show { display: flex; }
+
+/* ===== Toast Notifications ===== */
+.toast-container {
+  position: fixed; bottom: 24px; left: 24px;
+  z-index: 9999; display: flex;
+  flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 20px; border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary); font-size: 14px;
+  min-width: 280px; max-width: 420px;
+  animation: toastIn 0.35s ease;
+  pointer-events: auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.toast i { font-size: 20px; }
+.toast-success i { color: var(--accent-green); }
+.toast-error i { color: var(--accent-red); }
+.toast-info i { color: var(--accent-blue); }
+.toast-new-order i { color: var(--gold); }
+
+@keyframes toastIn {
+  from { transform: translateX(100px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ===== Empty State ===== */
+.empty-state {
+  text-align: center; padding: 48px 24px;
+  color: var(--text-muted);
+}
+
+.empty-state i {
+  font-size: 48px; color: var(--gold);
+  opacity: 0.3; margin-bottom: 16px;
+}
+
+.empty-state p { font-size: 14px; }
+
+/* ===== Spinner ===== */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .mobile-menu-btn { display: flex; }
+  .main { margin-right: 0; padding: 16px; padding-top: 72px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .glass-section { padding: 20px; }
+  .stat-card { padding: 18px; }
+  .stat-card .number { font-size: 24px; }
+  .page-header .header-left h1 { font-size: 22px; }
+  .page-header .header-actions { width: 100%; justify-content: flex-start; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .main { padding: 12px; padding-top: 64px; }
+  .glass-section { padding: 16px; border-radius: var(--radius); }
+  .stat-card { padding: 14px; }
+  .stat-card .number { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<button class="mobile-menu-btn" onclick="toggleSidebar()" id="menuBtn"><i class="fas fa-bars"></i></button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-icon">👠</div>
+    <div class="brand-text">
+      <h2>Royal Chaussures</h2>
+      <div class="subtitle">Admin Dashboard</div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">القائمة الرئيسية</div>
+    <a href="/" class="nav-item active"><i class="fas fa-chart-pie"></i> لوحة التحكم</a>
+    <a href="/orders" class="nav-item"><i class="fas fa-box"></i> الطلبات</a>
+    <a href="#" class="nav-item" onclick="showNotifHistory()">
+      <i class="fas fa-bell"></i> الإشعارات
+      <span class="notif-badge" id="notifBadge">0</span>
+    </a>
+    <a href="/system/status" class="nav-item"><i class="fas fa-cog"></i> حالة النظام</a>
+    <a href="/premium" class="nav-item" style="margin-top:6px;background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.15);color:#D4AF37;"><i class="fas fa-crown"></i> لوحة بريميوم ✨</a>
+  </div>
+  <div class="sidebar-footer">
+    <a href="#" id="installAppBtn" class="install-btn" onclick="installPWA()">
+      <i class="fas fa-download"></i> تثبيت التطبيق
+    </a>
+    <a href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- PWA Install Banner -->
+  <div class="pwa-banner" id="pwaBanner">
+    <i class="fas fa-mobile-alt"></i>
+    <span>قم بتثبيت تطبيق Royal Admin على جهازك</span>
+    <button class="pwa-close" onclick="this.parentElement.classList.remove('show')">✕</button>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <h1>لوحة التحكم</h1>
+      <p><i class="fas fa-user"></i> مرحبا {{ session.username }}! <span id="liveTime"></span></p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-glass btn-sm" onclick="exportPdf('stats','إحصائيات')"><i class="fas fa-file-pdf"></i> PDF</button>
+      <button class="btn btn-glass btn-sm" onclick="exportPdf('orders','الطلبات')"><i class="fas fa-file-pdf"></i> تصدير PDF</button>
+      <button class="btn btn-gold btn-sm" onclick="syncOrders()"><i class="fas fa-sync"></i> مزامنة</button>
+      <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon" id="themeIcon"></i></button>
+    </div>
+  </div>
+
+  <!-- Install Button (mobile-friendly) -->
+  <button class="btn btn-gold btn-sm install-btn" onclick="installPWA()" style="margin-bottom:16px">
+    <i class="fas fa-download"></i> تثبيت التطبيق
+  </button>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid" id="stats">
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+      <div class="number">{{ stats.total_orders }}</div>
+      <div class="label">إجمالي الطلبات</div>
+      <div class="trend trend-up"><i class="fas fa-arrow-up"></i> {{ stats.today_orders }} جديد اليوم</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-clock"></i></div>
+      <div class="number">{{ stats.by_status.get('pending',0) }}</div>
+      <div class="label">قيد الانتظار</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="number">{{ stats.by_status.get('confirmed',0) }}</div>
+      <div class="label">مؤكدة</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-truck"></i></div>
+      <div class="number">{{ stats.by_status.get('shipped',0)+stats.by_status.get('delivered',0) }}</div>
+      <div class="label">تم الشحن/التوصيل</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+      <div class="number">{{ stats.today_orders }}</div>
+      <div class="label">طلبات اليوم</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+      <div class="number">{{ stats.by_fulfillment.get('fulfilled',0) }}</div>
+      <div class="label">منفذة بالكامل</div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div class="charts-grid" id="charts">
+    <div class="chart-card">
+      <div class="chart-title"><i class="fas fa-chart-line"></i> المبيعات — آخر 30 يوم</div>
+      <canvas id="salesChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><i class="fas fa-chart-pie"></i> حالات الطلبات</div>
+      <canvas id="statusChart"></canvas>
+    </div>
+    <div class="chart-card" style="grid-column:1/-1">
+      <div class="chart-title"><i class="fas fa-chart-bar"></i> المنتجات الأكثر مبيعا</div>
+      <canvas id="topProductsChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Recent Orders Section -->
+  <div class="glass-section" id="orders">
+    <div class="section-header">
+      <div class="section-title"><i class="fas fa-list"></i> آخر الطلبات</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-glass btn-sm" onclick="exportPdf('orders','الطلبات-الأخيرة')"><i class="fas fa-file-pdf"></i> PDF</button>
+        <button class="btn btn-gold btn-sm" onclick="syncOrders()"><i class="fas fa-sync"></i> مزامنة</button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      {% if stats.recent_orders %}
+      <table>
+        <thead>
+          <tr><th>الطلب</th><th>الزبون</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr>
+        </thead>
+        <tbody>
+          {% for order in stats.recent_orders %}
+          <tr onclick="window.location='/orders/{{ order.id }}'" style="cursor:pointer">
+            <td><strong>{{ order.order_name }}</strong></td>
+            <td>{{ order.customer_name or '—' }}</td>
+            <td>{{ order.total_amount }} د.ج</td>
+            <td><span class="badge badge-{{ order.status }}">{{ order.status }}</span></td>
+            <td>{{ order.created_at[:10] if order.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>لا توجد طلبات بعد.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===== PWA / Install Prompt =====
+let deferredPrompt = null;
+let lastCheckTime = Math.floor(Date.now() / 1000);
+let salesChart = null, statusChart = null, productsChart = null;
+
+// Theme initialization
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('themeIcon').className = saved === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+  }
+})();
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  const icon = document.getElementById('themeIcon');
+  icon.className = next === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+}
+
+// PWA Install
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.querySelectorAll('.install-btn').forEach(function(el) { el.classList.add('show'); });
+  document.getElementById('pwaBanner').classList.add('show');
+});
+
+window.addEventListener('appinstalled', function() {
+  deferredPrompt = null;
+  document.querySelectorAll('.install-btn').forEach(function(el) { el.classList.remove('show'); });
+  document.getElementById('pwaBanner').classList.remove('show');
+  showToast('تم تثبيت التطبيق بنجاح!', 'success');
+});
+
+function installPWA() {
+  if (!deferredPrompt) {
+    showToast('يمكنك التثبيت من قائمة المتصفح', 'info');
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function() {
+    deferredPrompt = null;
+    document.querySelectorAll('.install-btn').forEach(function(el) { el.classList.remove('show'); });
+  });
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js').catch(function() {});
+}
+
+// Browser Notifications
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+requestNotificationPermission();
+
+// Sidebar
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+// Toast System
+function showToast(msg, type) {
+  var container = document.getElementById('toastContainer');
+  var t = document.createElement('div');
+  var icons = {
+    success: 'fa-check-circle',
+    error: 'fa-exclamation-circle',
+    info: 'fa-info-circle',
+    'new-order': 'fa-cart-plus'
+  };
+  t.className = 'toast toast-' + (type || 'info');
+  t.innerHTML = '<i class="fas ' + (icons[type || 'info'] || 'fa-info-circle') + '"></i> ' + msg;
+  container.appendChild(t);
+  setTimeout(function() {
+    t.style.opacity = '0';
+    t.style.transition = 'opacity 0.3s';
+    setTimeout(function() { t.remove(); }, 300);
+  }, 4000);
+}
+
+// Live Clock
+function updateClock() {
+  var d = new Date();
+  var el = document.getElementById('liveTime');
+  if (el) {
+    el.textContent = ': ' + d.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+  }
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+// Check New Orders (every 30s)
+function checkNewOrders() {
+  fetch('/api/orders/new-check?since=' + lastCheckTime)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.new_orders > 0)        document.getElementById('notifBadge').textContent = d.new_orders;
+        document.getElementById('notifBadge').classList.add('show');
+        showToast(' 🛒 ' + d.new_orders + ' طلب/طلبات جديدة!', 'new-order');
+        // Browser Notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('🛒 طلبات جديدة - Royal Chaussures', {
+            body: 'لديك ' + d.new_orders + ' طلب/طلبات جديدة!',
+            icon: '/favicon.ico',
+            badge: '/favicon.ico'
+          });
+        }
+      }
+      lastCheckTime = d.checked_at || Math.floor(Date.now() / 1000);
+    })
+    .catch(function() {});
+}
+setInterval(checkNewOrders, 30000);
+setTimeout(checkNewOrders, 5000);
+
+// Sync Orders
+function syncOrders() {
+  var btn = event && event.target ? event.target.closest('button') : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  fetch('/api/sync', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('✅ تمت المزامنة بنجاح!', 'success');
+        setTimeout(function() { location.reload(); }, 1500);
+      } else {
+        showToast('⚠️ فشلت المزامنة', 'error');
+      }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync"></i> مزامنة'; }
+    })
+    .catch(function() {
+      showToast('⚠️ خطأ في الاتصال', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync"></i> مزامنة'; }
+    });
+}
+
+function showNotifHistory() {
+  showToast('📋 سجل الإشعارات قيد التطوير', 'info');
+}
+
+// ===== Chart.js Initialization =====
+function initCharts() {
+  fetch('/api/stats/chart-data')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      // Sales Line Chart (30 days)
+      if (data.sales_30d && document.getElementById('salesChart')) {
+        var labels = data.sales_30d.map(function(d) { return d.date.slice(5); });
+        var values = data.sales_30d.map(function(d) { return d.total; });
+        var ctx = document.getElementById('salesChart').getContext('2d');
+        if (salesChart) salesChart.destroy();
+        var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        salesChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'المبيعات (د.ج)',
+              data: values,
+              borderColor: '#c9a96e',
+              backgroundColor: 'rgba(201,169,110,0.08)',
+              fill: true,
+              tension: 0.35,
+              pointBackgroundColor: '#c9a96e',
+              pointBorderColor: isDark ? '#1a1a1a' : '#fff',
+              pointRadius: 3,
+              pointHoverRadius: 6,
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: { color: '#999490', font: { family: 'Inter' } }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#6a6560', font: { size: 10 }, maxTicksLimit: 10 },
+                grid: { color: 'rgba(255,255,255,0.04)' }
+              },
+              y: {
+                ticks: { color: '#6a6560', font: { size: 10 } },
+                grid: { color: 'rgba(255,255,255,0.04)' }
+              }
+            }
+          }
+        });
+      }
+
+      // Status Doughnut Chart
+      if (data.status_counts && document.getElementById('statusChart')) {
+        var labels = Object.keys(data.status_counts);
+        var values = Object.values(data.status_counts);
+        var colors = {
+          pending: '#f59e0b',
+          confirmed: '#3b82f6',
+          processing: '#8b5cf6',
+          shipped: '#22d3ee',
+          delivered: '#2baf6b',
+          cancelled: '#dc3545'
+        };
+        var ctx = document.getElementById('statusChart').getContext('2d');
+        if (statusChart) statusChart.destroy();
+        statusChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: values,
+              backgroundColor: labels.map(function(l) { return colors[l] || '#666'; }),
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#999490',
+                  font: { family: 'Inter', size: 11 },
+                  padding: 12,
+                  usePointStyle: true,
+                  pointStyle: 'circle'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Top Products Horizontal Bar Chart
+      if (data.top_products && document.getElementById('topProductsChart')) {
+        var labels = data.top_products.map(function(p) { return p.name; });
+        var values = data.top_products.map(function(p) { return p.count; });
+        var ctx = document.getElementById('topProductsChart').getContext('2d');
+        if (productsChart) productsChart.destroy();
+        productsChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'عدد المبيعات',
+              data: values,
+              backgroundColor: 'rgba(201,169,110,0.5)',
+              borderColor: '#c9a96e',
+              borderWidth: 1,
+              borderRadius: 4,
+              barThickness: 18
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+              legend: {
+                labels: { color: '#999490', font: { family: 'Inter' } }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#6a6560', font: { size: 11 } },
+                grid: { color: 'rgba(255,255,255,0.04)' }
+              },
+              y: {
+                ticks: { color: '#999490', font: { size: 11 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    })
+    .catch(function() {
+      // Silent fail if chart data unavailable
+    });
+}
+
+// ===== PDF Export =====
+function exportPdf(elementId, filename) {
+  var el = document.getElementById(elementId);
+  if (!el) {
+    showToast('⚠️ القسم غير موجود', 'error');
+    return;
+  }
+  showToast('📄 جاري إنشاء PDF...', 'info');
+  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  html2pdf()
+    .set({
+      margin: [10, 10, 10, 10],
+      filename: 'Royal_' + filename + '.pdf',
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: isDark ? '#0a0a0a' : '#ffffff'
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    })
+    .from(el)
+    .save()
+    .then(function() {
+      showToast('✅ تم تصدير PDF بنجاح!', 'success');
+    })
+    .catch(function() {
+      showToast('⚠️ فشل تصدير PDF', 'error');
+    });
+}
+
+// ===== DOM Ready =====
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(initCharts, 500);
+  updateClock();
+});
+</script>
+</body>
+</html>
+"""
+
+# ========== API Endpoints جديدة (Dashboard Charts/Notifications) ==========
+
+@app.route("/api/orders/new-check", methods=["GET"])
+@require_auth
+def api_new_orders_check():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM orders WHERE created_at >= datetime('now','-120 seconds','+1 hour')")
+    new_count = c.fetchone()[0]
+    conn.close()
+    now_ts = int(time.time())
+    return jsonify({"new_orders": new_count, "checked_at": now_ts})
+
+
+@app.route("/api/stats/chart-data", methods=["GET"])
+@require_auth
+def api_chart_data():
+    conn = get_db()
+    c = conn.cursor()
+    sales_30d = []
+    from datetime import datetime, timedelta
+    for i in range(29, -1, -1):
+        day = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+        c.execute("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE created_at LIKE ? AND status != 'cancelled'", (f"{day}%",))
+        total = c.fetchone()[0]
+        sales_30d.append({"date": day, "total": float(total)})
+    c.execute("SELECT status, COUNT(*) FROM orders GROUP BY status")
+    status_counts = {row[0]: row[1] for row in c.fetchall()}
+    c.execute("SELECT items FROM orders WHERE status != 'cancelled'")
+    rows = c.fetchall()
+    product_counts = {}
+    for row in rows:
+        try:
+            items = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            if isinstance(items, list):
+                for item in items:
+                    name = item.get("name", item.get("title", "غير معروف"))
+                    qty = int(item.get("quantity", 1))
+                    product_counts[name] = product_counts.get(name, 0) + qty
+        except:
+            pass
+    top_products = sorted(product_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_products_list = [{"name": k, "count": v} for k, v in top_products]
+    conn.close()
+    return jsonify({"sales_30d": sales_30d, "status_counts": status_counts, "top_products": top_products_list})
+
+
+@app.route("/api/orders/report/pdf", methods=["GET"])
+@require_auth
+def api_orders_report_pdf():
+    status_filter = request.args.get("status", "")
+    date_from = request.args.get("from", "")
+    date_to = request.args.get("to", "")
+    conn = get_db()
+    c = conn.cursor()
+    query = "SELECT * FROM orders WHERE 1=1"
+    params = []
+    if status_filter:
+        query += " AND status = ?"
+        params.append(status_filter)
+    if date_from:
+        query += " AND created_at >= ?"
+        params.append(date_from)
+    if date_to:
+        query += " AND created_at <= ?"
+        params.append(date_to + " 23:59:59")
+    query += " ORDER BY created_at DESC"
+    c.execute(query, params)
+    rows = c.fetchall()
+    orders = []
+    for row in rows:
+        o = dict(row)
+        if o.get("items") and isinstance(o["items"], str):
+            try:
+                o["items"] = json.loads(o["items"])
+            except:
+                o["items"] = []
+        orders.append(o)
+    total_amount = sum(float(o.get("total_amount", 0)) for o in orders)
+    total_orders = len(orders)
+    conn.close()
+    return jsonify({
+        "report_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "total_orders": total_orders,
+        "total_amount": total_amount,
+        "status_filter": status_filter or "الكل",
+        "orders": orders
+    })
+
+
+
+# ========== Webhooks من Shopify ==========
+
+@app.route("/webhook/shopify/order-created", methods=["POST"])
+def shopify_order_created():
+    """استقبال طلب جديد من Shopify"""
+    data = request.get_json()
+
+    if not data:
+        return json.dumps({"error": "Invalid JSON"}), 400
+
+    # حفظ الطلب في قاعدة البيانات
+    customer = data.get("customer", {}) or {}
+    line_items = data.get("line_items", [])
+
+    items_summary = [{
+        "name": item.get("title", ""),
+        "quantity": item.get("quantity", 1),
+        "price": item.get("price", "0"),
+        "sku": item.get("sku", "")
+    } for item in line_items]
+
+    shipping = data.get("shipping_address", {}) or {}
+
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            INSERT OR IGNORE INTO orders
+            (shopify_order_id, order_name, customer_name, customer_phone,
+             total_amount, currency, status, items, shipping_address, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            str(data["id"]),
+            data.get("name", ""),
+            f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            customer.get("phone", "") or shipping.get("phone", ""),
+            float(data.get("total_price", 0)),
+            data.get("currency", "DZD"),
+            "pending",
+            json.dumps(items_summary, ensure_ascii=False),
+            json.dumps(shipping, ensure_ascii=False),
+            data.get("created_at", "")
+        ))
+        conn.commit()
+        print(f"📦 New order saved: {data.get('name')}")
+    except Exception as e:
+        print(f"⚠️ Error saving order: {e}")
+    finally:
+        conn.close()
+
+    return "OK", 200
+
+# ========== صفحة معلومات النظام ==========
+
+@app.route("/system/status")
+@require_auth
+def system_status():
+    """حالة النظام"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM orders")
+    order_count = c.fetchone()[0]
+    conn.close()
+
+    return jsonify({
+        "status": "running",
+        "version": "1.0.0",
+        "database": "SQLite",
+        "orders_count": order_count,
+        "platforms": ["shopify", "whatsapp", "messenger", "instagram"],
+        "integrations": {
+            "shopify": bool(SHOPIFY_ORDERS_TOKEN),
+            "whatsapp": bool(WHATSAPP_ACCESS_TOKEN),
+            "zr_express": bool(ZR_SECRET_KEY),
+            "openclaw": bool(OPENCLAW_TOKEN)
+        }
+    })
+
+# ========== التشغيل ==========
+
+if __name__ == "__main__":
+    init_db()
+
+    # مزامنة أولية مع Shopify
+    print("🔄 Syncing orders from Shopify for the first time...")
+    sync_orders_from_shopify()
+
+    # تشغيل مزامنة الخلفية
+    bg_thread = threading.Thread(target=sync_background, daemon=True)
+    bg_thread.start()
+    print("🔄 Background sync every 5 minutes started")
+
+    print("=" * 50)
+    print("🚀 Royal Chaussures Dashboard")
+    print("=" * 50)
+    print(f"📍 http://localhost:5050")
+    print(f"👤 Username: admin")
+    print(f"🔑 Password: RoyalChaussures2026!")
+    print(f"📦 ZR Express: {'\u2705 Active' if ZR_SECRET_KEY else '\u274c Not configured'}")
+    print(f"📦 Orders in DB: (check after sync)")
+    print("=" * 50)
+
+    app.run(port=5050, debug=False, host="0.0.0.0")

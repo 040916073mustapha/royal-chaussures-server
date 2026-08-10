@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Royal Chaussures - Cloud Server for Render
@@ -158,46 +158,37 @@ def shopify_api(method="GET", endpoint="products.json", params=None, token_type=
 
 
 def search_shopify_products(query=""):
-    "Search products by name/query and return formatted results with EUROPEAN SIZES only."
+    """Search products by name/query and return formatted results."""
     params = {"limit": 5, "status": "active"}
     if query:
         params["title"] = query
     data = shopify_api("GET", "products.json", params)
     if not data or "products" not in data:
-        return "\u0639\u0630\u0631\u0627\u064b\u060c \u0644\u0645 \u0623\u062a\u0645\u0643\u0646 \u0645\u0646 \u062c\u0644\u0628 \u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a \u062d\u0627\u0644\u064a\u0627\u064b. \U0001f6cd\ufe0f"
+        return "├ÅÔòú├ÅÔûæ├ÅÔûÆ├Å┬║Ôöÿ├»├Å├« Ôöÿ├ñÔöÿ├á ├Å├║├Å┬¼Ôöÿ├áÔöÿ├óÔöÿ├Ñ Ôöÿ├áÔöÿ├Ñ ├Å┬╝Ôöÿ├ñ├Å┬┐ ├Å┬║Ôöÿ├ñÔöÿ├áÔöÿ├Ñ├Å┬¼├Å┬╝├Å┬║├Å┬¼ ├Å┬í├Å┬║Ôöÿ├ñÔöÿ├¿├Å┬║Ôöÿ├». ┬¡ãÆ├©├¼┬┤┬®├à"
     products = data["products"]
     if not products:
-        return "\u0646\u0639\u062a\u0630\u0631\u060c \u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0646\u062a\u062c\u0627\u062a \u0645\u062a\u0627\u062d\u0629 \u062a\u0637\u0627\u0628\u0642 \u0637\u0644\u0628\u0643 \u062d\u0627\u0644\u064a\u0627\u064b. \U0001f622"
-    result_lines = ["\U0001f6cd\ufe0f **\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a \u0627\u0644\u0645\u062a\u0648\u0641\u0631\u0629:**\n"]
+        return "Ôöÿ├Ñ├ÅÔòú├Å┬¼├ÅÔûæ├ÅÔûÆ├Å├« Ôöÿ├ñ├Å┬║ ├Å┬¼Ôöÿ├¬├Å┬╝├Å┬╗ Ôöÿ├áÔöÿ├Ñ├Å┬¼├Å┬╝├Å┬║├Å┬¼ Ôöÿ├á├Å┬¼├Å┬║├Å┬í├Å┬« ├Å┬¼├Å├Ç├Å┬║├Å┬┐Ôöÿ├® ├Å├ÇÔöÿ├ñ├Å┬┐Ôöÿ├ó ├Å┬í├Å┬║Ôöÿ├ñÔöÿ├¿├Å┬║Ôöÿ├». ┬¡ãÆ├┐├¿"
+    result_lines = ["┬¡ãÆ├©├¼┬┤┬®├à **├Å┬║Ôöÿ├ñÔöÿ├áÔöÿ├Ñ├Å┬¼├Å┬╝├Å┬║├Å┬¼ ├Å┬║Ôöÿ├ñÔöÿ├á├Å┬¼Ôöÿ├¬Ôöÿ├╝├ÅÔûÆ├Å┬«:**\n"]
     for p in products[:3]:
         title = p["title"]
         variants = p.get("variants", [])
         price_min = min(float(v.get("price", 0)) for v in variants) if variants else 0
         price_max = max(float(v.get("price", 0)) for v in variants) if variants else 0
-        price_str = f"{int(price_min)} \u062f.\u062c" if price_min == price_max else f"{int(price_min)} - {int(price_max)} \u062f.\u062c"
+        price_str = f"{int(price_min)} ├Å┬╗.├Å┬╝" if price_min == price_max else f"{int(price_min)} - {int(price_max)} ├Å┬╗.├Å┬╝"
         img_url = (p.get("images") or [{}])[0].get("src", "")
-        # Extract European sizes from options, NOT from variant titles/inventory
-        sizes = []
-        options = p.get("options", [])
-        for opt in options:
-            if opt.get("name", "").lower() in ("size", "taille", "\u0627\u0644\u0645\u0642\u0627\u0633", "\u0645\u0642\u0627\u0633"):
-                sizes = [v for v in opt.get("values", []) if v.replace(" ", "").replace("\u200e","").isdigit()]
-                break
-        if not sizes:
-            sizes = []
-            for v in variants:
-                vt = v.get("title", "").strip()
-                if vt.replace(" ", "").isdigit():
-                    sizes.append(vt)
-            sizes = sorted(set(sizes), key=lambda x: float(x.replace(" ", "")))
-        size_str = "\u060c ".join(sizes) if sizes else "36 - 41"
-        result_lines.append(f"\u2022 **{title}**")
-        result_lines.append(f"  \u0627\u0644\u0633\u0639\u0631: {price_str}")
-        result_lines.append(f"  \u0627\u0644\u0645\u0642\u0627\u0633\u0627\u062a \u0627\u0644\u0623\u0648\u0631\u0648\u0628\u064a\u0629: {size_str}")
+        # Count available stock
+        in_stock = sum(1 for v in variants if int(v.get("inventory_quantity", 0)) > 0)
+        total_vars = len(variants)
+        stock_info = f"├ö┬ú├á Ôöÿ├á├Å┬¼Ôöÿ├¬Ôöÿ├╝├ÅÔûÆ {in_stock} Ôöÿ├áÔöÿ├®├Å┬║├ÅÔöé" if in_stock > 0 else "├ö├ÿ├« Ôöÿ├ÑÔöÿ├╝├Å┬╗ ├Å┬║Ôöÿ├ñÔöÿ├á├Å┬½├ÅÔûôÔöÿ├¬Ôöÿ├Ñ"
+        result_lines.append(f"├ö├ç├│ **{title}**")
+        result_lines.append(f"  ├Å┬║Ôöÿ├ñ├ÅÔöé├ÅÔòú├ÅÔûÆ: {price_str}")
+        result_lines.append(f"  ├Å┬║Ôöÿ├ñÔöÿ├á├Å┬½├ÅÔûôÔöÿ├¬Ôöÿ├Ñ: {stock_info} ({in_stock}/{total_vars})")
         if img_url:
             result_lines.append(f"  {img_url}")
         result_lines.append("")
     return "\n".join(result_lines)
+
+
 def check_product_inventory(product_query, size=None, color=None):
     """Check if a specific product/size/color is in stock."""
     params = {"limit": 5, "status": "active"}
@@ -266,11 +257,11 @@ threading.Thread(target=sync_shopify_orders, daemon=True).start()
 
 def detect_product_query(user_message):
     """Detect if user is asking about products and return search query."""
-    keywords = ["┘à┘åÏ¬Ï¼", "Ï¡Ï░ÏºÏí", "ÏÁ┘åÏ»┘ä", "Ï¿┘êÏ¬", "Ï¿Ïº┘ä┘èÏ▒┘è┘åÏº", "ÏºÏ│┘âÏ▒Ï¿┘è┘å",
+    keywords = ["Ôöÿ├áÔöÿ├Ñ├Å┬¼├Å┬╝", "├Å┬í├ÅÔûæ├Å┬║├Å├¡", "├Å├üÔöÿ├Ñ├Å┬╗Ôöÿ├ñ", "├Å┬┐Ôöÿ├¬├Å┬¼", "├Å┬┐├Å┬║Ôöÿ├ñÔöÿ├¿├ÅÔûÆÔöÿ├¿Ôöÿ├Ñ├Å┬║", "├Å┬║├ÅÔöéÔöÿ├ó├ÅÔûÆ├Å┬┐Ôöÿ├¿Ôöÿ├Ñ",
                 "escarpin", "ballerine", "botte", "sandale", "mule",
-                "product", "shoe", "size", "price", "Ï│Ï╣Ï▒", "┘à┘éÏºÏ│",
-                "┘ä┘ê┘å", "color", "┘àÏ¬┘ê┘üÏ▒", "disponible", "stock",
-                "Ï╣┘åÏ»┘â┘à", "Ï╣┘åÏ»┘â", "Ï┤┘å┘ê", "┘êÏºÏ┤", "product"]
+                "product", "shoe", "size", "price", "├ÅÔöé├ÅÔòú├ÅÔûÆ", "Ôöÿ├áÔöÿ├®├Å┬║├ÅÔöé",
+                "Ôöÿ├ñÔöÿ├¬Ôöÿ├Ñ", "color", "Ôöÿ├á├Å┬¼Ôöÿ├¬Ôöÿ├╝├ÅÔûÆ", "disponible", "stock",
+                "├ÅÔòúÔöÿ├Ñ├Å┬╗Ôöÿ├óÔöÿ├á", "├ÅÔòúÔöÿ├Ñ├Å┬╗Ôöÿ├ó", "├ÅÔöñÔöÿ├ÑÔöÿ├¬", "Ôöÿ├¬├Å┬║├ÅÔöñ", "product"]
     msg_lower = user_message.lower()
     for kw in keywords:
         if kw in msg_lower:
@@ -294,61 +285,6 @@ _STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=_TEMPLATE_DIR, static_folder=_STATIC_DIR, static_url_path='/static')
 app.secret_key = os.urandom(24).hex()
-
-# ==================== Store POS / Admin Blueprints ====================
-# ?? NEW: Unified Store POS & Admin Dashboard (feature/store-pos)
-# ?? Zero impact on existing webhooks/meta routes
-import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-try:
-    from database.db import init_db as init_store_db
-    init_store_db()
-    from routes.store import store_bp
-    from routes.admin import admin_bp
-    from routes.inventory_agent import inv_agent_bp
-    app.register_blueprint(store_bp, url_prefix="/api/v1/store")
-    app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
-    app.register_blueprint(inv_agent_bp, url_prefix="/api/v1/agent")
-    logger.info("[Store POS] Blueprints registered: /api/v1/store, /api/v1/admin, /api/v1/agent")
-except Exception as e:
-    logger.warning(f"[Store POS] Blueprint registration skipped: {e}")
-# ====================================================================
-
-# ????????? Dashboard HTTP Basic Auth ??????????????????????????????????????????????????????????????????????????????????
-DASHBOARD_USER = os.getenv("DASHBOARD_USER", "").strip()
-DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
-_DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
-
-# Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/api/chatbot", "/api/v1", "/pos")
-
-
-@app.before_request
-def require_auth_for_dashboard():
-    """
-    Apply HTTP Basic Auth to all /dashboard/* and /api/* paths,
-    except whitelisted safe paths (webhooks, health, etc.).
-    Soft-fail if DASHBOARD_USER/DASHBOARD_PASS not set in env.
-    """
-    if not _DASHBOARD_AUTH_ENABLED:
-        return  # auth not configured, allow all
-    path = request.path.rstrip("/")
-    # Allow GET requests for webhook verification (hub.mode=subscribe)
-    if request.method == "GET" and request.args.get("hub.mode") == "subscribe":
-        return
-    # Allow safe paths (webhooks, health, etc.)
-    for safe in _AUTH_SAFE_PATHS:
-        if path == safe or path.startswith(safe + "/"):
-            return
-    # Block /dashboard/* and /api/*
-    if path.startswith("/dashboard") or path.startswith("/api"):
-        auth = request.authorization
-        if not auth or auth.username != DASHBOARD_USER or auth.password != DASHBOARD_PASS:
-            return Response(
-                "Authentication required",
-                401,
-                {"WWW-Authenticate": 'Basic realm="Royal Chaussures Dashboard"'}
-            )
 
 
 @app.after_request
@@ -395,59 +331,73 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
     if not AI_API_KEY:
         logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
-    # Read system prompt from file (prompt.txt), fallback to env var, then to hardcoded default
-    _prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt.txt")
-    system_prompt = ""
-    try:
-        with open(_prompt_path, "r", encoding="utf-8") as f:
-            system_prompt = f.read().strip()
-        logger.info(f"[PROMPT] Loaded system prompt from {_prompt_path} ({len(system_prompt)} chars)")
-    except FileNotFoundError:
-        system_prompt = os.getenv("AI_SYSTEM_PROMPT", "")
-        if system_prompt:
-            logger.info("[PROMPT] Loaded system prompt from env var AI_SYSTEM_PROMPT")
-        else:
-            system_prompt = (
-                "[1. ROYAL IDENTITY]\n"
-                "I represent Royal Chaussures...\n"
-            )
-            logger.info("[PROMPT] Using hardcoded default system prompt")
+    system_prompt = os.getenv(
+        "AI_SYSTEM_PROMPT",
+        "[1. ROYAL IDENTITY]\n"
+        "I represent Royal Chaussures, a REAL luxury women's footwear boutique in Tlemcen, Algeria. I am an AI Customer Support Agent. I provide customer service: product information, sizing advice, order inquiries, shipping rates, and store hours. I do NOT handle payments, login credentials, or sensitive personal data.\n"
+        "- Boutique: https://royalchaussures.com/\n"
+        "- Phone: +213659832426\n"
+        "- Location: Imama (├á c├┤t├® primaire Hasnaoui), Tlemcen.\n"
+        "- Hours: Sat-Thu 09:00-20:00, Fri 16:00-20:00.\n\n"
+        "[2. INVENTORY & SHOPIFY]\n"
+        "- I have REAL-TIME access to all products, prices, sizes, colors, and stock via the Shopify API.\n"
+        "- The inventory data is appended automatically below in [SHOPIFY INVENTORY DATA]. I MUST use this data to answer accurately.\n"
+        "- If a customer asks about products, prices, sizes, or availability ÔÇö answer directly from the inventory data.\n"
+        "- If the customer wants something not listed in inventory, politely say it's currently unavailable.\n"
+        "- For order confirmations, ask for: full name, phone number, wilaya, product+color+size, quantity, and delivery preference (Home or Desk pickup).\n\n"
+        "[3. LANGUAGES]\n"
+        "- I reply in the same language the customer uses: Arabic ┘üÏÁÏ¡┘ë, Algerian Darija Ï»ÏºÏ▒Ï¼Ï®, French, or English.\n"
+        "- My tone is warm, professional, elegant, and welcoming. I match the '├ël├®gance Moderne' spirit of the brand.\n"
+        "- In Darija: be natural and friendly ÔÇö use terms like 'Ï«Ï¬┘è', 'Ï│┘èÏ»┘è', '┘êÏºÏ┤ Ï▒Ïº┘â', 'Ï┤Ï¡Ïº┘ä', '┘çÏºÏ»Ïº┘â'.\n\n"
+        "[4. DELIVERY RATES - SHIPPING PRICE LIST (per wilaya)]\n"
+        "- Tlemcen (all municipalities/Ghazaouet/Maghnia/Remchi): Home 500 DZD.\n"
+        "- Algiers: Home 650 DZD / Bureau 450 DZD.\n"
+        "- Ain Temouchent: Home 650 DZD / Bureau 500 DZD.\n"
+        "- Oran, Mascara, Mostaganem, Sidi Bel Abbes: Home 700 DZD / Bureau 500 DZD.\n"
+        "- Blida, Tiaret, Medea, Tissemsilt, Chlef, Ain Defla, Relizane, Saida: Home 750 DZD / Bureau 500 DZD.\n"
+        "- Oum El Bouaghi, Batna, Bejaia, Bouira, Tizi Ouzou, Jijel, Setif, Skikda, Guelma, Constantine, Bordj Bou Arreridj, Boumerdes, Khenchela, Souk Ahras, Tipaza, Mila: Home 800 DZD / Bureau 500 DZD.\n"
+        "- Annaba, El Tarf: Home 850 DZD / Bureau 500 DZD.\n"
+        "- Tebessa: Home 900 DZD / Bureau 500 DZD.\n"
+        "- Msila, Laghouat, Biskra, Djelfa, Ouled Djellal: Home 950 DZD / Bureau 650 DZD.\n"
+        "- El Bayadh, Naama, Ghardaia: Home 1000 DZD / Bureau 600 DZD.\n"
+        "- Ouargla, El Oued, Touggourt, El Meniaa, El M'Ghair: Home 1000 DZD / Bureau 700 DZD.\n"
+        "- Bechar: Home 1100 DZD / Bureau 700 DZD.\n"
+        "- Beni Abbes: Home 1200 DZD / Bureau 950 DZD.\n"
+        "- Adrar, Timimoun: Home 1400 DZD / Bureau 950 DZD.\n"
+        "- Tamanrasset, In Salah, In Guezzam: Home 1600 DZD / Bureau 1110 DZD.\n"
+        "- Payment: Cash on delivery (Paiement ├á la livraison) only.\n"
+        "- Delivery: 1-3 days across all 58 wilayas via ZR Express.\n\n"
+        "[5. POLICIES]\n"
+        "- Exchange/return within 7 days if item is unused and in original packaging.\n"
+        "- Size exchange allowed.\n"
+        "- Promotions only announced on social media.\n"
+        "- I do NOT process payments, store passwords, or collect payment details.\n"
+        "- I will NOT ask for: passwords, credit cards, bank info, or any payment instrument.\n\n"
+        "[6. ESCALATION RULES]\n"
+        "- Complex/complaint issues: respond politely and append EXACTLY this at the END of your response:\n"
+        "  ÔÜá´©Å [ESCALATE] Reason: [describe the issue in detail]\n"
+        "- Normal product/price/size questions: DO NOT escalate, answer directly.\n"
+        "- Order complaints, delivery issues, refund requests: ESCALATE.\n"
+        "- If the customer asks something outside my scope, ESCALATE.\n"
+        "- IMPORTANT: Remove the [ESCALATE] marker from the customer-facing reply before sending (the backend handles this). Just include it in your raw response."
+    )
 
-    # Pre-call Shopify inventory — always fetch live data for full context
+    # Pre-call Shopify inventory ÔÇö always fetch live data for full context
     shopify_context = ""
     try:
         logger.info("Fetching live Shopify inventory...")
-        import threading as _thr
-        import time as _time
-        _result = {"val": None}
-        def _fetch_inventory():
-            _result["val"] = search_shopify_products("")
-        _t = _thr.Thread(target=_fetch_inventory, daemon=True)
-        _t.start()
-        _t.join(timeout=5)
-        if _t.is_alive():
-            logger.warning("Inventory fetch timed out (>5s), continuing without inventory data")
-        else:
-            live_inventory = _result["val"]
-            if live_inventory:
-                shopify_context = "\n\n[SHOPIFY INVENTORY DATA - LIVE]\n" + live_inventory + "\n[END INVENTORY DATA]\n"
-                logger.info("Live inventory appended to AI context")
+        live_inventory = search_shopify_products("")
+        if live_inventory:
+            shopify_context = "\n\n[SHOPIFY INVENTORY DATA - LIVE]\n" + live_inventory + "\n[END INVENTORY DATA]\n"
+            logger.info("Live inventory appended to AI context")
     except Exception as inv_err:
-        logger.warning(f"Inventory fetch failed (non-critical), continuing: {_safe_str(inv_err)}")
+        logger.warning(f"Inventory fetch failed (non-critical): {_safe_str(inv_err)}")
 
     # Build messages with conversation history
     history = get_conversation(sender_id)
     messages = [{"role": "system", "content": system_prompt + shopify_context}]
     for msg in history[-8:]:
         messages.append(msg)
-    # Add context flag: is this the first user message in this conversation?
-    is_first_message = len([m for m in history if m["role"] == "user"]) <= 1
-    if is_first_message:
-        shopify_context += "\n\n[CONVERSATION STATE: FIRST MESSAGE — Welcome the customer warmly.]"
-    else:
-        shopify_context += "\n\n[CONVERSATION STATE: CONTINUING — Do NOT welcome again, continue naturally.]"
-    # Rebuild system prompt with updated context
-    messages[0] = {"role": "system", "content": system_prompt + shopify_context}
     # Build user content: plain string for text-only, OpenAI standard array for text+image
     user_message = user_message or ""
     if isinstance(image_url, str) and image_url.strip():
@@ -487,7 +437,7 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
         else:
             logger.error("AI API error: " + str(resp.status_code) + " " + resp.text[:2000])
     except requests.exceptions.Timeout:
-        logger.error(f"[AI] TIMEOUT after 40s — model={AI_MODEL}")
+        logger.error(f"[AI] TIMEOUT after 40s ÔÇö model={AI_MODEL}")
     except requests.exceptions.ConnectionError as ce:
         logger.error(f"[AI] CONNECTION ERROR: {ce}")
     except Exception as e:
@@ -497,29 +447,12 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
 
 # ????????? Facebook Messenger Reply ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
-def save_message_db(platform, sender_id, message, reply):
-    """Save a message and its reply to the database for dashboard display"""
-    try:
-        conn = sqlite3.connect(_DB_PATH, timeout=10)
-        c = conn.cursor()
-        c.execute("INSERT INTO messages (platform, sender_id, message, reply) VALUES (?,?,?,?)",
-                  (platform, sender_id, str(message)[:1000], str(reply)[:1000]))
-        conn.commit()
-        conn.close()
-        logger.info(f"[DB] Saved {platform} msg from {sender_id[:20] if sender_id else 'unknown'}: {str(message)[:40]}...")
-    except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
-        logger.error(f"[DB ERROR] save_message_db FAILED: {_safe_str(e)}")
-        logger.error(f"[DB ERROR] Traceback:\n{tb}")
-
 def send_fb_reply(sender_id, user_message, image_url=''):
     try:
         reply_text = generate_ai_reply(user_message, sender_id, image_url)
         page_token = get_fb_page_token()
         if not page_token:
             logger.warning("No page token, skipping FB reply")
-            save_message_db("messenger", sender_id, user_message or "[Image]", "[No page token]")
             return
         url = f"https://graph.facebook.com/v18.0/me/messages?access_token={page_token}"
         payload = {"recipient": {"id": sender_id}, "message": {"text": reply_text}}
@@ -529,15 +462,8 @@ def send_fb_reply(sender_id, user_message, image_url=''):
             logger.info(f"FB reply sent to {sender_id}: {reply_text[:60]}...")
         else:
             logger.warning(f"FB send failed ({resp.status_code}): {resp.text[:300]}")
-        # Always save to DB regardless of send success
-        logger.info(f"[DB] Attempting to save FB msg from {sender_id[:20]}...")
-        save_message_db("messenger", sender_id, user_message or "[Image]", reply_text)
-        logger.info(f"[DB] Successfully saved FB msg from {sender_id[:20]}")
     except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
         logger.error(f"send_fb_reply error: {_safe_str(e)}")
-        logger.error(f"send_fb_reply traceback:\n{tb}")
 
 
 # ????????? Instagram Reply ????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -557,7 +483,6 @@ def send_ig_reply(sender_id, user_message, image_url=''):
 
         if not ig_token:
             logger.warning("No token available for Instagram reply")
-            save_message_db("instagram", sender_id, user_message or "[Image]", "[No token]")
             return
 
         # Instagram DMs use /me/messages with a Page Token
@@ -573,14 +498,8 @@ def send_ig_reply(sender_id, user_message, image_url=''):
             if 'does not exist' in err_body or 'capability' in err_body.lower():
                 logger.info("Instagram reply needs 'Instagram Graph API' product.")
                 logger.info("Fix: Add Instagram Graph API in Meta Developer App.")
-        logger.info(f"[DB] Attempting to save IG msg from {sender_id[:20]}...")
-        save_message_db("instagram", sender_id, user_message or "[Image]", reply_text)
-        logger.info(f"[DB] Successfully saved IG msg from {sender_id[:20]}")
     except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
         logger.error(f"send_ig_reply error: {_safe_str(e)}")
-        logger.error(f"send_ig_reply traceback:\n{tb}")
 # ????????? WhatsApp Reply ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 def send_whatsapp_reply(to_number, user_message, image_url=''):
@@ -588,7 +507,6 @@ def send_whatsapp_reply(to_number, user_message, image_url=''):
         reply_text = generate_ai_reply(user_message, to_number, image_url)
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
             logger.warning("WhatsApp credentials not set")
-            save_message_db("whatsapp", to_number, user_message or "[Image]", "[WA not configured]")
             return
         url = f"https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
         headers = {"Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}", "Content-Type": "application/json"}
@@ -603,14 +521,8 @@ def send_whatsapp_reply(to_number, user_message, image_url=''):
             logger.info(f"WA reply sent to {to_number}: {reply_text[:60]}...")
         else:
             logger.warning(f"WA send failed ({resp.status_code}): {resp.text[:200]}")
-        logger.info(f"[DB] Attempting to save WA msg from {str(to_number)[:20]}...")
-        save_message_db("whatsapp", to_number, user_message or "[Image]", reply_text)
-        logger.info(f"[DB] Successfully saved WA msg from {str(to_number)[:20]}")
     except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
         logger.error(f"send_whatsapp_reply error: {_safe_str(e)}")
-        logger.error(f"send_whatsapp_reply traceback:\n{tb}")
 
 
 # ????????? Process common Messenger-style webhook payload ????????????????????????????????????????????????
@@ -660,29 +572,6 @@ def process_whatsapp_entries(entries):
                     threading.Thread(target=send_whatsapp_reply, args=(sender, text, image_url), daemon=True).start()
 
 
-# ????????? App Secret (for X-Hub-Signature-256 verification) ??????????????????????????????
-META_APP_SECRET = os.getenv("META_APP_SECRET", "")
-
-
-def verify_webhook_signature(request_body, signature_header):
-    """
-    Verify X-Hub-Signature-256 header against request body using META_APP_SECRET.
-    Returns True if valid or if signature/app_secret is not configured (soft fail).
-    """
-    if not META_APP_SECRET or not signature_header:
-        return True  # soft pass if not configured
-    try:
-        expected_signature = "sha256=" + hmac.new(
-            META_APP_SECRET.encode("utf-8"),
-            request_body,
-            hashlib.sha256
-        ).hexdigest()
-        return hmac.compare_digest(expected_signature, signature_header)
-    except Exception as e:
-        logger.warning(f"[WEBHOOK] Signature verification error: {e}")
-        return True  # soft pass on error to avoid breaking webhook
-
-
 # ????????? Main Webhook ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 # Meta sends ALL subscribed objects (Messenger, Instagram, WhatsApp)
 # to the SAME webhook URL (/webhook). The 'object' field differentiates them.
@@ -703,28 +592,6 @@ def webhook():
 
     # --- POST: Process incoming message ---
     logger.info("Webhook POST received")
-
-    # Verify X-Hub-Signature-256 (soft fail if missing/unconfigured)
-    signature = request.headers.get("X-Hub-Signature-256", "")
-    raw_body = request.get_data()
-
-    # DEBUG: Log signature details
-    secret_status = "SET" if META_APP_SECRET else "MISSING"
-    sig_status = "PRESENT" if signature else "MISSING"
-    logger.info(f"[WEBHOOK] SIG DEBUG: secret={secret_status}, header_sig={sig_status}, body_len={len(raw_body)}, sig_preview={signature[:50] if signature else 'N/A'}")
-
-    if not verify_webhook_signature(raw_body, signature):
-        # DEBUG: Log expected vs actual
-        if META_APP_SECRET and signature:
-            expected_sig = "sha256=" + hmac.new(
-                META_APP_SECRET.encode("utf-8"),
-                raw_body,
-                hashlib.sha256
-            ).hexdigest()
-            logger.warning(f"[WEBHOOK] SIG MISMATCH: expected={expected_sig[:60]}..., received={signature[:60]}...")
-        logger.warning(f"[WEBHOOK] Invalid signature! Possible tampering.")
-        return json_utf8({"status": "signature_mismatch"}), 403
-
     data = request.get_json(silent=True)
     if not data:
         return json_utf8({"status": "ok"})
@@ -846,7 +713,7 @@ def api_update_status(oid):
     if ok:
         logger.info(f"[OrderDetail] Updated order {oid} status to {ns}")
         # AUTO-WHATSAPP: Send confirmation if enabled and status = confirmed
-        if AUTO_CONFIRM_WA["enabled"] and ns.lower() in ("confirmed", "paid", "confirmé", "confirme"):
+        if AUTO_CONFIRM_WA["enabled"] and ns.lower() in ("confirmed", "paid", "confirm├®", "confirme"):
             try:
                 shopify_orders_data = shopify_api("GET", "orders.json", {"status": "any", "limit": 250}, token_type="orders")
                 if shopify_orders_data and "orders" in shopify_orders_data:
@@ -904,21 +771,21 @@ def dashboard_clients():
 def dashboard_settings():
     settings_data = {
         "zr_express": {
-            "status": "متصل",
+            "status": "┘àÏ¬ÏÁ┘ä",
             "tenant_id": "d2217f31-20f1-43c6-abd4-c420788a63ed",
-            "last_sync": "منذ دقيقة",
-            "server_status": "نشط"
+            "last_sync": "┘à┘åÏ░ Ï»┘é┘è┘éÏ®",
+            "server_status": "┘åÏ┤ÏÀ"
         },
         "automations": {
-            "status": "نشط",
+            "status": "┘åÏ┤ÏÀ",
             "items": [
-                {"icon": "💬", "name": "WhatsApp - تأكيد الطلبات", "badge": "تلقائي"},
-                {"icon": "📦", "name": "إشعارات الشحن", "badge": "تلقائي"},
-                {"icon": "📊", "name": "تقرير الصباح اليومي", "badge": "09:00 صباحاً"}
+                {"icon": "­ƒÆ¼", "name": "WhatsApp - Ï¬Ïú┘â┘èÏ» Ïº┘äÏÀ┘äÏ¿ÏºÏ¬", "badge": "Ï¬┘ä┘éÏºÏª┘è"},
+                {"icon": "­ƒôª", "name": "ÏÑÏ┤Ï╣ÏºÏ▒ÏºÏ¬ Ïº┘äÏ┤Ï¡┘å", "badge": "Ï¬┘ä┘éÏºÏª┘è"},
+                {"icon": "­ƒôè", "name": "Ï¬┘éÏ▒┘èÏ▒ Ïº┘äÏÁÏ¿ÏºÏ¡ Ïº┘ä┘è┘ê┘à┘è", "badge": "09:00 ÏÁÏ¿ÏºÏ¡Ïº┘ï"}
             ]
         },
         "ai_agent": {
-            "status": "متصل",
+            "status": "┘àÏ¬ÏÁ┘ä",
             "model": "DeepSeek-V4-Flash",
             "platforms": [
                 {"name": "Messenger", "cls": "bg-blue-500/15 text-blue-400"},
@@ -927,10 +794,10 @@ def dashboard_settings():
             ]
         },
         "shopify": {
-            "status": "متصل",
+            "status": "┘àÏ¬ÏÁ┘ä",
             "store": "rwqchh-na.myshopify.com",
-            "auto_sync": "مفعلة",
-            "last_update": "منذ ساعة"
+            "auto_sync": "┘à┘üÏ╣┘äÏ®",
+            "last_update": "┘à┘åÏ░ Ï│ÏºÏ╣Ï®"
         }
     }
     return render_template("dashboard_settings.html", active="settings", settings=settings_data)
@@ -1100,17 +967,17 @@ def send_confirmation_whatsapp(order):
             logger.warning(f"[WA Confirm] No phone for order {order.get('name')}")
             return {"success": False, "error": "No phone number"}
         customer = order.get("customer") or {}
-        name = (f"{customer.get('first_name','') or ''} {customer.get('last_name','') or ''}").replace("None", "").strip() or "عميلنا العزيز"
+        name = (f"{customer.get('first_name','') or ''} {customer.get('last_name','') or ''}").replace("None", "").strip() or "Ï╣┘à┘è┘ä┘åÏº Ïº┘äÏ╣Ï▓┘èÏ▓"
         items_summary = ", ".join([i.get("title","")[:30] for i in order.get("line_items", [])[:3]])
         message = (
-            f"❤️ *Royal Chaussures* - تأكيد الطلب\n\n"
-            f"مرحباً {name}،\n"
-            f"✅ تم تأكيد طلبك *{order.get('name','')}*\n"
-            f"📦 المنتجات: {items_summary}\n"
-            f"💰 المبلغ: {order.get('total_price','0')} DZD\n"
-            f"🚚 سيتم شحنه قريباً عبر ZR Express\n\n"
-            f"شكراً لثقتك! 👠✨\n"
-            f"📍 الإمامة، تلمسان | 📞 0659832426"
+            f"ÔØñ´©Å *Royal Chaussures* - Ï¬Ïú┘â┘èÏ» Ïº┘äÏÀ┘äÏ¿\n\n"
+            f"┘àÏ▒Ï¡Ï¿Ïº┘ï {name}Ïî\n"
+            f"Ô£à Ï¬┘à Ï¬Ïú┘â┘èÏ» ÏÀ┘äÏ¿┘â *{order.get('name','')}*\n"
+            f"­ƒôª Ïº┘ä┘à┘åÏ¬Ï¼ÏºÏ¬: {items_summary}\n"
+            f"­ƒÆ░ Ïº┘ä┘àÏ¿┘äÏ║: {order.get('total_price','0')} DZD\n"
+            f"­ƒÜÜ Ï│┘èÏ¬┘à Ï┤Ï¡┘å┘ç ┘éÏ▒┘èÏ¿Ïº┘ï Ï╣Ï¿Ï▒ ZR Express\n\n"
+            f"Ï┤┘âÏ▒Ïº┘ï ┘äÏ½┘éÏ¬┘â! ­ƒæáÔ£¿\n"
+            f"­ƒôì Ïº┘äÏÑ┘àÏº┘àÏ®Ïî Ï¬┘ä┘àÏ│Ïº┘å | ­ƒô× 0659832426"
         )
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
             logger.warning(f"[WA Confirm] WA not configured (token={'set' if WHATSAPP_ACCESS_TOKEN else 'empty'}, id={'set' if WHATSAPP_PHONE_NUMBER_ID else 'empty'})")
@@ -1203,7 +1070,7 @@ def api_wa_confirm_send():
                         "customer": {"first_name": cname or "", "last_name": ""},
                         "shipping_address": {"phone": cphone or ""} if cphone else {},
                         "billing_address": {},
-                        "line_items": [{"title": prod or "منتجات"}],
+                        "line_items": [{"title": prod or "┘à┘åÏ¬Ï¼ÏºÏ¬"}],
                         "total_price": str(price or "0")
                     }
                     logger.info(f"[WA Confirm] Built fallback order from local DB for {order_id}")
@@ -1270,29 +1137,6 @@ def api_messages():
     except Exception as e:
         _log_safe(logger.error, "Messages API error", e)
         return json_utf8({"success": False, "error": _safe_str(e)})
-
-
-@app.route('/api/profile')
-def api_profile():
-    """Get user profile name from Facebook/Instagram page token"""
-    sender_id = request.args.get("sender_id", "")
-    platform = request.args.get("platform", "")
-    if not sender_id:
-        return json_utf8({"success": False, "error": "Missing sender_id"})
-    try:
-        if platform in ("messenger", "instagram"):
-            token = get_fb_page_token()
-            if token:
-                url = f"https://graph.facebook.com/v18.0/{sender_id}?fields=name&access_token={token}"
-                resp = requests.get(url, timeout=5)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    return json_utf8({"success": True, "name": data.get("name", sender_id), "sender_id": sender_id})
-        # Default fallback: return first 16 chars of sender_id
-        display = sender_id[:20] if sender_id else "Unknown"
-        return json_utf8({"success": True, "name": display, "sender_id": sender_id})
-    except Exception as e:
-        return json_utf8({"success": True, "name": sender_id[:20], "sender_id": sender_id})
 
 
 # ????????? Main ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????

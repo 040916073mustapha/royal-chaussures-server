@@ -1,0 +1,56 @@
+﻿{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ stats: {}, orders: [] }" x-init="fetch('/api/stats').then(r=>r.json()).then(d=>stats=d); fetch('/api/orders').then(r=>r.json()).then(d=>orders=d.orders||[])">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-[#1a1a23] rounded-xl p-5 border border-[#2a2a35]">
+            <p class="text-gray-400 text-sm">ÏÑÏ¼┘àÏº┘ä┘è Ïº┘äÏÀ┘äÏ¿ÏºÏ¬</p>
+            <p class="text-3xl font-bold text-white mt-1" x-text="stats.total_orders || 0"></p>
+        </div>
+        <div class="bg-[#1a1a23] rounded-xl p-5 border border-[#2a2a35]">
+            <p class="text-gray-400 text-sm">Ïº┘ä┘àÏñ┘âÏ»Ï®</p>
+            <p class="text-3xl font-bold text-emerald-400 mt-1" x-text="stats.confirmed || 0"></p>
+        </div>
+        <div class="bg-[#1a1a23] rounded-xl p-5 border border-[#2a2a35]">
+            <p class="text-gray-400 text-sm">Ïº┘äÏÑ┘èÏ▒ÏºÏ»ÏºÏ¬</p>
+            <p class="text-3xl font-bold text-royal-400 mt-1" x-text="(stats.revenue||0).toLocaleString() + ' Ï».Ï¼'"></p>
+        </div>
+        <div class="bg-[#1a1a23] rounded-xl p-5 border border-[#2a2a35]">
+            <p class="text-gray-400 text-sm">┘àÏ╣Ï»┘ä Ïº┘äÏ¬┘êÏÁ┘è┘ä</p>
+            <p class="text-3xl font-bold text-blue-400 mt-1" x-text="(stats.delivery_rate||0) + '%'"></p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-[#1a1a23] rounded-xl p-4 border border-[#2a2a35]">
+            <p class="text-gray-400 text-sm">┘é┘èÏ» Ïº┘äÏº┘åÏ¬Ï©ÏºÏ▒</p>
+            <p class="text-2xl font-bold text-yellow-400" x-text="stats.pending || 0"></p>
+        </div>
+        <div class="bg-[#1a1a23] rounded-xl p-4 border border-[#2a2a35]">
+            <p class="text-gray-400 text-sm">Ï¬┘à Ïº┘äÏ¬┘êÏÁ┘è┘ä</p>
+            <p class="text-2xl font-bold text-green-400" x-text="stats.delivered || 0"></p>
+        </div>
+        <div class="bg-[#1a1a23] rounded-xl p-4 border border-[#2a2a35]">
+            <p class="text-gray-400 text-sm">Ïº┘äÏ╣┘à┘äÏºÏí</p>
+            <p class="text-2xl font-bold text-purple-400" x-text="stats.clients_count || 0"></p>
+        </div>
+    </div>
+    <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] p-5">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">ÏóÏ«Ï▒ Ïº┘äÏÀ┘äÏ¿ÏºÏ¬</h2>
+            <a href="/dashboard/orders" class="text-royal-400 text-sm hover:underline">Ï╣Ï▒ÏÂ Ïº┘ä┘â┘ä ÔåÆ</a>
+        </div>
+        <template x-if="orders.length === 0"><p class="text-gray-500 text-center py-8">┘äÏº Ï¬┘êÏ¼Ï» ÏÀ┘äÏ¿ÏºÏ¬ Ï¿Ï╣Ï»</p></template>
+        <template x-for="o in orders.slice(0,10)" :key="o.id">
+            <div class="flex items-center justify-between py-3 border-b border-[#2a2a35] last:border-0">
+                <div>
+                    <p class="font-medium" x-text="o.customer||'Ï▓Ï¿┘ê┘å'"></p>
+                    <p class="text-sm text-gray-400" x-text="o.product + (o.variant?' - '+o.variant:'')"></p>
+                </div>
+                <div class="text-left">
+                    <span class="text-xs px-2 py-1 rounded" :class="{'bg-emerald-500/20 text-emerald-400':o.status=='Confirme','bg-yellow-500/20 text-yellow-400':o.status=='Nouveau','bg-red-500/20 text-red-400':o.status=='Annule','bg-blue-500/20 text-blue-400':o.status=='Livre'}" x-text="o.status"></span>
+                    <p class="text-sm text-gray-400 mt-1" x-text="(o.total||0).toLocaleString() + ' Ï».Ï¼'"></p>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}

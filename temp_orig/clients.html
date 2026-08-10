@@ -1,0 +1,26 @@
+﻿{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ clients:[] }" x-init="fetch('/api/clients').then(r=>r.json()).then(d=>clients=d.clients||[])">
+    <h1 class="text-2xl font-bold mb-4">­ƒæÑ Ïº┘äÏ╣┘à┘äÏºÏí</h1>
+    <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-[#252530] text-gray-400">
+                <tr><th class="p-3 text-right">Ïº┘äÏºÏ│┘à</th><th class="p-3 text-right">Ï▒┘é┘à Ïº┘ä┘çÏºÏ¬┘ü</th><th class="p-3 text-right">Ïº┘ä┘ê┘äÏº┘èÏ®</th><th class="p-3 text-right">Ïº┘äÏÀ┘äÏ¿ÏºÏ¬</th><th class="p-3 text-right">Ïº┘äÏÑÏ¼┘àÏº┘ä┘è</th><th class="p-3 text-right">ÏóÏ«Ï▒ ÏÀ┘äÏ¿</th></tr>
+            </thead>
+            <tbody>
+                <template x-for="c in clients" :key="c.id">
+                    <tr class="border-t border-[#2a2a35] hover:bg-[#252530]/50">
+                        <td class="p-3 font-medium" x-text="c.name||'-'"></td>
+                        <td class="p-3 text-gray-400" x-text="c.phone||'-'"></td>
+                        <td class="p-3 text-gray-400" x-text="c.wilaya||'-'"></td>
+                        <td class="p-3"><span class="text-royal-400 font-bold" x-text="c.orders"></span></td>
+                        <td class="p-3" x-text="(c.spent||0).toLocaleString()+' Ï».Ï¼'"></td>
+                        <td class="p-3 text-xs text-gray-500" x-text="c.last_order ? c.last_order.slice(0,10) : '-'"></td>
+                    </tr>
+                </template>
+                <tr x-show="clients.length===0"><td colspan="6" class="p-8 text-center text-gray-500">┘äÏº ┘è┘êÏ¼Ï» Ï╣┘à┘äÏºÏí Ï¿Ï╣Ï»</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

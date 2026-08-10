@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS CONSTELLATION — Royal Chaussures</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Cairo:wght@400;600;700&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg-primary: #0a0a12;
+    --bg-secondary: #12121e;
+    --bg-card: #1a1a2e;
+    --text-primary: #e0e0ff;
+    --text-secondary: #8888aa;
+    --accent-cyan: #00d4ff;
+    --accent-orange: #ff6b35;
+    --accent-gold: #ffd700;
+    --glow-cyan: 0 0 20px rgba(0,212,255,0.3);
+    --glow-orange: 0 0 20px rgba(255,107,53,0.3);
+    --glow-gold: 0 0 20px rgba(255,215,0,0.3);
+    --font-display: 'Orbitron', monospace;
+    --font-arabic: 'Cairo', sans-serif;
+  }
+  
+  body {
+    font-family: var(--font-arabic);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+  
+  /* ── Canvas Background ── */
+  #constellationCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: auto;
+  }
+  
+  /* ── Header ── */
+  .header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    padding: 16px 30px;
+    background: linear-gradient(180deg, rgba(10,10,18,0.95) 0%, transparent 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .logo-icon {
+    width: 40px; height: 40px;
+    border: 2px solid var(--accent-cyan);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--accent-cyan);
+    box-shadow: var(--glow-cyan);
+    animation: pulse-glow 2s infinite;
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: var(--glow-cyan); }
+    50% { box-shadow: 0 0 40px rgba(0,212,255,0.6); }
+  }
+  
+  .header-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--text-secondary);
+  }
+  .header-title span { color: var(--accent-cyan); }
+  
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .stat-pill {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    color: var(--text-secondary);
+  }
+  .stat-pill .num {
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+  .stat-pill .num.fail { color: #ff4757; }
+  
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 6px;
+  }
+  .status-dot.online { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+  
+  /* ── Constellation Nodes ── */
+  .node {
+    position: fixed;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+  }
+  
+  .node-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    border: 2px solid;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  
+  .node-circle::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+  }
+  
+  .node.active .node-circle::after {
+    animation: rotate-ring 3s linear infinite;
+  }
+  
+  @keyframes rotate-ring {
+    0% { transform: rotate(0deg); border-color: transparent transparent transparent var(--accent-cyan); }
+    25% { border-color: var(--accent-cyan) transparent transparent transparent; }
+    50% { border-color: transparent var(--accent-cyan) transparent transparent; }
+    75% { border-color: transparent transparent var(--accent-cyan) transparent; }
+    100% { transform: rotate(360deg); border-color: transparent transparent transparent var(--accent-cyan); }
+  }
+  
+  .node.error .node-circle {
+    animation: error-shake 0.5s ease infinite;
+  }
+  
+  @keyframes error-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+  
+  .node-label {
+    margin-top: 10px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+  
+  .node-title {
+    font-family: var(--font-arabic);
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  
+  .node-status {
+    font-size: 10px;
+    margin-top: 6px;
+    padding: 2px 12px;
+    border-radius: 10px;
+    font-family: var(--font-display);
+    letter-spacing: 1px;
+  }
+  .node-status.idle { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+  .node-status.active { background: rgba(0,212,255,0.15); color: var(--accent-cyan); }
+  .node-status.error { background: rgba(255,71,87,0.15); color: #ff4757; }
+  
+  .node:hover .node-circle { transform: scale(1.1); }
+  
+  /* ── Skills / Modules Panel ── */
+  .detail-panel {
+    position: fixed;
+    bottom: -400px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    width: 90%;
+    max-width: 700px;
+    background: rgba(26,26,46,0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 30px;
+    transition: bottom 0.5s cubic-bezier(0.68, -0.15, 0.27, 1.15);
+  }
+  .detail-panel.open { bottom: 0; }
+  
+  .panel-handle {
+    width: 40px; height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+    cursor: pointer;
+  }
+  
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .panel-agent-name {
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+  .panel-agent-title {
+    font-family: var(--font-arabic);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  
+  .panel-section-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-secondary);
+    margin: 16px 0 8px;
+    font-family: var(--font-display);
+  }
+  
+  .panel-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .skill-tag {
+    padding: 4px 14px;
+    border-radius: 12px;
+    font-size: 11px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+  }
+  
+  /* ── Activity Feed ── */
+  .activity-feed {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    z-index: 5;
+    width: 280px;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    direction: ltr;
+  }
+  
+  .activity-feed::-webkit-scrollbar { width: 2px; }
+  .activity-feed::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 1px; }
+  
+  .activity-title {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  
+  .activity-item {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    font-size: 11px;
+    background: rgba(255,255,255,0.02);
+    border-left: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .activity-item.success { border-left-color: #00ff88; }
+  .activity-item.error { border-left-color: #ff4757; }
+  .activity-item.info { border-left-color: var(--accent-cyan); }
+  
+  .activity-time {
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-secondary);
+  }
+  .activity-agent {
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .activity-msg { color: var(--text-primary); }
+  
+  .activity-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 20px;
+  }
+  
+  /* ── Stats Grid ── */
+  .stats-grid {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 5;
+    display: flex;
+    gap: 12px;
+  }
+  
+  .stat-card {
+    background: rgba(26,26,46,0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 10px 16px;
+    min-width: 80px;
+    text-align: center;
+  }
+  
+  .stat-card .value {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .stat-card .label {
+    font-size: 9px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  
+  .stat-card.cyan .value { color: var(--accent-cyan); }
+  .stat-card.gold .value { color: var(--accent-gold); }
+  .stat-card.orange .value { color: var(--accent-orange); }
+  .stat-card.green .value { color: #00ff88; }
+  
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .node-circle { width: 60px; height: 60px; font-size: 24px; }
+    .node-label { font-size: 10px; }
+    .activity-feed { display: none; }
+    .stats-grid { gap: 6px; }
+    .stat-card { padding: 6px 10px; min-width: 60px; }
+    .stat-card .value { font-size: 14px; }
+    .header-title { font-size: 11px; }
+    .detail-panel { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Background Canvas ── -->
+<canvas id="constellationCanvas"></canvas>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-icon">✦</div>
+    <div>
+      <div class="header-title">JARVIS <span>CONSTELLATION</span></div>
+      <div style="font-size:10px;color:var(--text-secondary);font-family:var(--font-arabic);">Royal Chaussures — نظام الوكلاء الذكي</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="stat-pill">📦 <span class="num" id="totalOrders">0</span></div>
+    <div class="stat-pill">✅ <span class="num" id="successOrders">0</span></div>
+    <div class="stat-pill">❌ <span class="num fail" id="failOrders">0</span></div>
+    <div class="stat-pill"><span class="status-dot online"></span>ONLINE</div>
+  </div>
+</header>
+
+<!-- ── Constellation Nodes ── -->
+<div id="node-nexus" class="node" data-agent="nexus" onclick="openPanel('nexus')" 
+     style="top:35%;left:15%;">
+  <div class="node-circle" style="border-color:var(--accent-cyan);color:var(--accent-cyan);box-shadow:var(--glow-cyan);">
+    🛡️
+  </div>
+  <div class="node-label" style="color:var(--accent-cyan);">NEXUS</div>
+  <div class="node-title">وكيل العملاء</div>
+  <div class="node-status idle">IDLE</div>
+</div>
+
+<div id="node-vector" class="node" data-agent="vector" onclick="openPanel('vector')"
+     style="top:55%;left:50%;transform:translateX(-50%);">
+  <div class="node-circle" style="border-color:var(--accent-orange);color:var(--accent-orange);box-shadow:var(--glow-orange);">
+    🚀
+  </div>
+  <div class="node-label" style="color:var(--accent-orange);">VECTOR</div>
+  <div class="node-title">وكيل الشحنات</div>
+  <div class="node-status idle">IDLE</div>
+</div>
+
+<div id="node-aegis" class="node" data-agent="aegis" onclick="openPanel('aegis')"
+     style="top:35%;left:80%;">
+  <div class="node-circle" style="border-color:var(--accent-gold);color:var(--accent-gold);box-shadow:var(--glow-gold);">
+    🐙
+  </div>
+  <div class="node-label" style="color:var(--accent-gold);">AEGIS</div>
+  <div class="node-title">المنسق العام</div>
+  <div class="node-status idle">IDLE</div>
+</div>
+
+<!-- ── Activity Feed ── -->
+<div class="activity-feed" id="activityFeed">
+  <div class="activity-title">⟐ ACTIVITY LOG</div>
+  <div class="activity-empty">بانتظار النشاطات...</div>
+</div>
+
+<!-- ── Stats Grid ── -->
+<div class="stats-grid">
+  <div class="stat-card cyan">
+    <div class="value" id="statTotal">0</div>
+    <div class="label">TOTAL</div>
+  </div>
+  <div class="stat-card green">
+    <div class="value" id="statSuccess">0</div>
+    <div class="label">SUCCESS</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="value" id="statFailed">0</div>
+    <div class="label">FAILED</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="value" id="statUptime">0s</div>
+    <div class="label">UPTIME</div>
+  </div>
+</div>
+
+<!-- ── Detail Panel ── -->
+<div class="detail-panel" id="detailPanel">
+  <div class="panel-handle" onclick="closePanel()"></div>
+  <div class="panel-header">
+    <div>
+      <div class="panel-agent-name" id="panelAgentName">NEXUS</div>
+      <div class="panel-agent-title" id="panelAgentTitle">وكيل العملاء</div>
+    </div>
+    <div id="panelAgentRole" style="font-size:12px;color:var(--text-secondary);"></div>
+  </div>
+  
+  <div class="panel-section-title">⟐ SKILLS</div>
+  <div class="panel-skills" id="panelSkills"></div>
+  
+  <div class="panel-section-title">⟐ MODULES</div>
+  <div class="panel-skills" id="panelModules"></div>
+  
+  <div style="margin-top:12px;font-size:11px;color:var(--text-secondary);">
+    آخر نشاط: <span id="panelLastActive">—</span>
+  </div>
+</div>
+
+<script>
+// ── Background Canvas ──
+const canvas = document.getElementById('constellationCanvas');
+const ctx = canvas.getContext('2d');
+
+let stars = [];
+let connections = [];
+let mouseX = 0, mouseY = 0;
+let animFrame;
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Generate stars
+function initStars() {
+  stars = [];
+  const count = Math.floor((canvas.width * canvas.height) / 8000);
+  for (let i = 0; i < count; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.3,
+      a: Math.random() * 0.8 + 0.2,
+      speed: Math.random() * 0.3 + 0.1,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+  
+  // Agent node positions for connection lines
+  connections = [
+    { from: { x: canvas.width * 0.15, y: canvas.height * 0.35 }, to: { x: canvas.width * 0.5, y: canvas.height * 0.55 } },
+    { from: { x: canvas.width * 0.5, y: canvas.height * 0.55 }, to: { x: canvas.width * 0.8, y: canvas.height * 0.35 } },
+    { from: { x: canvas.width * 0.15, y: canvas.height * 0.35 }, to: { x: canvas.width * 0.8, y: canvas.height * 0.35 } },
+  ];
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const time = Date.now() / 1000;
+  
+  // Draw stars
+  for (const star of stars) {
+    const flicker = Math.sin(time * star.speed + star.phase) * 0.3 + 0.7;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 220, 255, ${star.a * flicker})`;
+    ctx.fill();
+  }
+  
+  // Draw connections between agents
+  const agentPositions = {
+    nexus: { x: canvas.width * 0.15, y: canvas.height * 0.35, color: '#00d4ff' },
+    vector: { x: canvas.width * 0.5, y: canvas.height * 0.55, color: '#ff6b35' },
+    aegis: { x: canvas.width * 0.8, y: canvas.height * 0.35, color: '#ffd700' },
+  };
+  
+  const pairs = [['nexus', 'vector'], ['vector', 'aegis'], ['nexus', 'aegis']];
+  for (const [a, b] of pairs) {
+    const p1 = agentPositions[a];
+    const p2 = agentPositions[b];
+    if (!p1 || !p2) continue;
+    
+    const pulse = Math.sin(time * 0.8 + (a.charCodeAt(0) + b.charCodeAt(0))) * 0.3 + 0.7;
+    const midColor = a === 'nexus' && b === 'vector' ? '#603020' :
+                     a === 'vector' && b === 'aegis' ? '#b06810' : '#306040';
+    
+    // Glow line
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = `rgba(100, 150, 255, ${0.08 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Main line
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = `rgba(150, 180, 255, ${0.15 * pulse})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Data pulse along line
+    const t = (time * 0.3) % 1;
+    const px = p1.x + (p2.x - p1.x) * t;
+    const py = p1.y + (p2.y - p1.y) * t;
+    ctx.beginPath();
+    ctx.arc(px, py, 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, 212, 255, ${0.6 * pulse})`;
+    ctx.fill();
+  }
+  
+  // Draw mouse proximity glow
+  const grd = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 200);
+  grd.addColorStop(0, 'rgba(0, 212, 255, 0.03)');
+  grd.addColorStop(1, 'rgba(0, 212, 255, 0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  animFrame = requestAnimationFrame(draw);
+}
+
+window.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+initStars();
+draw();
+
+// ── Agent Status Polling ──
+async function fetchStatus() {
+  try {
+    const res = await fetch('/api/agents/status');
+    const data = await res.json();
+    updateUI(data);
+  } catch (err) {
+    console.error('Status fetch error:', err);
+  }
+}
+
+function updateUI(data) {
+  const agents = data.agents || {};
+  const stats = data.stats || {};
+  const activity = data.recent_activity || [];
+  
+  // Update header stats
+  document.getElementById('totalOrders').textContent = stats.total_processed || 0;
+  document.getElementById('successOrders').textContent = stats.successful || 0;
+  document.getElementById('failOrders').textContent = stats.failed || 0;
+  
+  // Update stat cards
+  document.getElementById('statTotal').textContent = stats.total_processed || 0;
+  document.getElementById('statSuccess').textContent = stats.successful || 0;
+  document.getElementById('statFailed').textContent = stats.failed || 0;
+  
+  const uptime = stats.uptime_seconds || 0;
+  document.getElementById('statUptime').textContent = 
+    uptime > 3600 ? `${(uptime/3600).toFixed(1)}h` :
+    uptime > 60 ? `${Math.floor(uptime/60)}m` : `${uptime}s`;
+  
+  // Update agent nodes
+  for (const [key, agent] of Object.entries(agents)) {
+    const node = document.getElementById(`node-${key}`);
+    if (!node) continue;
+    
+    const statusEl = node.querySelector('.node-status');
+    const circle = node.querySelector('.node-circle');
+    
+    node.classList.remove('active', 'error', 'idle');
+    
+    if (agent.status === 'active') {
+      node.classList.add('active');
+      statusEl.className = 'node-status active';
+      statusEl.textContent = 'ACTIVE';
+      const color = agent.color || '#00d4ff';
+      circle.style.boxShadow = `0 0 30px ${color}`;
+    } else if (agent.status === 'error') {
+      node.classList.add('error');
+      statusEl.className = 'node-status error';
+      statusEl.textContent = 'ERROR';
+    } else {
+      node.classList.add('idle');
+      statusEl.className = 'node-status idle';
+      statusEl.textContent = 'IDLE';
+    }
+  }
+  
+  // Update activity feed
+  const feed = document.getElementById('activityFeed');
+  let html = '<div class="activity-title">⟐ ACTIVITY LOG</div>';
+  
+  if (activity.length === 0) {
+    html += '<div class="activity-empty">بانتظار النشاطات...</div>';
+  } else {
+    for (const item of activity.slice(0, 15)) {
+      const statusClass = item.status === 'error' ? 'error' : 
+                          item.status === 'active' ? 'success' : 'info';
+      const agentName = agents[item.agent]?.name || item.agent;
+      const time = item.time ? new Date(item.time).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+      html += `<div class="activity-item ${statusClass}">
+        <div class="activity-time">${time}</div>
+        <div><span class="activity-agent">${agentName}</span> — <span class="activity-msg">${item.message || ''}</span></div>
+        <div style="font-size:9px;color:var(--text-secondary);">طلب #${item.order}</div>
+      </div>`;
+    }
+  }
+  feed.innerHTML = html;
+}
+
+// Detail panel
+const agentData = {
+  nexus: { name: 'NEXUS', title: 'وكيل العملاء', role: 'التواصل مع العملاء، الرد عليهم، وتأكيد الطلبيات',
+           skills: ['خدمة العملاء', 'معالجة الطلبات', 'التواصل الآلي'],
+           modules: ['Shopify API', 'مزامنة CRM', 'الرد التلقائي'] },
+  vector: { name: 'VECTOR', title: 'وكيل الشحنات', role: 'إدارة الشحنات، إنشاء الطلبات على ZR Express وتحديث حالاتها',
+            skills: ['ZR Express API', 'الخدمات اللوجستية', 'التتبع'],
+            modules: ['إنشاء الشحنات', 'تحديث الحالات', 'خرائط المناطق'] },
+  aegis: { name: 'AEGIS', title: 'المنسق العام', role: 'المنسق العام للتدفق وإدارة التداخلات والأخطاء',
+           skills: ['تنسيق سير العمل', 'معالجة الأخطاء', 'مراقبة النظام'],
+           modules: ['Webhook Server', 'إعادة المحاولة التلقائية', 'صحة النظام'] },
+};
+
+function openPanel(key) {
+  const agent = agentData[key];
+  if (!agent) return;
+  
+  document.getElementById('panelAgentName').textContent = agent.name;
+  document.getElementById('panelAgentTitle').textContent = agent.title;
+  document.getElementById('panelAgentRole').textContent = agent.role;
+  
+  let skillsHtml = '';
+  for (const s of agent.skills) {
+    skillsHtml += `<span class="skill-tag">${s}</span>`;
+  }
+  document.getElementById('panelSkills').innerHTML = skillsHtml;
+  
+  let modulesHtml = '';
+  for (const m of agent.modules) {
+    modulesHtml += `<span class="skill-tag">${m}</span>`;
+  }
+  document.getElementById('panelModules').innerHTML = modulesHtml;
+  
+  document.getElementById('panelLastActive').textContent = new Date().toLocaleString('fr-FR');
+  
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('detailPanel').classList.remove('open');
+}
+
+// Poll every 3 seconds
+setInterval(fetchStatus, 3000);
+fetchStatus();
+</script>
+</body>
+</html>

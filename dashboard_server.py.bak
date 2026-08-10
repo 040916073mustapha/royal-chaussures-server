@@ -1,0 +1,1421 @@
+#!/usr/bin/env python3
+"""
+Royal Chaussures Dashboard — نظام إدارة الطلبات والمخزون
+=========================================================
+يربط بين Shopify → ZR Express → OpenClaw → WhatsApp/FB/IG
+مع واجهة تحكم ويب وقاعدة بيانات SQLite
+"""
+
+import requests
+import json
+import os
+import sys
+import sqlite3
+import hashlib
+import hmac
+import threading
+import time
+from datetime import datetime, timedelta
+from functools import wraps
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify, session, redirect, url_for, render_template, render_template_string
+
+# استيراد دوال ZR Express (lookup customer + territory)
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_ZR_CLIENT_PATH = os.path.join(_SCRIPT_DIR, 'scripts', 'zr_express_client.py')
+if os.path.exists(_ZR_CLIENT_PATH):
+    import importlib.util
+    _zr_spec = importlib.util.spec_from_file_location('zr_express_client', _ZR_CLIENT_PATH)
+    zr_client = importlib.util.module_from_spec(_zr_spec)
+    _zr_spec.loader.exec_module(zr_client)
+
+# تحميل المتغيرات من .env
+load_dotenv()
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24).hex()
+
+# ========== الإعدادات ==========
+
+# --- Shopify ---
+SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "rwqchh-na")
+SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-10")
+SHOPIFY_ORDERS_TOKEN = os.getenv("SHOPIFY_ORDERS_TOKEN", "")
+SHOPIFY_BASE = f"https://{SHOPIFY_STORE}.myshopify.com/admin/api/{SHOPIFY_API_VERSION}"
+SHOPIFY_HEADERS = {"X-Shopify-Access-Token": SHOPIFY_ORDERS_TOKEN, "Content-Type": "application/json"}
+SHOPIFY_STORE_LOCATION_ID = 113958715756
+
+# --- OpenClaw Gateway ---
+OPENCLAW_API_URL = "http://127.0.0.1:18789/v1/chat/completions"
+OPENCLAW_TOKEN = "40bc9b…a793"
+
+# --- WhatsApp ---
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = "1212786725251029"
+
+# --- ZR Express ---
+ZR_BASE_URL = os.getenv("ZR_BASE_URL", "https://api.zrexpress.app/api/v1")
+ZR_TENANT_ID = os.getenv("ZR_TENANT_ID", "")
+ZR_SECRET_KEY = os.getenv("ZR_SECRET_KEY", os.getenv("ZR_API_KEY", ""))
+ZR_API_KEY = ZR_SECRET_KEY
+
+# --- Dashboard Credentials ---
+DASHBOARD_USER = "admin"
+DASHBOARD_PASS_HASH = hashlib.sha256("RoyalChaussures2026!".encode()).hexdigest()
+
+# ========== قاعدة البيانات ==========
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "orders.db")
+
+def init_db():
+    """إنشاء جداول قاعدة البيانات"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    # جدول الطلبات
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shopify_order_id TEXT UNIQUE,
+            order_name TEXT,
+            customer_name TEXT,
+            customer_phone TEXT,
+            customer_platform TEXT DEFAULT 'shopify',
+            total_amount REAL,
+            currency TEXT DEFAULT 'DZD',
+            status TEXT DEFAULT 'pending',
+            fulfillment_status TEXT DEFAULT 'unfulfilled',
+            items TEXT,
+            shipping_address TEXT,
+            zr_tracking_number TEXT,
+            zr_parcel_id TEXT,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT DEFAULT (datetime('now','+1 hour'))
+        )
+    """)
+
+    # جدول رسائل الإشعارات
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER,
+            platform TEXT,
+            recipient TEXT,
+            message TEXT,
+            status TEXT DEFAULT 'sent',
+            sent_at TEXT DEFAULT (datetime('now','+1 hour')),
+            FOREIGN KEY (order_id) REFERENCES orders(id)
+        )
+    """)
+
+    # جدول سجل API
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS api_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            endpoint TEXT,
+            method TEXT,
+            status_code INTEGER,
+            response TEXT,
+            created_at TEXT DEFAULT (datetime('now','+1 hour'))
+        )
+    """)
+
+    # جدول المحادثات (AI Agents مع الزبائن)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER,
+            platform TEXT DEFAULT 'whatsapp',
+            sender_id TEXT,
+            customer_message TEXT,
+            ai_response TEXT,
+            agent_used TEXT DEFAULT 'customer_support',
+            message_role TEXT DEFAULT 'customer',
+            created_at TEXT DEFAULT (datetime('now','+1 hour')),
+            FOREIGN KEY (order_id) REFERENCES orders(id)
+        )
+    """)
+
+    # التحقق من وجود الأعمدة الجديدة في جدول orders (آمن للتحديث)
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN current_agent TEXT DEFAULT 'customer_support'")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN auto_reply INTEGER DEFAULT 1")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN shopify_tracking_updated INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN whatsapp_sent INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN customer_platform_id TEXT DEFAULT ''")
+    except:
+        pass
+
+    conn.commit()
+    conn.close()
+    print("✅ Database initialized: orders.db (with conversations & agent fields)")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# ========== المصادقة ==========
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login_page"))
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        pw_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        if username == DASHBOARD_USER and pw_hash == DASHBOARD_PASS_HASH:
+            session["logged_in"] = True
+            session["username"] = username
+            return redirect(url_for("dashboard"))
+        return render_template_string(LOGIN_HTML, error="⚠️ اسم المستخدم أو كلمة السر غير صحيحة")
+    return render_template_string(LOGIN_HTML, error="")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
+
+# ========== دوال Shopify ==========
+
+def shopify_request(endpoint, method="GET", data=None):
+    """إرسال طلب إلى Shopify API"""
+    url = f"{SHOPIFY_BASE}/{endpoint}"
+    try:
+        if method == "GET":
+            r = requests.get(url, headers=SHOPIFY_HEADERS, timeout=15)
+        elif method == "POST":
+            r = requests.post(url, json=data, headers=SHOPIFY_HEADERS, timeout=15)
+        elif method == "PUT":
+            r = requests.put(url, json=data, headers=SHOPIFY_HEADERS, timeout=15)
+        else:
+            return None, "Unsupported method"
+
+        if r.status_code in (200, 201):
+            return r.json(), None
+        return None, f"Shopify error {r.status_code}: {r.text[:200]}"
+    except Exception as e:
+        return None, str(e)
+
+def sync_orders_from_shopify():
+    """جلب آخر الطلبات من Shopify وتخزينها في قاعدة البيانات"""
+    data, error = shopify_request(f"orders.json?status=any&limit=50&order=created_at DESC")
+    if error:
+        print(f"❌ Sync orders error: {error}")
+        return False
+
+    conn = get_db()
+    count = 0
+    for order in data.get("orders", []):
+        customer = order.get("customer", {}) or {}
+        line_items = order.get("line_items", [])
+
+        # تجهيز بيانات المنتجات
+        items_summary = []
+        for item in line_items:
+            items_summary.append({
+                "name": item.get("title", ""),
+                "quantity": item.get("quantity", 1),
+                "price": item.get("price", "0"),
+                "sku": item.get("sku", ""),
+                "variant_id": item.get("variant_id")
+            })
+
+        shipping = order.get("shipping_address", {}) or {}
+
+        try:
+            c = conn.cursor()
+            c.execute("""
+                INSERT OR REPLACE INTO orders
+                (shopify_order_id, order_name, customer_name, customer_phone,
+                 total_amount, currency, status, fulfillment_status,
+                 items, shipping_address, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                str(order["id"]),
+                order.get("name", ""),
+                f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+                customer.get("phone", "") or shipping.get("phone", ""),
+                float(order.get("total_price", 0)),
+                order.get("currency", "DZD"),
+                order.get("financial_status", "pending"),
+                order.get("fulfillment_status") or "unfulfilled",
+                json.dumps(items_summary, ensure_ascii=False),
+                json.dumps(shipping, ensure_ascii=False),
+                order.get("created_at", "")
+            ))
+            count += c.rowcount
+        except Exception as e:
+            print(f"⚠️ DB insert error for order {order.get('name')}: {e}")
+
+    conn.commit()
+    conn.close()
+    print(f"✅ Synced {count} orders from Shopify")
+    return True
+
+# ========== دوال ZR Express ==========
+
+def create_zr_shipment(order_data):
+    """إنشاء شحنة في ZR Express مع lookup تلقائي للعميل والمنطقة"""
+    # قراءة المفاتيح مباشرة من ملف .env إذا os.getenv فشل
+    _key = os.getenv("ZR_SECRET_KEY", "")
+    if not _key:
+        _key = os.getenv("ZR_API_KEY", "")
+    if not _key:
+        # القراءة المباشرة من ملف .env
+        _env_paths = [os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'),
+                      r'C:\Users\Micro-Tech\.openclaw\workspace-shipment\scripts\.env']
+        for _p in _env_paths:
+            if os.path.exists(_p):
+                with open(_p, 'r', encoding='utf-8') as _f:
+                    for _line in _f:
+                        _line = _line.strip()
+                        if _line.startswith('ZR_SECRET_KEY='):
+                            _key = _line.split('=', 1)[1].strip().strip('"').strip("'")
+                            break
+                        if _line.startswith('ZR_API_KEY='):
+                            _key = _line.split('=', 1)[1].strip().strip('"').strip("'")
+                if _key:
+                    break
+    _tenant = os.getenv("ZR_TENANT_ID", "")
+    if not _tenant:
+        for _p in [_env_paths[0], _env_paths[1]]:
+            if os.path.exists(_p):
+                with open(_p, 'r', encoding='utf-8') as _f:
+                    for _line in _f:
+                        if _line.startswith('ZR_TENANT_ID='):
+                            _tenant = _line.split('=', 1)[1].strip().strip('"').strip("'")
+                            break
+                if _tenant:
+                    break
+    _base = os.getenv("ZR_BASE_URL", "https://api.zrexpress.app/api/v1")
+
+    if not _key or not _tenant:
+        return None, "⚠️ ZR_SECRET_KEY أو ZR_TENANT_ID غير مضبطين. تأكد من ملف .env"
+
+    url = f"{_base}/parcels"
+    headers = {
+        "X-Api-Key": _key,
+        "X-Tenant": _tenant,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    # استخراج بيانات الشحن من الطلب
+    customer_name = order_data.get("customer_name", "")
+    customer_phone = order_data.get("customer_phone", "")
+    shipping_addr = order_data.get("shipping_address", {})
+    if isinstance(shipping_addr, str):
+        try:
+            shipping_addr = json.loads(shipping_addr)
+        except:
+            shipping_addr = {}
+
+    wilaya = shipping_addr.get("province", "") or shipping_addr.get("city", "Alger")
+    commune = shipping_addr.get("city", "") or shipping_addr.get("district", "Alger Centre")
+    street = shipping_addr.get("address1", "") or shipping_addr.get("street", "")
+
+    # وصف المنتجات
+    items = order_data.get("items", [])
+    if isinstance(items, str):
+        try:
+            items = json.loads(items)
+        except:
+            items = []
+    product_names = [i.get("name", i.get("title", "")) for i in (items or [])]
+    description = "، ".join(product_names)[:200] or "Royal Chaussures Product"
+
+    total = int(float(order_data.get("total_amount", 0)))
+    if total <= 0:
+        total = 3500
+
+    # معالجة رقم الهاتف (إضافة رمز الجزائر)
+    phone = customer_phone.strip()
+    if phone.startswith("0"):
+        phone = f"+213{phone[1:]}"
+    elif not phone.startswith("+"):
+        phone = f"+213{phone}"
+
+    # ========== Lookup تلقائي للعميل والمنطقة ==========
+    customer_id = "e28547c8-7811-4e53-83f5-1c874258049a"  # Default customer
+    city_id = "8c97a133-681b-4da4-8466-2f6110557fa2"  # Default: Alger centre
+    district_id = "d134c182-7dac-4655-9d9b-bbdb62aa2ec4"  # Default: Alger wilaya
+    customers = []
+    try:
+        # البحث عن العميل في قاعدة ZR
+        cust_resp = requests.post(
+            f"{_base}/customers/search",
+            json={"pageNumber": 1, "pageSize": 50},
+            headers=headers,
+            timeout=10
+        )
+        if cust_resp.status_code == 200:
+            customers = cust_resp.json().get("items", [])
+            phone_clean = phone.strip()
+            for c in customers:
+                cp = c.get("phone", {})
+                c_phone = cp.get("number1", "") if isinstance(cp, dict) else str(cp)
+                if phone_clean in c_phone or c_phone in phone_clean:
+                    customer_id = c["id"]
+                    break
+            if not customer_id or customer_id == "e28547c8-7811-4e53-83f5-1c874258049a":
+                for c in customers:
+                    if customer_name.lower().strip() in c.get("name", "").lower().strip():
+                        customer_id = c["id"]
+                        break
+    except Exception:
+        pass
+
+    # البحث عن المنطقة من territory_mapping.json
+    try:
+        _map_paths = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts', 'territory_mapping.json'),
+            r'C:\Users\Micro-Tech\.openclaw\workspace-shipment\scripts\territory_mapping.json'
+        ]
+        for _map_path in _map_paths:
+            if os.path.exists(_map_path):
+                with open(_map_path, 'r', encoding='utf-8') as _f:
+                    _tmap = json.load(_f)
+                w_lower = wilaya.strip().lower() if wilaya else ""
+                c_lower = commune.strip().lower() if commune else ""
+                _found_commune = None
+                _found_wilaya = None
+                if c_lower in _tmap.get("communes", {}):
+                    _found_commune = _tmap["communes"][c_lower]
+                if not _found_commune:
+                    for name, data in _tmap.get("communes", {}).items():
+                        if c_lower in name or name in c_lower:
+                            _found_commune = data
+                            break
+                if _found_commune:
+                    city_id = _found_commune["id"]
+                    district_id = _found_commune["parentId"]
+                if w_lower in _tmap.get("wilayas", {}):
+                    _found_wilaya = _tmap["wilayas"][w_lower]
+                if _found_wilaya:
+                    district_id = _found_wilaya
+                    if not _found_commune:
+                        city_id = _found_wilaya
+                break
+    except Exception:
+        pass
+
+    # بناء payload
+    customer_payload = {
+        "name": customer_name,
+        "phone": {"number1": phone},
+    }
+    if customer_id:
+        customer_payload["customerId"] = customer_id
+    else:
+        customer_payload["customerId"] = "e28547c8-7811-4e53-83f5-1c874258049a"
+
+    deliv_addr = {
+        "street": street,
+        "city": wilaya.title() if wilaya else "Alger",
+        "district": commune.title() if commune else "Alger Centre",
+        "postalCode": "",
+        "country": "algeria",
+    }
+    if district_id:
+        deliv_addr["cityTerritoryId"] = district_id
+    else:
+        deliv_addr["cityTerritoryId"] = "d134c182-7dac-4655-9d9b-bbdb62aa2ec4"
+    if city_id:
+        deliv_addr["districtTerritoryId"] = city_id
+    else:
+        deliv_addr["districtTerritoryId"] = "8c97a133-681b-4da4-8466-2f6110557fa2"
+
+    payload = {
+        "customer": customer_payload,
+        "deliveryAddress": deliv_addr,
+        "orderedProducts": [
+            {
+                "unitPrice": 0,
+                "quantity": 1,
+                "productName": description[:100],
+                "stockType": "none",
+            }
+        ],
+        "amount": total,
+        "description": description,
+        "deliveryType": "home",
+        "externalId": order_data.get("order_name", f"ORD{order_data.get('id', '')}"),
+    }
+
+    try:
+        import json as _zrj
+        _zr_debug_msg = json.dumps({
+            'has_customerId': 'customerId' in str(payload.get('customer', {})),
+            'customerId_val': str(payload.get('customer', {}).get('customerId', 'MISSING')),
+            'key_exists': bool(_key),
+            'tenant_exists': bool(_tenant),
+            'payload_preview': str(payload)[:200]
+        }, ensure_ascii=False)
+        try:
+            with open(r'C:\Users\Micro-Tech\.openclaw\workspace\zr_debug_payload.json', 'w', encoding='utf-8') as _f:
+                _f.write(_zr_debug_msg)
+        except:
+            pass
+        
+        _zr_payload_str = json.dumps(payload, ensure_ascii=False)
+        headers['Content-Length'] = str(len(_zr_payload_str.encode('utf-8')))
+        resp = requests.post(url, data=_zr_payload_str.encode('utf-8'), headers=headers, timeout=15)
+        if resp.status_code in (200, 201):
+            result = resp.json()
+            return result, None
+        else:
+            return None, f"ZR API error {resp.status_code}: {resp.text[:300]}"
+    except Exception as e:
+        return None, str(e)
+
+# ========== دوال OpenClaw AI Agents ==========
+
+AVAILABLE_AGENTS = {
+    "customer_support": {
+        "model": "openclaw/customer_support",
+        "label": "🧑‍💼 خدمة العملاء",
+        "description": "الرد على استفسارات الزبائن، المنتجات، الطلبات"
+    },
+    "shipment_and_status_manager": {
+        "model": "openclaw/shipment_and_status_manager",
+        "label": "📦 الشحن والتتبع",
+        "description": "متابعة حالة الشحن، التوصيل، أرقام التتبع"
+    }
+}
+
+
+def call_openclaw_agent(agent_key, user_message, customer_id):
+    """استدعاء AI Agent معين عبر OpenClaw Gateway"""
+    agent = AVAILABLE_AGENTS.get(agent_key, AVAILABLE_AGENTS["customer_support"])
+
+    system_context = ""
+    if agent_key == "customer_support":
+        system_context = (
+            "أنت موظف خدمة عملاء في متجر **Royal Chaussures**، متجر جزائري للأحذية والإكسسوارات النسائية. "
+            "تتحدث باللهجة الجزائرية الدارجة بطريقة لطيفة ومحترمة. "
+            "هدفك مساعدة الزبون وبيع المنتجات."
+        )
+    elif agent_key == "shipment_and_status_manager":
+        system_context = (
+            "أنت مسؤول الشحن في متجر **Royal Chaussures**. "
+            "مهمتك متابعة حالة الطلبات والشحنات. "
+            "تتحدث باللهجة الجزائرية الدارجة. "
+            "قدم معلومات دقيقة عن وقت التوصيل ورقم التتبع إن وجد."
+        )
+
+    payload = {
+        "model": agent["model"],
+        "messages": [
+            {"role": "system", "content": system_context},
+            {"role": "user", "content": user_message}
+        ],
+        "user": f"dashboard:customer:{customer_id}"
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENCLAW_TOKEN}"
+    }
+
+    try:
+        r = requests.post(OPENCLAW_API_URL, json=payload, headers=headers, timeout=30)
+        if r.status_code == 200:
+            result = r.json()
+            return result["choices"][0]["message"]["content"], None
+        return None, f"Gateway error: {r.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+
+def get_available_agents():
+    """قائمة الـ agents المتاحة"""
+    return [
+        {"key": key, **info}
+        for key, info in AVAILABLE_AGENTS.items()
+    ]
+
+
+def log_conversation(order_id, platform, sender_id, customer_msg, ai_response, agent_used):
+    """تسجيل محادثة في قاعدة البيانات"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO conversations
+        (order_id, platform, sender_id, customer_message, ai_response, agent_used)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (order_id, platform, sender_id, customer_msg, ai_response, agent_used))
+    conn.commit()
+    conn.close()
+
+
+def get_conversation_history(order_id, limit=20):
+    """جلب سجل المحادثات لطلب معين"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM conversations
+        WHERE order_id = ?
+        ORDER BY created_at ASC
+        LIMIT ?
+    """, (order_id, limit))
+    convs = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return convs
+
+
+# ========== دوال الإشعارات ==========
+
+def send_whatsapp_notification(phone, message):
+    """إرسال إشعار واتساب للزبون"""
+    if not WHATSAPP_ACCESS_TOKEN:
+        return False
+
+    url = f"https://graph.facebook.com/v21.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "text",
+        "text": {"body": message}
+    }
+
+    try:
+        r = requests.post(url, json=payload, headers=headers, timeout=15)
+        return r.status_code in (200, 201)
+    except:
+        return False
+
+# ========== دوال الإحصائيات ==========
+
+def get_dashboard_stats():
+    """جلب إحصائيات اللوحة"""
+    conn = get_db()
+    c = conn.cursor()
+
+    stats = {}
+
+    # عدد الطلبات الكلي
+    c.execute("SELECT COUNT(*) FROM orders")
+    stats["total_orders"] = c.fetchone()[0]
+
+    # حسب الحالة
+    c.execute("SELECT status, COUNT(*) FROM orders GROUP BY status")
+    stats["by_status"] = {row[0]: row[1] for row in c.fetchall()}
+
+    # حسب التنفيذ
+    c.execute("SELECT fulfillment_status, COUNT(*) FROM orders GROUP BY fulfillment_status")
+    stats["by_fulfillment"] = {row[0]: row[1] for row in c.fetchall()}
+
+    # طلبات اليوم
+    today = datetime.now().strftime("%Y-%m-%d")
+    c.execute("SELECT COUNT(*) FROM orders WHERE created_at LIKE ?", (f"{today}%",))
+    stats["today_orders"] = c.fetchone()[0]
+
+    # آخر 5 طلبات
+    c.execute("""
+        SELECT order_name, customer_name, total_amount, status, created_at
+        FROM orders ORDER BY created_at DESC LIMIT 5
+    """)
+    stats["recent_orders"] = [dict(row) for row in c.fetchall()]
+
+    conn.close()
+    return stats
+
+# ========== دوال السيرفر ==========
+
+def sync_background():
+    """مزامنة الطلبات في الخلفية كل 5 دقائق"""
+    while True:
+        try:
+            sync_orders_from_shopify()
+        except Exception as e:
+            print(f"⚠️ Background sync error: {e}")
+        time.sleep(300)  # 5 دقائق
+
+# ========== واجهة برمجة التطبيقات (API Endpoints) ==========
+
+@app.route("/api/orders", methods=["GET"])
+@require_auth
+def api_get_orders():
+    """جلب الطلبات مع إمكانية التصفية"""
+    conn = get_db()
+    c = conn.cursor()
+
+    status_filter = request.args.get("status", "")
+    limit = int(request.args.get("limit", 50))
+
+    if status_filter:
+        c.execute("""
+            SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC LIMIT ?
+        """, (status_filter, limit))
+    else:
+        c.execute("""
+            SELECT * FROM orders ORDER BY created_at DESC LIMIT ?
+        """, (limit,))
+
+    orders = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    for order in orders:
+        if order.get("items"):
+            try:
+                order["items"] = json.loads(order["items"])
+            except:
+                pass
+        if order.get("shipping_address"):
+            try:
+                order["shipping_address"] = json.loads(order["shipping_address"])
+            except:
+                pass
+
+    return jsonify(orders)
+
+
+@app.route("/api/orders/<order_id>", methods=["GET"])
+@app.route("/api/orders/<int:order_id>/", methods=["GET"])
+@require_auth
+def api_get_order(order_id):
+    """جلب تفاصيل طلب معين (int id أو shopify id string)"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM orders WHERE shopify_order_id = ? OR id = ?", (str(order_id) if not isinstance(order_id, int) else "", order_id))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    order = dict(order)
+    if order.get("items"):
+        try:
+            order["items"] = json.loads(order["items"])
+        except:
+            pass
+    if order.get("shipping_address"):
+        try:
+            order["shipping_address"] = json.loads(order["shipping_address"])
+        except:
+            pass
+
+    return jsonify(order)
+
+
+@app.route("/api/orders/<int:order_id>/status", methods=["PUT"])
+@require_auth
+def api_update_status(order_id):
+    """تحديث حالة الطلب"""
+    data = request.get_json()
+    new_status = data.get("status", "")
+
+    if new_status not in ("pending", "confirmed", "processing", "shipped", "delivered", "cancelled"):
+        return jsonify({"error": "Invalid status"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE orders SET status = ?, updated_at = datetime('now','+1 hour') WHERE id = ?",
+              (new_status, order_id))
+    conn.commit()
+
+    # جلب معلومات الزبون للإشعار
+    c.execute("SELECT customer_name, customer_phone, order_name FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    # إرسال إشعار واتساب إذا كان هناك رقم
+    if order and order["customer_phone"]:
+        status_msgs = {
+            "confirmed": f"✅ مرحباً {order['customer_name']}! طلبك {order['order_name']} تم تأكيده. سنبدأ تجهيزه قريباً 🚀",
+            "processing": f"📦 مرحباً {order['customer_name']}! طلبك {order['order_name']} قيد التجهيز في المستودع 🔧",
+            "shipped": f"🚚 مرحباً {order['customer_name']}! طلبك {order['order_name']} تم شحنه. سنرسل لك رقم التتبع قريباً 📍",
+            "delivered": f"🎉 مرحباً {order['customer_name']}! طلبك {order['order_name']} تم توصيله. نتمنى أن ينال إعجابك ❤️👠"
+        }
+        if new_status in status_msgs:
+            send_whatsapp_notification(order["customer_phone"], status_msgs[new_status])
+
+    return jsonify({"success": True, "status": new_status})
+
+
+@app.route("/api/sync", methods=["POST"])
+@require_auth
+def api_sync():
+    """مزامنة يدوية مع Shopify"""
+    success = sync_orders_from_shopify()
+    return jsonify({"success": success})
+
+
+@app.route("/api/stats", methods=["GET"])
+@require_auth
+def api_stats():
+    """إحصائيات اللوحة"""
+    return jsonify(get_dashboard_stats())
+
+
+@app.route("/api/notify/<int:order_id>", methods=["POST"])
+@require_auth
+def api_notify(order_id):
+    """إرسال إشعار يدوي للزبون"""
+    data = request.get_json()
+    message = data.get("message", "")
+
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT customer_phone, customer_name, order_name FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order or not order["customer_phone"]:
+        return jsonify({"error": "Order or phone not found"}), 404
+
+    full_msg = f"👋 مرحباً {order['customer_name']}!\n{message}\n—— Royal Chaussures 👠"
+    success = send_whatsapp_notification(order["customer_phone"], full_msg)
+
+    return jsonify({"success": success, "sent_to": order["customer_phone"]})
+
+# ========== API Endpoints للـ Agents ==========
+
+@app.route("/api/agents", methods=["GET"])
+@require_auth
+def api_get_agents():
+    """جلب قائمة الـ Agents المتاحة"""
+    return jsonify({"agents": get_available_agents()})
+
+
+@app.route("/api/orders/<int:order_id>/conversations", methods=["GET"])
+@require_auth
+def api_get_conversations(order_id):
+    """جلب سجل محادثات طلب معين"""
+    limit = int(request.args.get("limit", 20))
+    convs = get_conversation_history(order_id, limit)
+    return jsonify({"conversations": convs, "count": len(convs)})
+
+
+@app.route("/api/orders/<int:order_id>/agent", methods=["GET", "PUT"])
+@require_auth
+def api_order_agent(order_id):
+    """جلب أو تغيير الـ Agent المسؤول عن الطلب"""
+    conn = get_db()
+    c = conn.cursor()
+
+    if request.method == "PUT":
+        data = request.get_json()
+        new_agent = data.get("agent", "")
+
+        if new_agent not in AVAILABLE_AGENTS:
+            conn.close()
+            return jsonify({"error": f"Invalid agent. Available: {list(AVAILABLE_AGENTS.keys())}"}), 400
+
+        c.execute("UPDATE orders SET current_agent = ?, updated_at = datetime('now','+1 hour') WHERE id = ?",
+                  (new_agent, order_id))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "agent": new_agent, "label": AVAILABLE_AGENTS[new_agent]["label"]})
+
+    # GET
+    c.execute("SELECT id, order_name, current_agent, auto_reply FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    return jsonify({
+        "order_id": order["id"],
+        "order_name": order["order_name"],
+        "current_agent": order["current_agent"],
+        "agent_label": AVAILABLE_AGENTS.get(order["current_agent"], {}).get("label", "غير معروف"),
+        "auto_reply": bool(order["auto_reply"])
+    })
+
+
+@app.route("/api/orders/<int:order_id>/auto_reply", methods=["PUT"])
+@require_auth
+def api_toggle_auto_reply(order_id):
+    """تفعيل/إيقاف الرد الآلي للطلب"""
+    data = request.get_json()
+    enabled = data.get("enabled", True)
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE orders SET auto_reply = ?, updated_at = datetime('now','+1 hour') WHERE id = ?",
+              (1 if enabled else 0, order_id))
+    conn.commit()
+    conn.close()
+
+    status = "مفعل" if enabled else "متوقف"
+    return jsonify({"success": True, "auto_reply": enabled, "status_text": status})
+
+
+@app.route("/api/orders/<int:order_id>/simulate_chat", methods=["POST"])
+@require_auth
+def api_simulate_chat(order_id):
+    """محاكاة رد الـ Agent على رسالة زبون (اختبار)"""
+    data = request.get_json()
+    message = data.get("message", "")
+
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id, order_name, current_agent, customer_name, customer_platform_id FROM orders WHERE id = ?",
+              (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    agent_key = order["current_agent"] or "customer_support"
+    response, error = call_openclaw_agent(agent_key, message, order_id)
+
+    if error:
+        return jsonify({"error": error}), 500
+
+    # تسجيل المحادثة
+    log_conversation(order_id, "dashboard", str(order["id"]), message, response, agent_key)
+
+    return jsonify({
+        "success": True,
+        "order_id": order_id,
+        "order_name": order["order_name"],
+        "agent_used": agent_key,
+        "agent_label": AVAILABLE_AGENTS.get(agent_key, {}).get("label", agent_key),
+        "customer_message": message,
+        "ai_response": response
+    })
+
+
+@app.route("/api/orders/<int:order_id>/ship", methods=["POST"])
+@require_auth
+def api_create_zr_shipment(order_id):
+    """إنشاء شحنة ZR Express لطلب معين"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    order_dict = dict(order)
+    import traceback as _zrtb
+    try:
+        result, error = create_zr_shipment(order_dict)
+    except Exception as _zre:
+        return jsonify({"success": False, "error": f"Exception in create_zr_shipment: {_zre}", "trace": _zrtb.format_exc()}), 500
+
+    if error:
+        return jsonify({"success": False, "error": error}), 400
+
+    # حفظ رقم التتبع في قاعدة البيانات
+    tracking = result.get("trackingNumber", result.get("tracking", ""))
+    parcel_id = result.get("id", result.get("parcelId", ""))
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE orders
+        SET zr_tracking_number = ?, zr_parcel_id = ?, status = 'shipped',
+            updated_at = datetime('now','+1 hour')
+        WHERE id = ?
+    """, (tracking, parcel_id, order_id))
+    conn.commit()
+    conn.close()
+
+    # رفع التتبع لـ Shopify
+    shopify_tracking_updated = False
+    shopify_order_id = order_dict.get("shopify_order_id", "")
+    if shopify_order_id:
+        try:
+            shop_url = f"https://{SHOPIFY_STORE}.myshopify.com/admin/api/2024-10"
+            fulfillment_payload = {
+                "fulfillment": {
+                    "location_id": None,  # سيتم اختيار أول location
+                    "tracking_number": tracking or parcel_id or "",
+                    "tracking_url": f"https://zrexpress.app/track/{tracking}" if tracking else "",
+                    "tracking_company": "ZR Express",
+                    "line_items_by_fulfillment_order": []
+                }
+            }
+            # جلب fulfillment orders الخاصة بالطلب
+            fo_resp = requests.get(
+                f"{shop_url}/orders/{shopify_order_id}/fulfillment_orders.json",
+                headers=SHOPIFY_HEADERS, timeout=10
+            )
+            if fo_resp.status_code == 200:
+                fo_data = fo_resp.json().get("fulfillment_orders", [])
+                if fo_data:
+                    fulfillment_payload["fulfillment"]["location_id"] = fo_data[0].get("assigned_location_id")
+                    fulfillment_payload["fulfillment"]["line_items_by_fulfillment_order"] = [
+                        {"fulfillment_order_id": fo["id"]} for fo in fo_data
+                    ]
+                    # إنشاء fulfillment
+                    f_resp = requests.post(
+                        f"{shop_url}/fulfillments.json",
+                        json=fulfillment_payload, headers=SHOPIFY_HEADERS, timeout=10
+                    )
+                    if f_resp.status_code in (200, 201):
+                        shopify_tracking_updated = True
+        except Exception:
+            pass
+
+    # إرسال إشعار واتساب للزبون
+    whatsapp_sent = False
+    if order["customer_phone"]:
+        tracking_msg = (
+            f"🚚 مرحباً {order['customer_name']}!\n"
+            f"طلبك {order['order_name']} تم شحنه عبر ZR Express.\n"
+            f"📦 رقم التتبع: {tracking or parcel_id or 'سيتم توفيره قريباً'}\n"
+            f"شكراً لثقتك في Royal Chaussures 👠❤️"
+        )
+        try:
+            whatsapp_sent = send_whatsapp_notification(order["customer_phone"], tracking_msg)
+        except Exception:
+            pass
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE orders
+        SET shopify_tracking_updated = ?, whatsapp_sent = ?,
+            updated_at = datetime('now','+1 hour')
+        WHERE id = ?
+    """, (1 if shopify_tracking_updated else 0, 1 if whatsapp_sent else 0, order_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "message": "✅ تم إنشاء الشحنة بنجاح!",
+        "tracking": tracking or "",
+        "parcel_id": parcel_id,
+        "shopify_tracking_updated": shopify_tracking_updated,
+        "whatsapp_sent": whatsapp_sent,
+        "zr_response": result
+    })
+
+
+# ========== واجهة المستخدم (HTML) ==========
+
+@app.route("/")
+@require_auth
+def dashboard():
+    """الصفحة الرئيسية"""
+    stats = get_dashboard_stats()
+    agents = get_available_agents()
+    return render_template_string(DASHBOARD_HTML, stats=stats, agents=agents)
+
+
+@app.route("/orders")
+@require_auth
+def orders_page():
+    """صفحة جميع الطلبات"""
+    import os as _os
+    tmpl_dir = _os.path.join(_os.path.dirname(__file__), "templates")
+    html_path = _os.path.join(tmpl_dir, "orders.html")
+    if _os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return render_template_string(f.read(), agents=get_available_agents())
+    return "<h1>Page not found</h1>", 404
+
+
+@app.route("/orders/<int:order_id>")
+@require_auth
+def order_detail_page(order_id):
+    """صفحة تفاصيل الطلب مع سجل المحادثة"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    order = c.fetchone()
+
+    if not order:
+        conn.close()
+        return "الطلب غير موجود", 404
+
+    c.execute("SELECT * FROM conversations WHERE order_id = ? ORDER BY created_at ASC", (order_id,))
+    conversations = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    order = dict(order)
+    order_items = []
+    if order.get("items"):
+        try:
+            parsed = json.loads(order["items"]) if isinstance(order["items"], str) else order["items"]
+            order_items = parsed if isinstance(parsed, list) else []
+        except:
+            order_items = []
+
+    import os as _os
+    tmpl_dir = _os.path.join(_os.path.dirname(__file__), "templates")
+    html_path = _os.path.join(tmpl_dir, "order_detail.html")
+    if _os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return render_template_string(f.read(), order=order, order_items=order_items, conversations=conversations, agents=get_available_agents())
+    return "<h1>Page not found</h1>", 404
+
+
+LOGIN_HTML = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — تسجيل الدخول</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        }
+        .login-card {
+            background: rgba(255,255,255,0.05); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 24px;
+            padding: 48px; width: 400px; max-width: 90%;
+        }
+        .logo { text-align: center; margin-bottom: 32px; }
+        .logo h1 { color: #e94560; font-size: 28px; }
+        .logo p { color: #8899aa; margin-top: 8px; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: #ccc; margin-bottom: 8px; font-size: 14px; }
+        input {
+            width: 100%; padding: 14px 16px; border-radius: 12px;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; font-size: 16px; outline: none; transition: 0.3s;
+        }
+        input:focus { border-color: #e94560; box-shadow: 0 0 20px rgba(233,69,96,0.2); }
+        button {
+            width: 100%; padding: 14px; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, #e94560, #c23152);
+            color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: 0.3s; margin-top: 8px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(233,69,96,0.3); }
+        .error { color: #e94560; text-align: center; margin-bottom: 16px; font-size: 14px; }
+        .footer { text-align: center; margin-top: 24px; color: #556; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">
+            <h1>👠 Royal Chaussures</h1>
+            <p>لوحة التحكم — Dashboard</p>
+        </div>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label>اسم المستخدم</label>
+                <input type="text" name="username" placeholder="admin" required>
+            </div>
+            <div class="form-group">
+                <label>كلمة السر</label>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit">🔐 دخول</button>
+        </form>
+        <div class="footer">Royal Chaussures © 2026 — نظام إدارة الطلبات</div>
+    </div>
+</body>
+</html>
+"""
+
+DASHBOARD_HTML = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — لوحة التحكم</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+        .sidebar {
+            position: fixed; right: 0; top: 0; width: 260px; height: 100vh;
+            background: rgba(255,255,255,0.03); border-left: 1px solid rgba(255,255,255,0.06);
+            padding: 24px; display: flex; flex-direction: column;
+        }
+        .sidebar h2 { color: #e94560; font-size: 18px; margin-bottom: 4px; }
+        .sidebar .subtitle { color: #667; font-size: 12px; margin-bottom: 32px; }
+        .sidebar a {
+            display: block; padding: 12px 16px; border-radius: 12px;
+            color: #8899aa; text-decoration: none; margin-bottom: 8px; transition: 0.3s;
+            font-size: 14px;
+        }
+        .sidebar a:hover, .sidebar a.active { background: rgba(233,69,96,0.1); color: #e94560; }
+        .sidebar .logout { margin-top: auto; color: #667; }
+        .main { margin-right: 260px; padding: 32px; }
+        .header { margin-bottom: 32px; }
+        .header h1 { font-size: 28px; color: #fff; }
+        .header p { color: #8899aa; margin-top: 8px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .stat-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; padding: 24px; text-align: center;
+        }
+        .stat-card .number { font-size: 36px; font-weight: 700; color: #e94560; }
+        .stat-card .label { color: #667; margin-top: 8px; font-size: 13px; }
+        .section { margin-bottom: 32px; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #ccc; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: right; padding: 12px 16px; color: #667; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 14px; }
+        .badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: 600;
+        }
+        .badge-pending { background: rgba(255,193,7,0.15); color: #ffc107; }
+        .badge-confirmed { background: rgba(0,123,255,0.15); color: #0d6efd; }
+        .badge-processing { background: rgba(102,16,242,0.15); color: #6610f2; }
+        .badge-shipped { background: rgba(13,202,240,0.15); color: #0dcaf0; }
+        .badge-delivered { background: rgba(25,135,84,0.15); color: #198754; }
+        .badge-cancelled { background: rgba(220,53,69,0.15); color: #dc3545; }
+        .actions { display: flex; gap: 8px; }
+        .btn {
+            padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer;
+            font-size: 12px; transition: 0.3s; color: #fff;
+        }
+        .btn-primary { background: #e94560; }
+        .btn-success { background: #198754; }
+        .btn-info { background: #0dcaf0; color: #000; }
+        .btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
+        .sync-btn {
+            padding: 10px 20px; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, #e94560, #c23152);
+            color: #fff; cursor: pointer; font-size: 14px; transition: 0.3s; margin-bottom: 20px;
+        }
+        .sync-btn:hover { transform: translateY(-2px); }
+        .empty { text-align: center; padding: 48px; color: #667; }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-right: 0; padding: 16px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>👠 Royal Chaussures</h2>
+        <div class="subtitle">Dashboard v1.0</div>
+        <a href="/" class="active">📊 لوحة التحكم</a>
+        <a href="/orders">📦 الطلبات</a>
+        <a href="#">🔔 الإشعارات</a>
+        <a href="/system/status">⚙️ حالة النظام</a>
+        <a href="/logout" class="logout">🚪 تسجيل الخروج</a>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1>📊 لوحة تحكم Royal Chaussures</h1>
+            <p>مرحباً {{ session.username }}! إحصائيات المتجر والطلبات</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ stats.total_orders }}</div>
+                <div class="label">إجمالي الطلبات</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.by_status.get('confirmed', 0) }}</div>
+                <div class="label">✔️ مؤكدة</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.by_status.get('pending', 0) }}</div>
+                <div class="label">⏳ قيد الانتظار</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.by_status.get('shipped', 0) + stats.by_status.get('delivered', 0) }}</div>
+                <div class="label">🚚 تم الشحن/التوصيل</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.today_orders }}</div>
+                <div class="label">📅 طلبات اليوم</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.by_fulfillment.get('fulfilled', 0) }}</div>
+                <div class="label">✅ منفذة</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="section-title">📋 آخر الطلبات</div>
+                <button class="sync-btn" onclick="syncOrders()">🔄 مزامنة مع Shopify</button>
+            </div>
+            <div id="orders-table">
+                {% if stats.recent_orders %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الطلب</th>
+                            <th>الزبون</th>
+                            <th>المبلغ</th>
+                            <th>الحالة</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in stats.recent_orders %}
+                        <tr onclick="window.location='/orders/{{ order.id }}'" style="cursor:pointer">
+                            <td><strong>{{ order.order_name }}</strong></td>
+                            <td>{{ order.customer_name or '—' }}</td>
+                            <td>{{ order.total_amount }} د.ج</td>
+                            <td><span class="badge badge-{{ order.status }}">{{ order.status }}</span></td>
+                            <td>{{ order.created_at[:10] if order.created_at else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty">📭 لا توجد طلبات بعد. قم بمزامنة Shopify أو انتظر وصول طلب جديد</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function syncOrders() {
+            fetch('/api/sync', { method: 'POST' })
+                .then(r => r.json())
+                .then(d => {
+                    if(d.success) {
+                        alert('✅ تمت المزامنة بنجاح!');
+                        location.reload();
+                    } else alert('❌ فشلت المزامنة');
+                });
+        }
+    </script>
+</body>
+</html>
+"""
+
+# ========== Webhooks من Shopify ==========
+
+@app.route("/webhook/shopify/order-created", methods=["POST"])
+def shopify_order_created():
+    """استقبال طلب جديد من Shopify"""
+    data = request.get_json()
+
+    if not data:
+        return json.dumps({"error": "Invalid JSON"}), 400
+
+    # حفظ الطلب في قاعدة البيانات
+    customer = data.get("customer", {}) or {}
+    line_items = data.get("line_items", [])
+
+    items_summary = [{
+        "name": item.get("title", ""),
+        "quantity": item.get("quantity", 1),
+        "price": item.get("price", "0"),
+        "sku": item.get("sku", "")
+    } for item in line_items]
+
+    shipping = data.get("shipping_address", {}) or {}
+
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            INSERT OR IGNORE INTO orders
+            (shopify_order_id, order_name, customer_name, customer_phone,
+             total_amount, currency, status, items, shipping_address, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            str(data["id"]),
+            data.get("name", ""),
+            f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            customer.get("phone", "") or shipping.get("phone", ""),
+            float(data.get("total_price", 0)),
+            data.get("currency", "DZD"),
+            "pending",
+            json.dumps(items_summary, ensure_ascii=False),
+            json.dumps(shipping, ensure_ascii=False),
+            data.get("created_at", "")
+        ))
+        conn.commit()
+        print(f"📦 New order saved: {data.get('name')}")
+    except Exception as e:
+        print(f"⚠️ Error saving order: {e}")
+    finally:
+        conn.close()
+
+    return "OK", 200
+
+# ========== صفحة معلومات النظام ==========
+
+@app.route("/system/status")
+@require_auth
+def system_status():
+    """حالة النظام"""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM orders")
+    order_count = c.fetchone()[0]
+    conn.close()
+
+    return jsonify({
+        "status": "running",
+        "version": "1.0.0",
+        "database": "SQLite",
+        "orders_count": order_count,
+        "platforms": ["shopify", "whatsapp", "messenger", "instagram"],
+        "integrations": {
+            "shopify": bool(SHOPIFY_ORDERS_TOKEN),
+            "whatsapp": bool(WHATSAPP_ACCESS_TOKEN),
+            "zr_express": bool(ZR_SECRET_KEY),
+            "openclaw": bool(OPENCLAW_TOKEN)
+        }
+    })
+
+# ========== التشغيل ==========
+
+if __name__ == "__main__":
+    init_db()
+
+    # مزامنة أولية مع Shopify
+    print("🔄 Syncing orders from Shopify for the first time...")
+    sync_orders_from_shopify()
+
+    # تشغيل مزامنة الخلفية
+    bg_thread = threading.Thread(target=sync_background, daemon=True)
+    bg_thread.start()
+    print("🔄 Background sync every 5 minutes started")
+
+    print("=" * 50)
+    print("🚀 Royal Chaussures Dashboard")
+    print("=" * 50)
+    print(f"📍 http://localhost:5050")
+    print(f"👤 Username: admin")
+    print(f"🔑 Password: RoyalChaussures2026!")
+    print(f"📦 ZR Express: {'\u2705 Active' if ZR_SECRET_KEY else '\u274c Not configured'}")
+    print(f"📦 Orders in DB: (check after sync)")
+    print("=" * 50)
+
+    app.run(port=5050, debug=False, host="0.0.0.0")

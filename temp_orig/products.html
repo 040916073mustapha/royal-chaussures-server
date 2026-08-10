@@ -1,0 +1,22 @@
+﻿{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ products:[] }" x-init="fetch('/api/products').then(r=>r.json()).then(d=>products=d.products||[])">
+    <h1 class="text-2xl font-bold mb-4">­ƒæƒ Ïº┘ä┘à┘åÏ¬Ï¼ÏºÏ¬ ┘êÏº┘ä┘àÏ«Ï▓┘ê┘å</h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="p in products" :key="p.id">
+            <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden">
+                <div class="h-40 bg-[#252530] flex items-center justify-center">
+                    <img :src="p.image" :alt="p.title" class="h-full w-full object-cover" x-show="p.image">
+                    <span x-show="!p.image" class="text-gray-600 text-4xl">­ƒæƒ</span>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold" x-text="p.title"></h3>
+                    <p class="text-sm text-gray-400 mt-1"><span x-text="p.variants + ' ┘à┘éÏºÏ│'"></span> <span x-text="p.stock + ' ┘àÏ«Ï▓┘ê┘å'"></span></p>
+                    <p class="text-royal-400 font-bold mt-2" x-text="(p.price_min==p.price_max ? p.price_min.toLocaleString() : p.price_min.toLocaleString()+' - '+p.price_max.toLocaleString()) + ' Ï».Ï¼'"></p>
+                </div>
+            </div>
+        </template>
+    </div>
+    <div x-show="products.length===0" class="text-center py-12 text-gray-500">Ï¼ÏºÏ▒┘è Ï¬Ï¡┘à┘è┘ä Ïº┘ä┘à┘åÏ¬Ï¼ÏºÏ¬...</div>
+</div>
+{% endblock %}

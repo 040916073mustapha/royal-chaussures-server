@@ -1,0 +1,44 @@
+﻿Ô£à Database initialized: orders.db (with conversations & agent fields)
+­ƒöä Syncing orders from Shopify for the first time...
+Ô£à Synced 50 orders from Shopify
+­ƒöä Background sync every 5 minutes started
+==================================================
+­ƒÜÇ Royal Chaussures Dashboard
+==================================================
+­ƒôì http://localhost:5050
+­ƒæñ Username: admin
+­ƒöæ Password: RoyalChaussures2026!
+­ƒôª ZR Express: Ô£à Active
+­ƒôª Orders in DB: (check after sync)
+==================================================
+ * Serving Flask app 'dashboard_server'
+ * Debug mode: off
+python : WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server 
+instead.
+At line:1 char:76
++ ... cro-Tech\.openclaw\workspace; python dashboard_server.py 2>&1 | Out-F ...
++                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (WARNING: This i...server instead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://192.168.1.2:5050
+Press CTRL+C to quit
+127.0.0.1 - - [01/Aug/2026 13:18:31] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [01/Aug/2026 13:18:31] "GET /login HTTP/1.1" 200 -
+127.0.0.1 - - [01/Aug/2026 13:18:39] "GET /premium HTTP/1.1" 302 -
+127.0.0.1 - - [01/Aug/2026 13:18:47] "GET /static/styles_premium.css HTTP/1.1" 200 -
+127.0.0.1 - - [01/Aug/2026 13:18:47] "GET /static/script_premium.js HTTP/1.1" 200 -
+192.168.1.2 - - [01/Aug/2026 13:21:01] "GET /premium HTTP/1.1" 302 -
+192.168.1.2 - - [01/Aug/2026 13:21:01] "GET /login HTTP/1.1" 200 -
+192.168.1.2 - - [01/Aug/2026 13:21:01] "GET /favicon.ico HTTP/1.1" 404 -
+192.168.1.2 - - [01/Aug/2026 13:21:26] "POST /login HTTP/1.1" 302 -
+192.168.1.2 - - [01/Aug/2026 13:21:26] "GET / HTTP/1.1" 200 -
+192.168.1.2 - - [01/Aug/2026 13:21:26] "GET /manifest.json HTTP/1.1" 404 -
+192.168.1.2 - - [01/Aug/2026 13:21:32] "GET /orders HTTP/1.1" 200 -
+192.168.1.2 - - [01/Aug/2026 13:21:32] "GET /api/orders?limit=100 HTTP/1.1" 200 -
+192.168.1.2 - - [01/Aug/2026 13:21:37] "GET / HTTP/1.1" 200 -
+192.168.1.2 - - [01/Aug/2026 13:21:38] "GET /manifest.json HTTP/1.1" 404 -
+192.168.1.2 - - [01/Aug/2026 13:21:46] "GET /premium HTTP/1.1" 404 -
+192.168.1.2 - - [01/Aug/2026 13:21:48] "GET /premium HTTP/1.1" 404 -

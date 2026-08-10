@@ -1,0 +1,130 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures ÔÇö {{ order.order_name }}</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif}
+        body{background:#0a0a1a;color:#e0e0e0;min-height:100vh;padding:32px}
+        .back{color:#e94560;text-decoration:none;font-size:14px;display:inline-block;margin-bottom:16px}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+        .card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:24px;margin-bottom:24px}
+        .card h3{color:#e94560;font-size:16px;margin-bottom:16px}
+        .card .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+        .card .row .label{color:#667}
+        .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+        .badge-pending{background:rgba(255,193,7,0.15);color:#ffc107}
+        .badge-paid,.badge-confirmed{background:rgba(0,123,255,0.15);color:#0d6efd}
+        .badge-shipped{background:rgba(13,202,240,0.15);color:#0dcaf0}
+        .badge-delivered{background:rgba(25,135,84,0.15);color:#198754}
+        .btn{padding:10px 20px;border-radius:10px;border:none;cursor:pointer;font-size:13px;transition:0.3s;color:#fff;margin:4px}
+        .btn-primary{background:#e94560}
+        .btn-success{background:#198754}
+        .btn-warning{background:#ffc107;color:#000}
+        .btn-info{background:#0dcaf0;color:#000}
+        .btn-danger{background:#dc3545}
+        .btn:hover{filter:brightness(1.2);transform:translateY(-1px)}
+        .status-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+        .conv{background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;margin-bottom:12px;border-right:3px solid #e94560}
+        .conv .meta{color:#667;font-size:12px;margin-bottom:8px}
+        .conv .msg{color:#ccc;line-height:1.6}
+        .conv .reply{color:#0dcaf0;margin-top:8px;padding:8px 12px;background:rgba(13,202,240,0.05);border-radius:8px}
+        select{padding:10px 16px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:14px}
+        textarea{width:100%;padding:12px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:14px;resize:vertical}
+        .toggle-label{display:flex;align-items:center;gap:12px;cursor:pointer}
+        .toggle-label input{width:20px;height:20px}
+        @media(max-width:768px){.grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+    <a href="/orders" class="back">­ƒöÖ Ïº┘äÏ╣┘êÏ»Ï® ┘ä┘äÏÀ┘äÏ¿ÏºÏ¬</a>
+    <div class="grid">
+        <div>
+            <div class="card">
+                <h3>­ƒôï ┘àÏ╣┘ä┘ê┘àÏºÏ¬ Ïº┘äÏÀ┘äÏ¿</h3>
+                <div class="row"><span class="label">Ï▒┘é┘à Ïº┘äÏÀ┘äÏ¿</span><span>{{ order.order_name }}</span></div>
+                <div class="row"><span class="label">Ïº┘äÏ▓Ï¿┘ê┘å</span><span>{{ order.customer_name or '-' }}</span></div>
+                <div class="row"><span class="label">Ïº┘ä┘çÏºÏ¬┘ü</span><span>{{ order.customer_phone or '-' }}</span></div>
+                <div class="row"><span class="label">Ïº┘ä┘àÏ¿┘äÏ║</span><span>{{ order.total_amount }} {{ order.currency }}</span></div>
+                <div class="row"><span class="label">Ïº┘äÏ¡Ïº┘äÏ®</span><span class="badge badge-{{ order.status }}">{{ order.status }}</span></div>
+                <div class="row"><span class="label">Ïº┘äÏ¬ÏºÏ▒┘èÏ«</span><span>{{ order.created_at[:16] if order.created_at else '-' }}</span></div>
+                <div style="margin-top:16px;">
+                    <label style="color:#667;font-size:13px;display:block;margin-bottom:8px;">­ƒñû Ï¬Ï¡Ï»┘èÏ½ Ïº┘äÏ¡Ïº┘äÏ®</label>
+                    <div class="status-actions">
+                        <button class="btn btn-warning" onclick="updateStatus('pending')">ÔÅ│ ┘é┘èÏ» Ïº┘äÏº┘åÏ¬Ï©ÏºÏ▒</button>
+                        <button class="btn btn-primary" onclick="updateStatus('confirmed')">Ô£ö´©Å Ï¬Ïú┘â┘èÏ»</button>
+                        <button class="btn btn-info" onclick="updateStatus('shipped')">­ƒÜÜ Ï┤Ï¡┘å</button>
+                        <button class="btn btn-success" onclick="updateStatus('delivered')">­ƒÄë Ï¬┘êÏÁ┘è┘ä</button>
+                        <button class="btn btn-danger" onclick="updateStatus('cancelled')">ÔØî ÏÑ┘äÏ║ÏºÏí</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>­ƒºá Ïº┘äÏ¬Ï¡┘â┘à Ï¿Ïº┘ä┘Ç AI Agent</h3>
+                <div class="row"><span class="label">Ïº┘ä┘ê┘â┘è┘ä Ïº┘äÏ¡Ïº┘ä┘è</span><span id="currentAgentLabel">{{ order.current_agent or 'customer_support' }}</span></div>
+                <div style="margin-top:8px;">
+                    <label style="color:#667;font-size:13px;display:block;margin-bottom:4px;">Ï¬Ï║┘è┘èÏ▒ Ïº┘ä┘ê┘â┘è┘ä:</label>
+                    <select id="agentSelect">
+                        {% for agent in agents %}
+                        <option value="{{ agent.key }}" {% if agent.key == (order.current_agent or 'customer_support') %}selected{% endif %}>{{ agent.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary" onclick="changeAgent()" style="margin-top:8px;">Ï¬ÏÀÏ¿┘è┘é</button>
+                </div>
+                <div style="margin-top:16px;">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="autoReplyToggle" {% if order.auto_reply %}checked{% endif %} onchange="toggleAutoReply()">
+                        <span id="autoReplyLabel">{% if order.auto_reply %}Ô£à Ïº┘äÏ▒Ï» Ïº┘äÏó┘ä┘è ┘à┘üÏ╣┘ä{% else %}Ôøö Ïº┘äÏ▒Ï» Ïº┘äÏó┘ä┘è ┘àÏ¬┘ê┘é┘ü{% endif %}</span>
+                    </label>
+                </div>
+            </div>
+            <div class="card">
+                <h3>­ƒôª Ïº┘ä┘à┘åÏ¬Ï¼ÏºÏ¬</h3>
+                {% if order_items %}
+                {% for item in order_items %}
+                <div class="row"><span class="label">{{ item.name }}</span><span>{{ item.quantity }} x {{ item.price }} Ï».Ï¼</span></div>
+                {% endfor %}
+                {% else %}
+                <p style="color:#667;">┘äÏº Ï¬┘êÏ¼Ï» ┘à┘åÏ¬Ï¼ÏºÏ¬ ┘à┘üÏÁ┘äÏ®</p>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="card">
+                <h3>­ƒÆ¼ Ï│Ï¼┘ä Ïº┘ä┘àÏ¡ÏºÏ»Ï½Ï®</h3>
+                {% if conversations and conversations|length > 0 %}
+                {% for conv in conversations %}
+                <div class="conv">
+                    <div class="meta">­ƒòÉ {{ conv.created_at[:16] if conv.created_at else '' }} | ­ƒñû {{ conv.agent_used or 'customer_support' }}</div>
+                    <div class="msg">­ƒæñ <strong>Ïº┘äÏ▓Ï¿┘ê┘å:</strong> {{ conv.customer_message }}</div>
+                    <div class="reply">­ƒñû <strong>Ïº┘äÏ▒Ï»:</strong> {{ conv.ai_response }}</div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="color:#667;">­ƒô¡ ┘äÏº Ï¬┘êÏ¼Ï» ┘àÏ¡ÏºÏ»Ï½ÏºÏ¬ Ï¿Ï╣Ï»</p>
+                {% endif %}
+                <div style="margin-top:16px;">
+                    <h4 style="color:#ccc;margin-bottom:8px;">­ƒº¬ ÏºÏ«Ï¬Ï¿ÏºÏ▒ Ïº┘ä┘Ç Agent</h4>
+                    <textarea id="testMessage" rows="2" placeholder="Ïº┘âÏ¬Ï¿ Ï▒Ï│Ïº┘äÏ® Ïº┘äÏ▓Ï¿┘ê┘å ┘ç┘åÏº..."></textarea>
+                    <button class="btn btn-info" onclick="simulateChat()" style="margin-top:8px;">­ƒñû ÏºÏ«Ï¬Ï¿ÏºÏ▒ Ïº┘äÏ▒Ï»</button>
+                    <div id="simulateResult" style="margin-top:12px;"></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>­ƒöö ÏÑÏ▒Ï│Ïº┘ä Ï▒Ï│Ïº┘äÏ® ┘êÏºÏ¬Ï│ÏºÏ¿</h3>
+                <textarea id="customMessage" rows="2" placeholder="Ïº┘âÏ¬Ï¿ Ï▒Ï│Ïº┘äÏ® ┘àÏ«ÏÁÏÁÏ® ┘ä┘äÏ▓Ï¿┘ê┘å..."></textarea>
+                <button class="btn btn-success" onclick="sendNotification()" style="margin-top:8px;">­ƒôñ ÏÑÏ▒Ï│Ïº┘ä</button>
+                <div id="notifyResult" style="margin-top:8px;"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function updateStatus(s){fetch('/api/orders/{{ order.id }}/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:s})}).then(r=>r.json()).then(d=>{if(d.success){alert('Ô£à Ï¬┘à Ïº┘äÏ¬Ï¡Ï»┘èÏ½');location.reload()}else alert('ÔØî ┘üÏ┤┘ä')})}
+        function changeAgent(){const a=document.getElementById('agentSelect').value;fetch('/api/orders/{{ order.id }}/agent',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:a})}).then(r=>r.json()).then(d=>{if(d.success){alert('Ô£à Ï¬┘à Ïº┘äÏ¬Ï║┘è┘èÏ▒');location.reload()}})}
+        function toggleAutoReply(){const e=document.getElementById('autoReplyToggle').checked;fetch('/api/orders/{{ order.id }}/auto_reply',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:e})}).then(r=>r.json()).then(d=>{if(d.success)document.getElementById('autoReplyLabel').textContent=e?'Ô£à Ïº┘äÏ▒Ï» Ïº┘äÏó┘ä┘è ┘à┘üÏ╣┘ä':'Ôøö Ïº┘äÏ▒Ï» Ïº┘äÏó┘ä┘è ┘àÏ¬┘ê┘é┘ü'})}
+        function simulateChat(){const m=document.getElementById('testMessage').value;if(!m){alert('Ïº┘âÏ¬Ï¿ Ï▒Ï│Ïº┘äÏ®');return};document.getElementById('simulateResult').innerHTML='<p style="color:#667;">Ï¼ÏºÏ▒┘è...</p>';fetch('/api/orders/{{ order.id }}/simulate_chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m})}).then(r=>r.json()).then(d=>{if(d.success){document.getElementById('simulateResult').innerHTML='<div class=\"conv\"><div class=\"reply\">'+d.agent_label+': '+d.ai_response+'</div></div>';setTimeout(()=>location.reload(),2000)}else document.getElementById('simulateResult').innerHTML='<p style=\"color:#dc3545;\">Ï«ÏÀÏú</p>'})}
+        function sendNotification(){const m=document.getElementById('customMessage').value;if(!m){alert('Ïº┘âÏ¬Ï¿ Ï▒Ï│Ïº┘äÏ®');return};fetch('/api/notify/{{ order.id }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m})}).then(r=>r.json()).then(d=>{if(d.success)document.getElementById('notifyResult').innerHTML='<p style=\"color:#198754;\">Ô£à Ï¬┘à Ïº┘äÏÑÏ▒Ï│Ïº┘ä</p>';else document.getElementById('notifyResult').innerHTML='<p style=\"color:#dc3545;\">Ï«ÏÀÏú</p>'})}
+    </script>
+</body>
+</html>
