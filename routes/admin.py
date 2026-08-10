@@ -8,7 +8,7 @@ Royal Chaussures — Admin Dashboard API
 - تقارير شاملة
 """
 
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, render_template
 from middleware.auth import admin_required, token_required, generate_token
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -22,7 +22,17 @@ from database.db import (
     get_low_stock_items
 )
 
-admin_bp = Blueprint("admin", __name__)
+admin_bp = Blueprint("admin", __name__, template_folder="../templates")
+
+
+# ============================================================
+# 🖥️ Admin Dashboard - صفحة التحكم
+# ============================================================
+
+@admin_bp.route("/dashboard", methods=["GET"])
+def admin_dashboard():
+    """عرض واجهة الـ Admin Dashboard"""
+    return render_template("dashboard/index.html")
 
 
 # ============================================================
