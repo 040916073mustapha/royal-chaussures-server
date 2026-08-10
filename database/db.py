@@ -22,17 +22,24 @@ _local = threading.local()
 def get_db():
     """الحصول على اتصال بقاعدة البيانات (لكل thread connection منفصل)"""
     if not hasattr(_local, "connection") or _local.connection is None:
-        _local.connection = sqlite3.connect(DB_PATH)
+        _local.connection = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
         _local.connection.row_factory = sqlite3.Row
         _local.connection.execute("PRAGMA journal_mode=WAL")
+        _local.connection.execute("PRAGMA busy_timeout=10000")
+        _local.connection.execute("PRAGMA synchronous=NORMAL")
         _local.connection.execute("PRAGMA foreign_keys=ON")
+        _local.connection.execute("PRAGMA cache_size=-8000")
     return _local.connection
 
 
 def close_db():
     """إغلاق الاتصال (ينادى عند نهاية الطلب)"""
     if hasattr(_local, "connection") and _local.connection is not None:
-        _local.connection.close()
+        try:
+            _local.connection.commit()
+            _local.connection.close()
+        except:
+            pass
         _local.connection = None
 
 

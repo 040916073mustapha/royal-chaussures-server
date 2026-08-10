@@ -310,6 +310,9 @@ try:
     app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
     app.register_blueprint(inv_agent_bp, url_prefix="/api/v1/agent")
     logger.info("[Store POS] Blueprints registered: /api/v1/store, /api/v1/admin, /api/v1/agent")
+    from database.db import close_db as close_store_db
+    app.teardown_appcontext(lambda exc: close_store_db() if callable(close_store_db) else None)
+    logger.info("[Store POS] DB teardown handler registered")
 except Exception as e:
     logger.warning(f"[Store POS] Blueprint registration skipped: {e}")
 # ====================================================================
