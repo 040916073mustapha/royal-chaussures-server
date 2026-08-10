@@ -4,6 +4,76 @@
  */
 
 // ==============================================
+//  GLOBAL API CONFIG
+// ==============================================
+var API = (() => {
+    const base = '/api/v1/store';
+    return {
+        headers: () => ({
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${window.STATE ? window.STATE.token : ''}`
+        }),
+        async login(username, password) {
+            const r = await fetch(`${base}/auth/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            });
+            return r.json();
+        },
+        async getProducts() {
+            const r = await fetch(`${base}/products`, {headers: this.headers()});
+            return r.json();
+        },
+        async searchProducts(q) {
+            const r = await fetch(`${base}/products/search?q=${encodeURIComponent(q)}&limit=50`, 
+                {headers: this.headers()});
+            return r.json();
+        },
+        async getByBarcode(code) {
+            const r = await fetch(`${base}/products/barcode/${encodeURIComponent(code)}`,
+                {headers: this.headers()});
+            return r.json();
+        },
+        async recordSale(data) {
+            if (window.STATE && window.STATE.isOffline) {
+                return this._saveOffline(data);
+            }
+            const r = await fetch(`${base}/sales`, {
+                method: 'POST',
+                headers: this.headers(),
+                body: JSON.stringify(data)
+            });
+            const result = await r.json();
+            if (!r.ok && result.error && (result.error.includes('timeout') || r.status >= 500)) {
+                return this._saveOffline(data);
+            }
+            return result;
+        },
+        async _saveOffline(data) {
+            const pending = JSON.parse(localStorage.getItem('pos_pending') || '[]');
+            pending.push({...data, _offlineId: Date.now(), _createdAt: new Date().toISOString()});
+            localStorage.setItem('pos_pending', JSON.stringify(pending));
+            return {sale: {receipt_number: `OFFLINE-${Date.now()}`, total: data.total || 0}, _offline: true};
+        },
+        async syncPending() {
+            const pending = JSON.parse(localStorage.getItem('pos_pending') || '[]');
+            if (pending.length === 0) return;
+            const stillPending = [];
+            for (const sale of pending) {
+                try {
+                    const r = await fetch(`${base}/sales`, {
+                        method: 'POST', headers: this.headers(), body: JSON.stringify(sale)
+                    });
+                    if (!r.ok) stillPending.push(sale);
+                } catch { stillPending.push(sale); }
+            }
+            localStorage.setItem('pos_pending', JSON.stringify(stillPending));
+        }
+    };
+})();
+
+// ==============================================
 //  LOGIN
 // ==============================================
 async function login() {
