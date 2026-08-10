@@ -4,6 +4,24 @@
  */
 
 // ==============================================
+//  GLOBAL STATE
+// ==============================================
+var STATE = {
+    token: null,
+    user: null,
+    cart: [],
+    products: [],
+    allProducts: [],
+    categories: new Set(),
+    selectedPayment: 'cash',
+    lastSale: null,
+    isOffline: false,
+    pendingSales: JSON.parse(localStorage.getItem('pos_pending') || '[]'),
+    _lastBarcodeTime: 0,
+    _barcodeBuffer: ''
+};
+
+// ==============================================
 //  GLOBAL API CONFIG
 // ==============================================
 var API = (() => {
@@ -11,7 +29,7 @@ var API = (() => {
     return {
         headers: () => ({
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${window.STATE ? window.STATE.token : ''}`
+            'Authorization': `Bearer ${STATE.token || ''}`
         }),
         async login(username, password) {
             const r = await fetch(`${base}/auth/login`, {
@@ -36,7 +54,7 @@ var API = (() => {
             return r.json();
         },
         async recordSale(data) {
-            if (window.STATE && window.STATE.isOffline) {
+            if (STATE.isOffline) {
                 return this._saveOffline(data);
             }
             const r = await fetch(`${base}/sales`, {
