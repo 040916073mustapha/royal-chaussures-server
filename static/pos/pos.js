@@ -1,6 +1,6 @@
 /**
  * Royal POS — JavaScript Engine
- * ShopLine Classic Light Theme
+ * ShopLine Clone (French, LTR)
  */
 
 // ==============================================
@@ -116,10 +116,10 @@ async function login() {
     const btn = document.getElementById('login-btn');
     const err = document.getElementById('login-error');
 
-    if (!user || !pass) { err.textContent = 'يرجى إدخال اسم المستخدم وكلمة السر'; err.style.display = 'block'; return; }
+    if (!user || !pass) { err.textContent = 'Veuillez entrer identifiant et mot de passe'; err.style.display = 'block'; return; }
     
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> جاري تسجيل الدخول...';
+    btn.innerHTML = '<span class="spinner"></span> Connexion...';
     err.style.display = 'none';
 
     const result = await API.login(user, pass);
@@ -134,14 +134,13 @@ async function login() {
         updateConnectionStatus();
         startClock();
     } else {
-        err.textContent = result.error || 'خطأ في تسجيل الدخول';
+        err.textContent = result.error || 'Erreur de connexion';
         err.style.display = 'block';
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Connexion';
     }
 }
 
-// ---- Auto-login from localStorage ----
 (function autoLogin() {
     const token = localStorage.getItem('pos_token');
     const user = localStorage.getItem('pos_user');
@@ -159,16 +158,13 @@ function showApp() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('pos-app').classList.add('active');
     
-    const displayName = STATE.user?.display_name || STATE.user?.username || 'مدير المحل';
-    const role = STATE.user?.role === 'admin' ? 'Admin' : 'Store';
+    const displayName = STATE.user?.display_name || STATE.user?.username || 'Gérant';
+    const role = STATE.user?.role === 'admin' ? 'Admin' : 'Magasin';
     
-    // Sidebar
     document.getElementById('sidebar-name').textContent = displayName;
-    document.getElementById('sidebar-role').textContent = role;
     document.getElementById('sidebar-avatar').textContent = displayName.charAt(0).toUpperCase();
     
-    document.getElementById('page-title').textContent = '🛒 مبيعة جديدة';
-    document.getElementById('barcode-input').focus();
+    switchView('home');
 }
 
 function logout() {
@@ -182,39 +178,27 @@ function logout() {
     document.getElementById('login-user').value = '';
     document.getElementById('login-pass').value = '';
     document.getElementById('login-btn').disabled = false;
-    document.getElementById('login-btn').innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
+    document.getElementById('login-btn').innerHTML = '<i class="fas fa-sign-in-alt"></i> Connexion';
 }
 
 // ==============================================
-//  VIEW SWITCHER (Sidebar Navigation)
+//  VIEW SWITCHER
 // ==============================================
 function switchView(viewId) {
-    // Update sidebar active
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.toggle('active', item.dataset.view === viewId);
     });
     
-    // Update view containers
     document.querySelectorAll('.view-container').forEach(v => {
         v.classList.remove('active');
     });
     
     const target = document.getElementById('view-' + viewId);
-    if (target) {
-        target.classList.add('active');
+    if (target) target.classList.add('active');
+    
+    if (viewId === 'sale') {
+        setTimeout(() => document.getElementById('barcode-input')?.focus(), 100);
     }
-    
-    // Update page title
-    const titles = {
-        'sale': '🛒 مبيعة جديدة',
-        'purchase': '🛍️ شراء جديد',
-        'products': '📦 قائمة المنتجات',
-        'sales-list': '📜 قائمة المبيعات',
-        'purchases-list': '📁 قائمة المشتريات'
-    };
-    document.getElementById('page-title').textContent = titles[viewId] || viewId;
-    
-    // Special handling
     if (viewId === 'products') {
         renderProductsTable();
     }
@@ -228,7 +212,6 @@ async function loadProducts() {
         const data = await API.getProducts();
         STATE.allProducts = data.products || [];
         
-        // Extract categories
         STATE.categories = new Set();
         STATE.allProducts.forEach(p => {
             if (p.category) STATE.categories.add(p.category);
@@ -239,13 +222,14 @@ async function loadProducts() {
         renderProducts(STATE.products);
         renderProductsTable();
     } catch (e) {
-        showToast('فشل تحميل المنتجات: ' + e.message, 'error');
+        showToast('Erreur chargement produits: ' + e.message, 'error');
     }
 }
 
 function renderCategories() {
     const container = document.getElementById('categories');
-    container.innerHTML = '<button class="cat-btn active" onclick="filterCategory(\'all\')">الكل</button>';
+    if (!container) return;
+    container.innerHTML = '<button class="cat-btn active" onclick="filterCategory(\'all\')">Tout</button>';
     STATE.categories.forEach(cat => {
         container.innerHTML += `<button class="cat-btn" onclick="filterCategory('${cat}')">${cat}</button>`;
     });
@@ -264,18 +248,19 @@ function renderProducts(products) {
     const grid = document.getElementById('products-grid');
     if (!grid) return;
     if (!products || products.length === 0) {
-        grid.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px;">لا توجد منتجات</div>';
+        grid.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:40px;font-size:14px;">Aucun produit</div>';
         return;
     }
     
     grid.innerHTML = products.map(p => {
         const stock = p.store_quantity || 0;
         let stockClass = '';
-        let stockText = `${stock} قطعة`;
-        if (stock <= 0) { stockClass = 'out'; stockText = 'غير متوفر'; }
+        let stockText = `${stock} pcs`;
+        if (stock <= 0) { stockClass = 'out'; stockText = 'Rupture'; }
         else if (stock <= 5) { stockClass = 'low'; }
         
         return `<div class="product-card" onclick="addToCart(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.store_price || p.online_price || 0}, ${stock})">
+            ${p.barcode ? `<div style="font-size:10px;color:var(--text-secondary);margin-bottom:2px;">#${p.barcode}</div>` : ''}
             <div class="price">${(p.store_price || p.online_price || 0).toLocaleString()} DA</div>
             <div class="name">${p.name}</div>
             ${p.color ? `<div class="color-tag">${p.color}</div>` : ''}
@@ -304,33 +289,32 @@ async function searchProducts(q) {
 }
 
 // ==============================================
-//  PRODUCTS TABLE (View)
+//  PRODUCTS TABLE
 // ==============================================
 function renderProductsTable() {
     const tbody = document.getElementById('products-table-body');
     if (!tbody) return;
     
     if (!STATE.allProducts || STATE.allProducts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;text-align:center;color:var(--text-muted);">لا توجد منتجات</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:30px;text-align:center;color:var(--text-secondary);">Aucun produit</td></tr>';
         return;
     }
     
     tbody.innerHTML = STATE.allProducts.map(p => {
         const stock = p.store_quantity || 0;
-        let stockClass = '';
+        let stockStyle = '';
         let stockText = `${stock}`;
-        if (stock <= 0) { stockClass = 'color:var(--accent-red);'; stockText = 'غير متوفر'; }
-        else if (stock <= 5) { stockClass = 'color:var(--accent-orange);'; }
+        if (stock <= 0) { stockStyle = 'color:var(--accent-red);'; stockText = 'Rupture'; }
+        else if (stock <= 5) { stockStyle = 'color:var(--accent-orange);'; }
         
         return `<tr style="border-bottom:1px solid var(--border-light);">
-            <td style="padding:10px 16px;font-weight:500;">${p.name}</td>
-            <td style="padding:10px 16px;text-align:center;color:var(--text-muted);">${p.color || '—'}</td>
-            <td style="padding:10px 16px;text-align:center;color:var(--accent-blue);font-weight:700;">${(p.store_price || p.online_price || 0).toLocaleString()} DA</td>
-            <td style="padding:10px 16px;text-align:center;${stockClass}font-weight:500;">${stockText}</td>
+            <td style="padding:10px 14px;font-weight:500;">${p.name}</td>
+            <td style="padding:10px 14px;color:var(--text-secondary);">${p.color || '—'}</td>
+            <td style="padding:10px 14px;color:var(--accent-blue-dark);font-weight:700;">${(p.store_price || p.online_price || 0).toLocaleString()} DA</td>
+            <td style="padding:10px 14px;${stockStyle}font-weight:500;">${stockText}</td>
         </tr>`;
     }).join('');
     
-    // Wire search
     const searchInput = document.getElementById('products-search');
     if (searchInput) {
         searchInput.oninput = function() {
@@ -377,14 +361,14 @@ async function lookupBarcode(code) {
             addToCart(p.id, p.name, p.store_price || p.online_price || 0, p.store_quantity || 0);
             showToast(`✅ ${p.name} — ${(p.store_price || p.online_price || 0).toLocaleString()} DA`);
         } else {
-            showToast('⚠️ المنتج غير موجود', 'error');
+            showToast('⚠️ Produit introuvable', 'error');
         }
     } catch {
         const found = STATE.allProducts.find(p => p.barcode === code);
         if (found) {
             addToCart(found.id, found.name, found.store_price || found.online_price || 0, found.store_quantity || 0);
         } else {
-            showToast('⚠️ باركود غير معروف', 'error');
+            showToast('⚠️ Code-barres inconnu', 'error');
         }
     }
 }
@@ -394,14 +378,14 @@ async function lookupBarcode(code) {
 // ==============================================
 function addToCart(id, name, price, stock) {
     if (stock <= 0) {
-        showToast('⚠️ هذا المنتج غير متوفر حالياً', 'error');
+        showToast('⚠️ Produit indisponible', 'error');
         return;
     }
     
     const existing = STATE.cart.find(item => item.id === id);
     if (existing) {
         if (existing.qty >= stock) {
-            showToast(`⚠️ الكمية القصوى: ${stock}`, 'error');
+            showToast(`⚠️ Stock max: ${stock}`, 'error');
             return;
         }
         existing.qty++;
@@ -434,7 +418,7 @@ function updateQty(id, delta) {
     }
     if (item.qty > item.stock) {
         item.qty = item.stock;
-        showToast(`⚠️ الكمية القصوى: ${item.stock}`, 'error');
+        showToast(`⚠️ Stock max: ${item.stock}`, 'error');
     }
     
     renderCart();
@@ -442,7 +426,7 @@ function updateQty(id, delta) {
 
 function clearCart() {
     if (STATE.cart.length === 0) return;
-    if (!confirm('تفريغ السلة؟')) return;
+    if (!confirm('Vider le panier ?')) return;
     STATE.cart = [];
     renderCart();
 }
@@ -457,7 +441,7 @@ function renderCart() {
     if (!items) return;
     
     if (STATE.cart.length === 0) {
-        items.innerHTML = '<div class="cart-empty" id="cart-empty"><i class="fas fa-shopping-cart"></i><p>السلة فارغة</p><p style="font-size:12px;">امسح باركود أو اختر منتج</p></div>';
+        items.innerHTML = '<div class="cart-empty"><i class="fas fa-shopping-cart"></i><p>Panier vide</p><p style="font-size:12px;">Scannez ou sélectionnez un produit</p></div>';
         if (summary) summary.style.display = 'none';
         if (count) count.textContent = '0';
         if (mobileCount) mobileCount.textContent = '0';
@@ -536,7 +520,7 @@ function selectPayment(method) {
 async function completeSale() {
     const btn = document.getElementById('btn-complete-sale');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> جاري...';
+    btn.innerHTML = '<span class="spinner"></span> En cours...';
     
     try {
         const results = [];
@@ -564,17 +548,17 @@ async function completeSale() {
         document.getElementById('payment-form').style.display = 'none';
         document.getElementById('payment-success').style.display = 'block';
         document.getElementById('success-total').textContent = total.toLocaleString() + ' DA';
-        document.getElementById('success-receipt').textContent = `رقم الفاتورة: ${receipt}`;
+        document.getElementById('success-receipt').textContent = `Facture n°: ${receipt}`;
         
         STATE.cart = [];
         renderCart();
         
     } catch (e) {
-        showToast('❌ فشل إتمام البيع: ' + e.message, 'error');
+        showToast('❌ Erreur vente: ' + e.message, 'error');
     }
     
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد البيع';
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmer la vente';
 }
 
 function resetSale() {
@@ -593,17 +577,17 @@ function printReceipt() {
     
     const s = STATE.lastSale;
     const itemsHtml = s.items.map(item => 
-        `<tr><td>${item.name}</td><td style="text-align:center;">${item.qty}</td><td style="text-align:left;">${(item.price * item.qty).toLocaleString()}</td></tr>`
+        `<tr><td>${item.name}</td><td style="text-align:center;">${item.qty}</td><td style="text-align:right;">${(item.price * item.qty).toLocaleString()}</td></tr>`
     ).join('');
     
-    const methods = { cash: 'نقدي', card: 'بطاقة', bank_transfer: 'تحويل بنكي', check: 'شيك' };
+    const methods = { cash: 'Espèces', card: 'Carte', bank_transfer: 'Virement', check: 'Chèque' };
     
     const printWindow = window.open('', '_blank', 'width=300,height=600');
     printWindow.document.write(`
-        <html dir="rtl">
+        <html dir="ltr">
         <head>
             <meta charset="UTF-8">
-            <title>فاتورة ${s.receipt}</title>
+            <title>Facture ${s.receipt}</title>
             <style>
                 @page { margin: 0; size: 80mm auto; }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -631,14 +615,14 @@ function printReceipt() {
                 <p>Imama, Tlemcen</p>
                 <p>+213 659 83 24 26</p>
                 <hr>
-                <p>فاتورة: ${s.receipt}</p>
-                <p>التاريخ: ${new Date().toLocaleDateString('ar-DZ')}</p>
-                <p>وقت: ${new Date().toLocaleTimeString('ar-DZ')}</p>
+                <p>Facture: ${s.receipt}</p>
+                <p>Date: ${new Date().toLocaleDateString('fr-FR')}</p>
+                <p>Heure: ${new Date().toLocaleTimeString('fr-FR')}</p>
             </div>
             <hr>
             <table>
                 <thead>
-                    <tr><th>المنتج</th><th>الكمية</th><th>المجموع</th></tr>
+                    <tr><th>Produit</th><th>Qté</th><th>Total</th></tr>
                 </thead>
                 <tbody>
                     ${itemsHtml}
@@ -646,16 +630,16 @@ function printReceipt() {
             </table>
             <hr>
             <div style="display:flex;justify-content:space-between;">
-                <span>الإجمالي</span>
+                <span>Total</span>
                 <span class="total-row">${s.total.toLocaleString()} DA</span>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:5px;">
-                <span>وسيلة الدفع</span>
+                <span>Paiement</span>
                 <span>${methods[s.payment] || s.payment}</span>
             </div>
             <hr>
             <div class="footer">
-                <p>شكراً لتسوقكم مع Royal Chaussures 👑</p>
+                <p>Merci de votre visite chez Royal Chaussures 👑</p>
                 <p>www.royalchaussures.com</p>
             </div>
             <script>
@@ -666,7 +650,7 @@ function printReceipt() {
 }
 
 // ==============================================
-//  MODAL
+//  MODAL / KEYBOARD SHORTCUTS
 // ==============================================
 function closeModal(id) {
     document.getElementById(id).classList.remove('active');
@@ -699,10 +683,8 @@ function updateConnectionStatus() {
     
     function check() {
         const online = navigator.onLine;
-        if (dot) {
-            dot.className = 'dot ' + (online ? 'online' : 'offline');
-        }
-        if (text) text.textContent = online ? 'متصل' : 'غير متصل';
+        if (dot) dot.className = 'dot ' + (online ? 'online' : 'offline');
+        if (text) text.textContent = online ? 'Connecté' : 'Hors ligne';
         STATE.isOffline = !online;
     }
     
@@ -720,7 +702,6 @@ function toggleCart() {
     panel.classList.toggle('active');
 }
 
-// Auto-close cart when selecting product on mobile
 document.getElementById('products-grid')?.addEventListener('click', function() {
     if (window.innerWidth <= 900) {
         document.getElementById('cart-panel')?.classList.remove('active');
@@ -734,12 +715,12 @@ document.getElementById('products-grid')?.addEventListener('click', function() {
     const pending = JSON.parse(localStorage.getItem('pos_pending') || '[]');
     if (pending.length > 0) {
         STATE.pendingSales = pending;
-        console.log(`[POS] ${pending.length} pending sales to sync`);
+        console.log(`[POS] ${pending.length} vente(s) en attente de synchronisation`);
     }
 })();
 
 // ==============================================
-//  TOAST NOTIFICATIONS
+//  TOAST
 // ==============================================
 function showToast(message, type) {
     const toast = document.getElementById('toast');
@@ -754,4 +735,4 @@ function showToast(message, type) {
     }, 3000);
 }
 
-console.log('🦁 Royal POS Engine Ready — ShopLine Theme');
+console.log('🦁 Royal POS Engine Ready — ShopLine Clone (FR)');

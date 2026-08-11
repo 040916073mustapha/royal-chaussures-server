@@ -1,207 +1,221 @@
-            <div class="topbar-left">
-                <span class="page-title" id="page-title">🛒 مبيعة جديدة</span>
-                <div class="digital-clock" id="digital-clock">00:00:00</div>
+            Déconnexion
+                </button>
             </div>
-            <div class="connection-indicator">
-                <span class="dot online" id="conn-dot"></span>
-                <span id="conn-text">متصل</span>
-            </div>
-        </header>
-        
-        <!-- === VIEW: SALE (POS الرئيسي) === -->
-        <div class="view-container active" id="view-sale">
-            <div class="pos-sale-view">
-                
-                <!-- Left: Products -->
-                <div class="sale-left">
-                    <div class="toolbar">
-                        <input type="text" id="barcode-input" placeholder="📷 امسح الباركود..."
-                               autocomplete="off" inputmode="none"
-                               onkeydown="handleBarcode(event)">
-                        <input type="text" id="search-input" placeholder="🔍 بحث في المنتجات..."
-                               oninput="searchProducts(this.value)" autocomplete="off">
-                    </div>
-                    
-                    <div class="categories-bar" id="categories">
-                        <button class="cat-btn active" onclick="filterCategory('all')">الكل</button>
-                    </div>
-                    
-                    <div class="products-grid" id="products-grid">
-                        <!-- Dynamic -->
-                    </div>
-                </div>
-                
-                <!-- Right: Cart -->
-                <div class="cart-panel" id="cart-panel">
-                    <div class="cart-header">
-                        <h3>🧾 سلة المشتريات</h3>
-                        <span class="count" id="cart-count">0</span>
-                    </div>
-                    
-                    <div class="cart-items" id="cart-items">
-                        <div class="cart-empty" id="cart-empty">
-                            <i class="fas fa-shopping-cart"></i>
-                            <p>السلة فارغة</p>
-                            <p style="font-size:12px;">امسح باركود أو اختر منتج</p>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="pos-main">
+
+            <!-- ========== VIEW: HOME (Menu Principal) ========== -->
+            <div class="view-container active" id="view-home">
+                <div class="home-menu">
+                    <div class="menu-grid">
+                        <div class="menu-item" onclick="switchView('sale')">
+                            <div class="mi-icon"><i class="fas fa-shopping-cart"></i></div>
+                            <div class="mi-label">Nouvelle vente</div>
+                            <div class="mi-desc">Vendre un produit</div>
                         </div>
-                    </div>
-                    
-                    <div class="cart-summary" id="cart-summary" style="display:none;">
-                        <div class="summary-row">
-                            <span>عدد القطع</span>
-                            <span id="cart-total-items">0</span>
+                        <div class="menu-item" onclick="switchView('purchase')">
+                            <div class="mi-icon"><i class="fas fa-truck-loading"></i></div>
+                            <div class="mi-label">Nouvel achat</div>
+                            <div class="mi-desc">Approvisionnement</div>
                         </div>
-                        <div class="summary-row total">
-                            <span>الإجمالي</span>
-                            <span id="cart-total">0 DA</span>
+                        <div class="menu-item" onclick="switchView('products')">
+                            <div class="mi-icon"><i class="fas fa-box"></i></div>
+                            <div class="mi-label">Liste produits</div>
+                            <div class="mi-desc">Gérer le catalogue</div>
                         </div>
-                        <div class="cart-actions">
-                            <button class="btn-clear" onclick="clearCart()" title="تفريغ">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                            <button class="btn-checkout" id="btn-checkout" onclick="openCheckout()">
-                                <i class="fas fa-check-circle"></i> إتمام البيع
-                            </button>
+                        <div class="menu-item" onclick="switchView('sales-list')">
+                            <div class="mi-icon"><i class="fas fa-file-invoice"></i></div>
+                            <div class="mi-label">Liste des ventes</div>
+                            <div class="mi-desc">Historique ventes</div>
+                        </div>
+                        <div class="menu-item" onclick="switchView('purchases-list')">
+                            <div class="mi-icon"><i class="fas fa-file-import"></i></div>
+                            <div class="mi-label">Liste achats</div>
+                            <div class="mi-desc">Historique achats</div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <button class="mobile-cart-btn" id="mobile-cart-btn" onclick="toggleCart()">
-                <i class="fas fa-shopping-cart"></i>
-                <span class="badge" id="mobile-cart-count">0</span>
-            </button>
-        </div>
-        
-        <!-- === VIEW: PURCHASE (شراء جديد) === -->
-        <div class="view-container" id="view-purchase">
-            <div class="generic-view">
-                <div class="view-header">
-                    <h2>🛍️ شراء جديد</h2>
-                    <p>توريد منتجات جديدة للمخزون</p>
+
+            <!-- ========== VIEW: SALE (Point de Vente) ========== -->
+            <div class="view-container" id="view-sale">
+                <div class="pos-sale-view">
+                    <div class="sale-left">
+                        <div class="toolbar">
+                            <input type="text" id="barcode-input" placeholder="📷 Scanner code-barres..."
+                                   autocomplete="off" inputmode="none"
+                                   onkeydown="handleBarcode(event)">
+                            <input type="text" id="search-input" placeholder="🔍 Rechercher un produit..."
+                                   oninput="searchProducts(this.value)" autocomplete="off">
+                        </div>
+                        <div class="categories-bar" id="categories">
+                            <button class="cat-btn active" onclick="filterCategory('all')">Tout</button>
+                        </div>
+                        <div class="products-grid" id="products-grid"></div>
+                    </div>
+                    <div class="cart-panel" id="cart-panel">
+                        <div class="cart-header">
+                            <h3>🧾 Panier</h3>
+                            <span class="count" id="cart-count">0</span>
+                        </div>
+                        <div class="cart-items" id="cart-items">
+                            <div class="cart-empty" id="cart-empty">
+                                <i class="fas fa-shopping-cart"></i>
+                                <p>Panier vide</p>
+                                <p style="font-size:12px;">Scannez un code-barres ou sélectionnez un produit</p>
+                            </div>
+                        </div>
+                        <div class="cart-summary" id="cart-summary" style="display:none;">
+                            <div class="summary-row">
+                                <span>Articles</span>
+                                <span id="cart-total-items">0</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Total</span>
+                                <span id="cart-total">0 DA</span>
+                            </div>
+                            <div class="cart-actions">
+                                <button class="btn-clear" onclick="clearCart()" title="Vider">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <button class="btn-checkout" id="btn-checkout" onclick="openCheckout()">
+                                    <i class="fas fa-check-circle"></i> Valider la vente
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="placeholder-card">
-                    <i class="fas fa-truck-loading"></i>
-                    <h3>قريباً — شراء جديد</h3>
-                    <p>واجهة توريد المنتجات قيد التطوير</p>
+                <button class="mobile-cart-btn" id="mobile-cart-btn" onclick="toggleCart()">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="badge" id="mobile-cart-count">0</span>
+                </button>
+            </div>
+
+            <!-- ========== VIEW: PURCHASE ========== -->
+            <div class="view-container" id="view-purchase">
+                <div class="generic-view">
+                    <div class="view-header">
+                        <h2>🛍️ Nouvel achat</h2>
+                        <p>Approvisionnement du stock</p>
+                    </div>
+                    <div class="placeholder-card">
+                        <i class="fas fa-truck-loading"></i>
+                        <p style="margin-top:10px;color:var(--text-secondary);">Bientôt disponible</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- === VIEW: PRODUCTS LIST === -->
-        <div class="view-container" id="view-products">
-            <div class="generic-view">
-                <div class="view-header">
-                    <h2>📦 قائمة المنتجات</h2>
-                    <p>عرض وإدارة جميع منتجات المحل</p>
-                </div>
-                <div style="margin-bottom:16px;">
-                    <input type="text" id="products-search" placeholder="🔍 بحث..."
-                           style="width:100%;max-width:400px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-primary);font-family:'Tajawal',sans-serif;font-size:15px;">
-                </div>
-                <div style="background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border-color);overflow:hidden;">
-                    <table style="width:100%;border-collapse:collapse;">
-                        <thead>
-                            <tr style="background:var(--bg-input);border-bottom:2px solid var(--border-color);">
-                                <th style="padding:12px 16px;text-align:right;font-size:13px;color:var(--text-muted);">المنتج</th>
-                                <th style="padding:12px 16px;text-align:center;font-size:13px;color:var(--text-muted);">اللون</th>
-                                <th style="padding:12px 16px;text-align:center;font-size:13px;color:var(--text-muted);">سعر المحل</th>
-                                <th style="padding:12px 16px;text-align:center;font-size:13px;color:var(--text-muted);">المخزون</th>
-                            </tr>
-                        </thead>
-                        <tbody id="products-table-body">
-                            <tr><td colspan="4" style="padding:40px;text-align:center;color:var(--text-muted);">جاري التحميل...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-        <!-- === VIEW: SALES LIST === -->
-        <div class="view-container" id="view-sales-list">
-            <div class="generic-view">
-                <div class="view-header">
-                    <h2>📜 قائمة المبيعات</h2>
-                    <p>سجل المبيعات والفواتير</p>
-                </div>
-                <div class="placeholder-card">
-                    <i class="fas fa-file-invoice"></i>
-                    <h3>قريباً — سجل المبيعات</h3>
-                    <p>سيتم عرض المبيعات المسجلة هنا قريباً</p>
+
+            <!-- ========== VIEW: PRODUCTS LIST ========== -->
+            <div class="view-container" id="view-products">
+                <div class="generic-view">
+                    <div class="view-header">
+                        <h2>📦 Liste des produits</h2>
+                        <p>Catalogue complet du magasin</p>
+                    </div>
+                    <div style="margin-bottom:14px;">
+                        <input type="text" id="products-search" placeholder="🔍 Rechercher..."
+                               style="width:100%;max-width:400px;padding:10px 14px;background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:14px;">
+                    </div>
+                    <div class="products-table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Couleur</th>
+                                    <th>Prix magasin</th>
+                                    <th>Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body">
+                                <tr><td colspan="4" style="padding:30px;text-align:center;color:var(--text-secondary);">Chargement...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- === VIEW: PURCHASES LIST === -->
-        <div class="view-container" id="view-purchases-list">
-            <div class="generic-view">
-                <div class="view-header">
-                    <h2>📁 قائمة المشتريات</h2>
-                    <p>سجل عمليات التوريد</p>
-                </div>
-                <div class="placeholder-card">
-                    <i class="fas fa-file-import"></i>
-                    <h3>قريباً — سجل المشتريات</h3>
-                    <p>سيتم عرض المشتريات المسجلة هنا قريباً</p>
+
+            <!-- ========== VIEW: SALES LIST ========== -->
+            <div class="view-container" id="view-sales-list">
+                <div class="generic-view">
+                    <div class="view-header">
+                        <h2>📜 Liste des ventes</h2>
+                        <p>Historique des factures</p>
+                    </div>
+                    <div class="placeholder-card">
+                        <i class="fas fa-file-invoice"></i>
+                        <p style="margin-top:10px;color:var(--text-secondary);">Bientôt disponible</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-    </div><!-- .pos-content -->
+
+            <!-- ========== VIEW: PURCHASES LIST ========== -->
+            <div class="view-container" id="view-purchases-list">
+                <div class="generic-view">
+                    <div class="view-header">
+                        <h2>📁 Liste des achats</h2>
+                        <p>Historique des approvisionnements</p>
+                    </div>
+                    <div class="placeholder-card">
+                        <i class="fas fa-file-import"></i>
+                        <p style="margin-top:10px;color:var(--text-secondary);">Bientôt disponible</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div><!-- .pos-body -->
+
 </div><!-- #pos-app -->
 
 <!-- ============================================
      PAYMENT MODAL
      ============================================ -->
 <div class="modal-overlay" id="payment-modal">
-    <div class="modal-box" id="payment-modal-box">
+    <div class="modal-box">
         <div id="payment-form">
-            <h2>💳 إتمام البيع</h2>
+            <h2>💳 Finaliser la vente</h2>
             <div class="receipt-total" id="payment-total">0 DA</div>
-            
             <div class="receipt-items" id="payment-items"></div>
-            
-            <div style="margin:15px 0;">
-                <label style="color:var(--text-secondary);font-size:13px;">ملاحظات (اختياري)</label>
-                <input type="text" id="payment-notes" placeholder="ملاحظة..."
-                       style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-primary);font-family:'Tajawal',sans-serif;">
+            <div style="margin:14px 0;">
+                <label style="color:var(--text-secondary);font-size:12px;">Notes (optionnel)</label>
+                <input type="text" id="payment-notes" placeholder="Note..."
+                       style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:13px;">
             </div>
-            
             <div class="payment-methods">
                 <button class="active" data-method="cash" onclick="selectPayment('cash')">
-                    <i class="fas fa-money-bill-wave"></i> نقدي
+                    <i class="fas fa-money-bill-wave"></i> Espèces
                 </button>
                 <button data-method="card" onclick="selectPayment('card')">
-                    <i class="fas fa-credit-card"></i> بطاقة
+                    <i class="fas fa-credit-card"></i> Carte
                 </button>
                 <button data-method="bank_transfer" onclick="selectPayment('bank_transfer')">
-                    <i class="fas fa-university"></i> تحويل
+                    <i class="fas fa-university"></i> Virement
                 </button>
                 <button data-method="check" onclick="selectPayment('check')">
-                    <i class="fas fa-money-check"></i> شيك
+                    <i class="fas fa-money-check"></i> Chèque
                 </button>
             </div>
-            
             <div class="modal-actions">
-                <button class="btn-secondary" onclick="closeModal('payment-modal')">إلغاء</button>
+                <button class="btn-secondary" onclick="closeModal('payment-modal')">Annuler</button>
                 <button class="btn-primary" onclick="completeSale()" id="btn-complete-sale">
-                    <i class="fas fa-check-circle"></i> تأكيد البيع
+                    <i class="fas fa-check-circle"></i> Confirmer la vente
                 </button>
             </div>
         </div>
-        
         <div id="payment-success" style="display:none;">
             <div class="receipt-done">
                 <i class="fas fa-check-circle"></i>
-                <h2>✅ تم البيع بنجاح!</h2>
+                <h2>✅ Vente réussie !</h2>
                 <div class="receipt-total" id="success-total">0 DA</div>
-                <div class="receipt-number" id="success-receipt">رقم الفاتورة: ---</div>
-                <div class="modal-actions" style="margin-top:30px;">
+                <div class="receipt-number" id="success-receipt">Facture n°: ---</div>
+                <div class="modal-actions" style="margin-top:28px;">
                     <button class="btn-print" onclick="printReceipt()">
-                        <i class="fas fa-print"></i> طباعة الفاتورة
+                        <i class="fas fa-print"></i> Imprimer
                     </button>
                     <button class="btn-primary" onclick="closeModal('payment-modal'); resetSale();">
-                        <i class="fas fa-plus-circle"></i> بيع جديد
+                        <i class="fas fa-plus-circle"></i> Nouvelle vente
                     </button>
                 </div>
             </div>
@@ -212,9 +226,6 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- ============================================
-     JAVASCRIPT ENGINE
-     ============================================ -->
 <script src="/static/pos/pos.js"></script>
 </body>
 </html>
