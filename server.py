@@ -350,18 +350,12 @@ try:
     app.teardown_appcontext(lambda exc: close_store_db() if callable(close_store_db) else None)
     logger.info("[Store POS] DB teardown handler registered")
     
-    # Direct POS fallback route
-    @app.route('/api/v1/store/pos', methods=['GET'])
-    def _pos_fallback():
-        return render_template('pos/index.html')
-    logger.info("[Store POS] POS fallback route registered")
-    
 except Exception as e:
     import traceback as _tb
     logger.warning(f"[Store POS] Blueprint registration skipped: {e}\n{_tb.format_exc()}")
     
     # Direct POS route when blueprint fails
-    @app.route('/api/v1/store/pos', methods=['GET'])
+    @app.route('/api/v1/store/pos', endpoint='pos_direct', methods=['GET'])
     def _pos_fallback_direct():
         return render_template('pos/index.html')
     logger.info("[Store POS] POS direct route registered (blueprint fallback)")

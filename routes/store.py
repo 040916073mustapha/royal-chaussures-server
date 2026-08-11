@@ -15,7 +15,8 @@ from database.db import (
     get_inventory, update_inventory, deduct_store_inventory, get_low_stock_items,
     create_sale, get_store_sales, get_store_sale_items, get_store_daily_summary,
     create_expense, get_expenses,
-    create_purchase_with_items, get_purchases, get_purchase_items
+    create_purchase_with_items, get_purchases, get_purchase_items,
+    get_store_purchases, get_purchase_detail
 )
 from middleware.auth import store_manager_required, token_required, generate_token
 from werkzeug.security import check_password_hash
@@ -310,27 +311,6 @@ def record_sale():
     return jsonify({"sale": result}), 201
 
 
-@store_bp.route("/sales", methods=["GET"])
-@store_manager_required
-def list_sales():
-    """جلب المبيعات"""
-    store_id = g.current_user.get("store_id") or request.args.get("store_id", type=int)
-    from_date = request.args.get("from")
-    to_date = request.args.get("to")
-    limit = int(request.args.get("limit", 100))
-    offset = int(request.args.get("offset", 0))
-    
-    sales = get_store_sales(
-        store_id=store_id,
-        from_date=from_date,
-        to_date=to_date,
-        limit=limit,
-        offset=offset
-    )
-    
-    return jsonify({"sales": sales, "count": len(sales)})
-
-
 @store_bp.route("/sales/summary", methods=["GET"])
 @store_manager_required
 def daily_summary():
@@ -522,6 +502,43 @@ def get_sale_detail(sale_id):
         return jsonify({"error": "Vente introuvable"}), 404
     
     return jsonify({"sale": sale, "items": items, "count": len(items)})
+
+
+# ============================================================
+# 📋 Purchase List (Liste des achats)
+# ============================================================
+
+@store_bp.route("/purchases/list", methods=["GET"])
+@store_manager_required
+def list_purchases_route():
+    """جلب المشتريات مع فلترة"""
+    store_id = g.current_user.get("store_id") or request.args.get("store_id", type=int)
+    
+    filters = {
+        "store_id": store_id,
+        "from_date": request.args.get("date_from"),
+        "to_date": request.args.get("date_to"),
+        "code": request.args.get("code"),
+        "fournisseur": request.args.get("fournisseur"),
+        "nom": request.args.get("nom"),
+        "cancelled": request.args.get("cancelled") == "1",
+        "search": request.args.get("q"),
+        "limit": int(request.args.get("limit", 500)),
+        "offset": int(request.args.get("offset", 0))
+    }
+    
+    purchases = get_store_purchases(**filters)
+    return jsonify({"purchases": purchases, "count": len(purchases)})
+
+
+@store_bp.route("/purchases/<int:purchase_id>/detail", methods=["GET"])
+@store_manager_required
+def get_purchase_detail_route(purchase_id):
+    """جلب تفاصيل فاتورة شراء"""
+    purchase = get_purchase_detail(purchase_id)
+    if not purchase:
+        return jsonify({"error": "Achat introuvable"}), 404
+    return jsonify(purchase)
 
 
 # ============================================================

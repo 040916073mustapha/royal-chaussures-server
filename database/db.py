@@ -445,26 +445,28 @@ def create_sale(data):
     return dict_from_row(db.execute("SELECT * FROM store_sales WHERE id = ?", [sale_id]).fetchone())
 
 
-def get_store_sales(store_id=None, from_date=None, to_date=None, limit=100, offset=0):
-    """جلب مبيعات المحل مع فلترة"""
+# Old get_store_sales replaced by enhanced version below
+
+
+def get_store_daily_summary(store_id, date_str=None):
+    """ملخص يومي للمبيعات"""
     db = get_db()
-    query = "SELECT ss.*, p.name as product_name, p.sku FROM store_sales ss JOIN products p ON p.id = ss.product_id WHERE 1=1"
-    params = []
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
     
-    if store_id:
-        query += " AND ss.store_id = ?"
-        params.append(store_id)
-    if from_date:
-        query += " AND ss.sale_date >= ?"
-        params.append(from_date)
-    if to_date:
-        query += " AND ss.sale_date <= ?"
-        params.append(to_date)
+    row = db.execute("""
+        SELECT 
+            COUNT(*) as total_transactions,
+            SUM(total) as total_revenue,
+            SUM(discount) as total_discounts,
+            SUM(quantity) as total_items
+        FROM store_sales
+        WHERE store_id = ? AND DATE(sale_date) = ?
+    """, [store_id, date_str]).fetchone()
     
-    query += " ORDER BY ss.sale_date DESC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-    
-    return dicts_from_rows(db.execute(query, params).fetchall())
+    return dict_from_row(row)
+
+
 
 
 def get_store_sales(store_id=None, from_date=None, to_date=None, limit=100, offset=0,
@@ -476,9 +478,9 @@ def get_store_sales(store_id=None, from_date=None, to_date=None, limit=100, offs
     query = """
         SELECT 
             ss.id, ss.receipt_number, ss.sale_date, ss.total, ss.discount as remise,
-            ss.amount_received as amount_paid, ss.status, ss.payment_method,
-            ss.customer_name, ss.seller_name, ss.recorded_by, ss.created_at,
-            ss.cost_price
+            ss.total as amount_paid, '' as status, ss.payment_method,
+            ss.customer_name, ss.cashier as seller_name, ss.cashier as recorded_by, ss.sale_date as created_at,
+            ss.unit_price as cost_price
         FROM store_sales ss
         WHERE 1=1
     """
@@ -502,8 +504,8 @@ def get_store_sales(store_id=None, from_date=None, to_date=None, limit=100, offs
     if vendeur:
         query += " AND ss.seller_name LIKE ?"
         params.append(f"%{vendeur}%")
-    if cancelled is None or not cancelled:
-        query += " AND (ss.status IS NULL OR ss.status != 'cancelled')"
+    if not cancelled:
+        pass  # ss.status not available
     if credit:
         query += " AND ss.status = 'credit'"
     if search:
@@ -528,6 +530,78 @@ def get_store_sale_items(sale_id):
         WHERE ss.id = ?
         ORDER BY ss.id ASC
     """, [sale_id]).fetchall())
+
+
+# ============================================================
+# Purchase List (Liste des achats)
+# ============================================================
+
+def get_store_purchases(store_id=None, from_date=None, to_date=None, limit=500, offset=0,
+                        code=None, fournisseur=None, nom=None, cancelled=None, search=None):
+    """جلب المشتريات مع فلترة متقدمة"""
+    db = get_db()
+    query = """
+        SELECT 
+            sp.id, sp.supplier, sp.purchase_date as date_achat,
+            sp.total as montant_total, sp.notes,
+            sp.created_at, sp.recorded_by,
+            COALESCE((SELECT COUNT(*) FROM store_purchase_items WHERE purchase_id = sp.id), 0) as nombre_article,
+            sp.total as montant_verse,
+            0.0 as montant_reste,
+            0.0 as tva_pct,
+            0.0 as montant_tva,
+            sp.total as total_ht
+        FROM store_purchases sp
+        WHERE 1=1
+    """
+    params = []
+    
+    if store_id:
+        query += " AND sp.store_id = ?"
+        params.append(store_id)
+    if from_date:
+        query += " AND sp.purchase_date >= ?"
+        params.append(f"{from_date} 00:00:00")
+    if to_date:
+        query += " AND sp.purchase_date <= ?"
+        params.append(f"{to_date} 23:59:59")
+    if code:
+        query += " AND CAST(sp.id AS TEXT) LIKE ?"
+        params.append(f"%{code}%")
+    if fournisseur:
+        query += " AND sp.supplier LIKE ?"
+        params.append(f"%{fournisseur}%")
+    if nom:
+        query += " AND sp.notes LIKE ?"
+        params.append(f"%{nom}%")
+    if not cancelled:
+        query += " AND (sp.status IS NULL OR sp.status != 'cancelled')"
+    
+    query += " ORDER BY sp.purchase_date DESC, sp.id DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    
+    return dicts_from_rows(db.execute(query, params).fetchall())
+
+
+def get_purchase_detail(purchase_id):
+    """جلب تفاصيل فاتورة شراء مع العناصر"""
+    db = get_db()
+    purchase = dict_from_row(db.execute("""
+        SELECT sp.*,
+            COALESCE((SELECT COUNT(*) FROM store_purchase_items WHERE purchase_id = sp.id), 0) as nombre_article
+        FROM store_purchases sp WHERE sp.id = ?
+    """, [purchase_id]).fetchone())
+    
+    if purchase:
+        purchase["items"] = dicts_from_rows(db.execute("""
+            SELECT spi.*, p.name as product_name
+            FROM store_purchase_items spi
+            LEFT JOIN products p ON p.id = spi.product_id
+            WHERE spi.purchase_id = ?
+            ORDER BY spi.id ASC
+        """, [purchase_id]).fetchall())
+    
+    return purchase
 
 
 # ============================================================

@@ -296,7 +296,55 @@
         .purchase-footer .pf-shortcut{background:#fff8dc;border:1px solid #e0c840;border-radius:3px;padding:1px 6px;font-weight:700;font-size:10px;color:#5a4a00}
         .purchase-footer .pf-key{background:#f0e68c;border:1px solid #d4c020;border-radius:3px;padding:1px 5px;font-weight:700;font-size:10px;color:#5a4a00}
         
-        /* Sales List View */
+        /* Purchase List View (Liste des achats) */
+        .purchlist-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
+        .purchlist-top{background:#f5efe0;border-bottom:2px solid #d4c5a9;padding:8px 16px;display:flex;align-items:center;justify-content:space-between}
+        .purchlist-top .plt-left{display:flex;align-items:center;gap:12px}
+        .purchlist-top .plt-left .plt-icon{width:38px;height:38px;color:#1abc9c;font-size:26px;display:flex;align-items:center;justify-content:center}
+        .purchlist-top .plt-left h2{font-size:18px;font-weight:700;color:#1a5276}
+        .purchlist-top .plt-left .plt-count{background:#d5d8dc;color:#2c3e50;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600}
+        .purchlist-top .plt-right{display:flex;align-items:center;gap:8px}
+        .purchlist-top .plt-right input{padding:7px 12px;background:#fff;border:1px solid #b0a080;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;width:200px}
+        .purchlist-top .plt-right button{padding:6px 14px;background:#1abc9c;color:#fff;border:none;border-radius:4px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;gap:5px;font-size:12px}
+        .purchlist-body{display:flex;flex:1;overflow:hidden}
+        .purchlist-table-section{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px}
+        .purchlist-toolbar{display:flex;gap:2px;margin-bottom:5px}
+        .pl-toolbar-btn{padding:4px 8px;border:none;border-radius:3px;font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:0.1s;display:flex;align-items:center;gap:3px;background:#1abc9c;color:#fff}
+        .pl-toolbar-btn:hover{opacity:0.85}
+        .pl-toolbar-btn:disabled{opacity:0.4;cursor:default}
+        .purchlist-table-wrap{flex:1;overflow:auto;background:#fff;border:1px solid var(--border-color);border-radius:3px}
+        .purchlist-table-wrap table{width:100%;border-collapse:collapse;font-size:11px}
+        .purchlist-table-wrap thead{position:sticky;top:0;z-index:2}
+        .purchlist-table-wrap th{background:#f0f2f5;border-bottom:2px solid var(--border-color);padding:4px 6px;text-align:left;font-size:9px;font-weight:700;color:var(--text-secondary);white-space:nowrap}
+        .purchlist-table-wrap th:first-child{width:28px;text-align:center}
+        .purchlist-table-wrap td{padding:4px 6px;border-bottom:1px solid var(--border-light);font-size:11px;white-space:nowrap}
+        .purchlist-table-wrap td:first-child{text-align:center}
+        .purchlist-table-wrap td:nth-child(5){text-align:center}
+        .purchlist-table-wrap td:nth-child(7){font-weight:700}
+        .purchlist-table-wrap .no-items{text-align:center;padding:40px;color:var(--text-secondary);font-size:13px}
+        .purchlist-table-wrap .no-items i{font-size:40px;opacity:0.15;display:block;margin-bottom:8px}
+        .purchlist-summary{height:26px;min-height:26px;background:#f0f2f5;border-top:2px solid var(--border-color);display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:700}
+        .purchlist-summary .pls-col{display:flex;gap:24px}
+        .purchlist-summary .pls-col span{display:flex;align-items:center;gap:2px}
+        .purchlist-filter{width:300px;min-width:300px;background:#fff;border-left:1px solid var(--border-color);display:flex;flex-direction:column;overflow-y:auto}
+        .purchlist-filter .plf-header{padding:10px 12px;background:#f0f2f5;border-bottom:1px solid var(--border-color);font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;color:#1abc9c}
+        .purchlist-filter .plf-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+        .plf-group{display:flex;flex-direction:column;gap:2px}
+        .plf-group label{font-size:11px;font-weight:600;color:var(--text-secondary)}
+        .plf-group .plf-row{display:flex;gap:4px}
+        .plf-group input,.plf-group select{padding:5px 6px;background:#fff;border:1px solid var(--border-color);border-radius:3px;font-family:Inter,sans-serif;font-size:12px;flex:1}
+        .plf-group input:focus,.plf-group select:focus{outline:none;border-color:#1abc9c}
+        .plf-group .plf-date{flex:1}
+        .plf-group .plf-checkbox{display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer}
+        .plf-group .plf-checkbox input{width:14px;height:14px}
+        .plf-actions{display:flex;gap:4px;margin-top:4px}
+        .plf-actions button{padding:5px 12px;border:none;border-radius:3px;font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;flex:1}
+        .plf-actions .btn-plf-valider{background:#1abc9c;color:#fff}
+        .plf-actions .btn-plf-valider:hover{opacity:0.85}
+        .plf-actions .btn-plf-annuler{background:#95a5a6;color:#fff}
+        .plf-actions .btn-plf-annuler:hover{opacity:0.85}
+        .purchlist-table-wrap tr.selected{background:#c8f7c5!important;outline:2px solid #27ae60}
+                /* Sales List View */
         .saleslist-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .saleslist-top{background:#f5efe0;border-bottom:2px solid #d4c5a9;padding:8px 16px;display:flex;align-items:center;justify-content:space-between}
         .saleslist-top .slt-left{display:flex;align-items:center;gap:12px}
@@ -777,10 +825,106 @@
             </div>
 
             <!-- PURCHASES LIST -->
+            <!-- PURCHASE LIST -->
             <div class="view-container" id="view-purchases-list">
-                <div class="generic-view">
-                    <div class="view-header"><h2>Liste des achats</h2><p>Historique des approvisionnements</p></div>
-                    <div class="placeholder-card"><i class="fas fa-file-import"></i><p style="margin-top:10px;color:var(--text-secondary);">Bientot disponible</p></div>
+                <div class="purchlist-view">
+                    <div class="purchlist-top">
+                        <div class="plt-left">
+                            <div class="plt-icon"><i class="fas fa-file-invoice"></i></div>
+                            <h2>Liste des achats</h2>
+                            <span class="plt-count" id="pl-total-count">0</span>
+                        </div>
+                        <div class="plt-right">
+                            <input type="text" id="pl-quick-search" placeholder="Rechercher un achat...">
+                            <button onclick="loadPurchaseList()"><i class="fas fa-search"></i> Recherche</button>
+                        </div>
+                    </div>
+                    <div class="purchlist-body">
+                        <div class="purchlist-table-section">
+                            <div class="purchlist-toolbar">
+                                <button class="pl-toolbar-btn" onclick="switchView('purchase')"><i class="fas fa-plus-circle"></i> Nouveau</button>
+                                <button class="pl-toolbar-btn" id="pl-btn-edit" disabled><i class="fas fa-edit"></i> Modifier</button>
+                                <button class="pl-toolbar-btn" id="pl-btn-print" disabled onclick="reprintPurchase()"><i class="fas fa-print"></i> Imprimer</button>
+                                <button class="pl-toolbar-btn" id="pl-btn-delete" disabled><i class="fas fa-trash-alt"></i> Supprimer</button>
+                                <button class="pl-toolbar-btn" id="pl-btn-import" disabled><i class="fas fa-upload"></i> Importer</button>
+                                <button class="pl-toolbar-btn" onclick="exportPurchaseList()"><i class="fas fa-download"></i> Exporter</button>
+                                <button class="pl-toolbar-btn" onclick="resetPurchaseFilter()"><i class="fas fa-times"></i> Annuler</button>
+                            </div>
+                            <div class="purchlist-table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>État</th>
+                                            <th>Code</th>
+                                            <th>Fournisseur</th>
+                                            <th>Date achat</th>
+                                            <th>Nombre article</th>
+                                            <th>Montant Total</th>
+                                            <th>Montant versé</th>
+                                            <th>Montant reste</th>
+                                            <th>TVA %</th>
+                                            <th>Montant TVA</th>
+                                            <th>Total H.T</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="purchase-list-table-body">
+                                        <tr><td colspan="12"><div class="no-items"><i class="fas fa-file-invoice"></i>Aucun achat enregistré</div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="purchlist-summary">
+                                <div class="pls-col">
+                                    <span><span class="sls-label">Montant total:</span> <span class="sls-val" id="pl-sum-total">0.00 DA</span></span>
+                                    <span><span class="sls-label">Montant versé:</span> <span class="sls-val" id="pl-sum-paid">0.00 DA</span></span>
+                                    <span><span class="sls-label">Montant reste:</span> <span class="sls-val" id="pl-sum-balance">0.00 DA</span></span>
+                                    <span><span class="sls-label">Montant TVA:</span> <span class="sls-val" id="pl-sum-tva">0.00 DA</span></span>
+                                    <span><span class="sls-label">Total H.T:</span> <span class="sls-val" id="pl-sum-ht">0.00 DA</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="purchlist-filter">
+                            <div class="plf-header"><i class="fas fa-search"></i> Recherche</div>
+                            <div class="plf-body">
+                                <div class="plf-group">
+                                    <label>Période</label>
+                                    <div class="plf-row">
+                                        <input type="date" id="pl-filter-date-from" class="plf-date" placeholder="Date du">
+                                        <span style="display:flex;align-items:center;color:var(--text-secondary);font-size:12px;">au</span>
+                                        <input type="date" id="pl-filter-date-to" class="plf-date" placeholder="Au">
+                                    </div>
+                                </div>
+                                <div class="plf-group">
+                                    <label>Code</label>
+                                    <input type="text" id="pl-filter-code" placeholder="Code achat...">
+                                </div>
+                                <div class="plf-group">
+                                    <label>Code article</label>
+                                    <input type="text" id="pl-filter-article" placeholder="Code article...">
+                                </div>
+                                <div class="plf-group">
+                                    <label>Nom</label>
+                                    <input type="text" id="pl-filter-nom" placeholder="Nom...">
+                                </div>
+                                <div class="plf-group">
+                                    <label>Fournisseur</label>
+                                    <select id="pl-filter-fournisseur">
+                                        <option value="">Tous</option>
+                                        <option value="divers">Divers</option>
+                                        <option value="fournisseur1">Fournisseur 1</option>
+                                        <option value="fournisseur2">Fournisseur 2</option>
+                                    </select>
+                                </div>
+                                <div class="plf-group">
+                                    <label class="plf-checkbox"><input type="checkbox" id="pl-filter-cancelled"> Afficher les factures d'achat annulées</label>
+                                </div>
+                                <div class="plf-actions">
+                                    <button class="btn-plf-valider" onclick="loadPurchaseList()"><i class="fas fa-check"></i> Valider</button>
+                                    <button class="btn-plf-annuler" onclick="resetPurchaseFilter()"><i class="fas fa-times"></i> Annuler</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
