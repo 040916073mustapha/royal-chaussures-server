@@ -309,14 +309,14 @@
         .saleslist-table-section{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px}
         .saleslist-toolbar{display:flex;gap:4px;margin-bottom:5px}
         .sl-toolbar-btn{padding:6px 12px;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:0.1s;display:flex;align-items:center;gap:5px}
-        .sl-toolbar-btn.btn-new{background:var(--accent-green);color:#fff}
-        .sl-toolbar-btn.btn-new:hover{background:var(--accent-green-dark)}
-        .sl-toolbar-btn.btn-edit{background:#f39c12;color:#fff}
-        .sl-toolbar-btn.btn-edit:hover{background:#d68910}
-        .sl-toolbar-btn.btn-print{background:#3498db;color:#fff}
-        .sl-toolbar-btn.btn-print:hover{background:var(--accent-blue-dark)}
-        .sl-toolbar-btn.btn-delete{background:#e74c3c;color:#fff}
-        .sl-toolbar-btn.btn-delete:hover{background:#c0392b}
+        .sl-toolbar-btn.btn-new{background:#5d7b9f;color:#fff}
+        .sl-toolbar-btn.btn-new:hover{opacity:0.85}
+        .sl-toolbar-btn.btn-edit{background:#5d7b9f}
+        .sl-toolbar-btn.btn-edit:hover{opacity:0.85}
+        .sl-toolbar-btn.btn-print{background:#5d7b9f}
+        .sl-toolbar-btn.btn-print:hover{opacity:0.85}
+        .sl-toolbar-btn.btn-delete{background:#5d7b9f}
+        .sl-toolbar-btn.btn-delete:hover{opacity:0.85}
         .sl-toolbar-btn.btn-export{background:#6c5ce7;color:#fff}
         .sl-toolbar-btn.btn-export:hover{background:#5a4bd1}
         .sl-toolbar-btn:disabled{opacity:0.4;cursor:default}
@@ -336,7 +336,7 @@
         .saleslist-table-wrap .sl-row{display:flex;align-items:center;gap:4px}
         .saleslist-table-wrap .sl-row .btn-icon{border:none;background:none;cursor:pointer;color:var(--text-secondary);padding:2px;font-size:12px}
         .saleslist-table-wrap .sl-row .btn-icon:hover{color:var(--accent-blue)}
-        .saleslist-table-wrap tr.selected{background:#d4e6f9!important;outline:2px solid #3498db}
+        .saleslist-table-wrap tr.selected{background:#c8f7c5!important;outline:2px solid #27ae60}
         .saleslist-summary{height:38px;min-height:38px;background:#2c3e50;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:13px;font-weight:600}
         .saleslist-summary .sls-left{display:flex;gap:24px;align-items:center}
         .saleslist-summary .sls-left span{display:flex;align-items:center;gap:4px}
@@ -699,7 +699,8 @@
                                 <button class="sl-toolbar-btn btn-print" id="sl-btn-print" disabled onclick="reprintReceipt()"><i class="fas fa-print"></i> Imprimer ticket</button>
                                 <button class="sl-toolbar-btn btn-delete" id="sl-btn-delete" disabled><i class="fas fa-trash-alt"></i> Supprimer</button>
                                 <button class="sl-toolbar-btn btn-export" onclick="exportSalesList()"><i class="fas fa-download"></i> Exporter</button>
-                            </div>
+                            <button class="sl-toolbar-btn btn-import" disabled><i class="fas fa-upload"></i> Importer</button>
+                        </div>
                             <div class="saleslist-table-wrap">
                                 <table>
                                     <thead>
@@ -725,18 +726,17 @@
                                 </table>
                             </div>
                             <div class="saleslist-summary">
-                                <div class="sls-left">
-                                    <span><i class="fas fa-receipt"></i> Montant total: <span class="sls-val" id="sl-sum-total">0.00 DA</span></span>
-                                    <span><i class="fas fa-coins"></i> Somme vers&eacute;e: <span class="sls-val" id="sl-sum-paid">0.00 DA</span></span>
-                                </div>
-                                <div class="sls-right">
-                                    <span><i class="fas fa-balance-scale"></i> Solde: <span class="sls-val" id="sl-sum-balance">0.00 DA</span></span>
-                                    <span><i class="fas fa-chart-line"></i> Co&ucirc;t d'achat: <span class="sls-val" id="sl-sum-cost">0.00 DA</span></span>
+                                <div class="sls-col">
+                                    <span><span class="sls-label">Montant total:</span> <span class="sls-val" id="sl-sum-total">0.00 DA</span></span>
+                                    <span><span class="sls-label">Somme versee:</span> <span class="sls-val" id="sl-sum-paid">0.00 DA</span></span>
+                                    <span><span class="sls-label">Solde:</span> <span class="sls-val" id="sl-sum-balance">0.00 DA</span></span>
+                                    <span><span class="sls-label">Total remise:</span> <span class="sls-val" id="sl-sum-remise">0.00 DA</span></span>
+                                    <span><span class="sls-label">Cout achat:</span> <span class="sls-val" id="sl-sum-cost">0.00 DA</span></span>
                                 </div>
                             </div>
                         </div>
                         <div class="saleslist-filter">
-                            <div class="slf-header"><i class="fas fa-filter"></i> Filtres</div>
+                            <div class="slf-header"><i class="fas fa-search"></i> Recherche</div>
                             <div class="slf-body">
                                 <div class="slf-group">
                                     <label>P&eacute;riode</label>
