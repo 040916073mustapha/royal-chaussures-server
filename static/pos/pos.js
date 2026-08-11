@@ -1,6 +1,6 @@
 /**
- * Royal POS — Main JavaScript Engine
- * Dark Neon Cyberpunk Theme
+ * Royal POS — JavaScript Engine
+ * ShopLine Classic Light Theme
  */
 
 // ==============================================
@@ -92,6 +92,22 @@ var API = (() => {
 })();
 
 // ==============================================
+//  DIGITAL CLOCK
+// ==============================================
+function startClock() {
+    function update() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        const el = document.getElementById('digital-clock');
+        if (el) el.textContent = `${h}:${m}:${s}`;
+    }
+    update();
+    setInterval(update, 1000);
+}
+
+// ==============================================
 //  LOGIN
 // ==============================================
 async function login() {
@@ -116,6 +132,7 @@ async function login() {
         showApp();
         loadProducts();
         updateConnectionStatus();
+        startClock();
     } else {
         err.textContent = result.error || 'خطأ في تسجيل الدخول';
         err.style.display = 'block';
@@ -134,14 +151,23 @@ async function login() {
         showApp();
         loadProducts();
         updateConnectionStatus();
+        startClock();
     }
 })();
 
 function showApp() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('pos-app').classList.add('active');
-    document.getElementById('user-name').textContent = STATE.user?.display_name || STATE.user?.username || 'مدير المحل';
-    document.getElementById('user-role').textContent = STATE.user?.role === 'admin' ? 'Admin' : 'Store';
+    
+    const displayName = STATE.user?.display_name || STATE.user?.username || 'مدير المحل';
+    const role = STATE.user?.role === 'admin' ? 'Admin' : 'Store';
+    
+    // Sidebar
+    document.getElementById('sidebar-name').textContent = displayName;
+    document.getElementById('sidebar-role').textContent = role;
+    document.getElementById('sidebar-avatar').textContent = displayName.charAt(0).toUpperCase();
+    
+    document.getElementById('page-title').textContent = '🛒 مبيعة جديدة';
     document.getElementById('barcode-input').focus();
 }
 
@@ -157,6 +183,41 @@ function logout() {
     document.getElementById('login-pass').value = '';
     document.getElementById('login-btn').disabled = false;
     document.getElementById('login-btn').innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
+}
+
+// ==============================================
+//  VIEW SWITCHER (Sidebar Navigation)
+// ==============================================
+function switchView(viewId) {
+    // Update sidebar active
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.view === viewId);
+    });
+    
+    // Update view containers
+    document.querySelectorAll('.view-container').forEach(v => {
+        v.classList.remove('active');
+    });
+    
+    const target = document.getElementById('view-' + viewId);
+    if (target) {
+        target.classList.add('active');
+    }
+    
+    // Update page title
+    const titles = {
+        'sale': '🛒 مبيعة جديدة',
+        'purchase': '🛍️ شراء جديد',
+        'products': '📦 قائمة المنتجات',
+        'sales-list': '📜 قائمة المبيعات',
+        'purchases-list': '📁 قائمة المشتريات'
+    };
+    document.getElementById('page-title').textContent = titles[viewId] || viewId;
+    
+    // Special handling
+    if (viewId === 'products') {
+        renderProductsTable();
+    }
 }
 
 // ==============================================
@@ -176,6 +237,7 @@ async function loadProducts() {
         renderCategories();
         STATE.products = [...STATE.allProducts];
         renderProducts(STATE.products);
+        renderProductsTable();
     } catch (e) {
         showToast('فشل تحميل المنتجات: ' + e.message, 'error');
     }
@@ -200,6 +262,7 @@ function filterCategory(cat) {
 
 function renderProducts(products) {
     const grid = document.getElementById('products-grid');
+    if (!grid) return;
     if (!products || products.length === 0) {
         grid.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px;">لا توجد منتجات</div>';
         return;
@@ -215,7 +278,7 @@ function renderProducts(products) {
         return `<div class="product-card" onclick="addToCart(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.store_price || p.online_price || 0}, ${stock})">
             <div class="price">${(p.store_price || p.online_price || 0).toLocaleString()} DA</div>
             <div class="name">${p.name}</div>
-            ${p.color ? `<div style="font-size:11px;color:var(--text-muted);">${p.color}</div>` : ''}
+            ${p.color ? `<div class="color-tag">${p.color}</div>` : ''}
             <div class="stock ${stockClass}">${stockText}</div>
         </div>`;
     }).join('');
@@ -233,11 +296,50 @@ async function searchProducts(q) {
         STATE.products = data.products || [];
         renderProducts(STATE.products);
     } catch {
-        // Fallback: local search
         STATE.products = STATE.allProducts.filter(p => 
             p.name.includes(q) || p.sku?.includes(q) || p.barcode?.includes(q)
         );
         renderProducts(STATE.products);
+    }
+}
+
+// ==============================================
+//  PRODUCTS TABLE (View)
+// ==============================================
+function renderProductsTable() {
+    const tbody = document.getElementById('products-table-body');
+    if (!tbody) return;
+    
+    if (!STATE.allProducts || STATE.allProducts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:40px;text-align:center;color:var(--text-muted);">لا توجد منتجات</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = STATE.allProducts.map(p => {
+        const stock = p.store_quantity || 0;
+        let stockClass = '';
+        let stockText = `${stock}`;
+        if (stock <= 0) { stockClass = 'color:var(--accent-red);'; stockText = 'غير متوفر'; }
+        else if (stock <= 5) { stockClass = 'color:var(--accent-orange);'; }
+        
+        return `<tr style="border-bottom:1px solid var(--border-light);">
+            <td style="padding:10px 16px;font-weight:500;">${p.name}</td>
+            <td style="padding:10px 16px;text-align:center;color:var(--text-muted);">${p.color || '—'}</td>
+            <td style="padding:10px 16px;text-align:center;color:var(--accent-blue);font-weight:700;">${(p.store_price || p.online_price || 0).toLocaleString()} DA</td>
+            <td style="padding:10px 16px;text-align:center;${stockClass}font-weight:500;">${stockText}</td>
+        </tr>`;
+    }).join('');
+    
+    // Wire search
+    const searchInput = document.getElementById('products-search');
+    if (searchInput) {
+        searchInput.oninput = function() {
+            const q = this.value.toLowerCase();
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        };
     }
 }
 
@@ -255,13 +357,11 @@ function handleBarcode(e) {
         return;
     }
     
-    // Accumulate barcode input (scanner types fast)
     const now = Date.now();
     if (now - STATE._lastBarcodeTime > 100) STATE._barcodeBuffer = '';
     STATE._barcodeBuffer += e.key;
     STATE._lastBarcodeTime = now;
     
-    // If Enter comes after barcode chars, process
     if (e.key === 'Enter' && STATE._barcodeBuffer.length > 3) {
         lookupBarcode(STATE._barcodeBuffer.replace('Enter', '').trim());
         STATE._barcodeBuffer = '';
@@ -280,7 +380,6 @@ async function lookupBarcode(code) {
             showToast('⚠️ المنتج غير موجود', 'error');
         }
     } catch {
-        // Try local search
         const found = STATE.allProducts.find(p => p.barcode === code);
         if (found) {
             addToCart(found.id, found.name, found.store_price || found.online_price || 0, found.store_quantity || 0);
@@ -312,10 +411,11 @@ function addToCart(id, name, price, stock) {
     
     renderCart();
     
-    // Brief feedback
     const el = document.getElementById('cart-count');
-    el.style.transform = 'scale(1.3)';
-    setTimeout(() => el.style.transform = 'scale(1)', 200);
+    if (el) {
+        el.style.transform = 'scale(1.3)';
+        setTimeout(() => el.style.transform = 'scale(1)', 200);
+    }
 }
 
 function removeFromCart(id) {
@@ -349,24 +449,24 @@ function clearCart() {
 
 function renderCart() {
     const items = document.getElementById('cart-items');
-    const empty = document.getElementById('cart-empty');
     const summary = document.getElementById('cart-summary');
     const count = document.getElementById('cart-count');
     const mobileCount = document.getElementById('mobile-cart-count');
     const checkoutBtn = document.getElementById('btn-checkout');
     
+    if (!items) return;
+    
     if (STATE.cart.length === 0) {
         items.innerHTML = '<div class="cart-empty" id="cart-empty"><i class="fas fa-shopping-cart"></i><p>السلة فارغة</p><p style="font-size:12px;">امسح باركود أو اختر منتج</p></div>';
-        summary.style.display = 'none';
-        count.textContent = '0';
-        mobileCount.textContent = '0';
-        document.getElementById('mobile-total').textContent = '0 DA';
-        checkoutBtn.disabled = true;
+        if (summary) summary.style.display = 'none';
+        if (count) count.textContent = '0';
+        if (mobileCount) mobileCount.textContent = '0';
+        if (checkoutBtn) checkoutBtn.disabled = true;
         return;
     }
     
-    summary.style.display = 'block';
-    checkoutBtn.disabled = false;
+    if (summary) summary.style.display = 'block';
+    if (checkoutBtn) checkoutBtn.disabled = false;
     
     let total = 0;
     let totalItems = 0;
@@ -387,11 +487,13 @@ function renderCart() {
         </div>`;
     }).join('');
     
-    count.textContent = totalItems;
-    mobileCount.textContent = totalItems;
-    document.getElementById('cart-total-items').textContent = totalItems;
-    document.getElementById('cart-total').textContent = total.toLocaleString() + ' DA';
-    document.getElementById('mobile-total').textContent = total.toLocaleString() + ' DA';
+    if (count) count.textContent = totalItems;
+    if (mobileCount) mobileCount.textContent = totalItems;
+    
+    const itemsEl = document.getElementById('cart-total-items');
+    const totalEl = document.getElementById('cart-total');
+    if (itemsEl) itemsEl.textContent = totalItems;
+    if (totalEl) totalEl.textContent = total.toLocaleString() + ' DA';
 }
 
 // ==============================================
@@ -404,7 +506,6 @@ function openCheckout() {
     document.getElementById('payment-form').style.display = 'block';
     document.getElementById('payment-success').style.display = 'none';
     
-    // Calculate total
     let total = 0;
     let itemsHtml = '';
     STATE.cart.forEach(item => {
@@ -420,7 +521,6 @@ function openCheckout() {
     document.getElementById('payment-items').innerHTML = itemsHtml;
     document.getElementById('payment-notes').value = '';
     
-    // Reset payment method
     selectPayment('cash');
     
     modal.classList.add('active');
@@ -451,7 +551,6 @@ async function completeSale() {
             results.push(result);
         }
         
-        // Success
         const total = STATE.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
         const receipt = results[0]?.sale?.receipt_number || `POS-${Date.now()}`;
         
@@ -481,6 +580,7 @@ async function completeSale() {
 function resetSale() {
     document.getElementById('payment-form').style.display = 'block';
     document.getElementById('payment-success').style.display = 'none';
+    switchView('sale');
     document.getElementById('barcode-input').focus();
     loadProducts();
 }
@@ -523,45 +623,45 @@ function printReceipt() {
                 td { padding: 3px 0; }
                 .total-row { font-weight: bold; font-size: 14px; }
                 .footer { text-align: center; margin-top: 10px; font-size: 10px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h2>🦁 Royal Chaussures</h2>
-        <p>Imama, Tlemcen</p>
-        <p>+213 659 83 24 26</p>
-        <hr>
-        <p>فاتورة: ${s.receipt}</p>
-        <p>التاريخ: ${new Date().toLocaleDateString('ar-DZ')}</p>
-        <p>وقت: ${new Date().toLocaleTimeString('ar-DZ')}</p>
-    </div>
-    <hr>
-    <table>
-        <thead>
-            <tr><th>المنتج</th><th>الكمية</th><th>المجموع</th></tr>
-        </thead>
-        <tbody>
-            ${itemsHtml}
-        </tbody>
-    </table>
-    <hr>
-    <div style="display:flex;justify-content:space-between;">
-        <span>الإجمالي</span>
-        <span class="total-row">${s.total.toLocaleString()} DA</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:5px;">
-        <span>وسيلة الدفع</span>
-        <span>${methods[s.payment] || s.payment}</span>
-    </div>
-    <hr>
-    <div class="footer">
-        <p>شكراً لتسوقكم مع Royal Chaussures 👑</p>
-        <p>www.royalchaussures.com</p>
-    </div>
-    <script>
-        window.onload = function() { window.print(); window.close(); };
-    <\/script>
-</body></html>`);
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>🦁 Royal Chaussures</h2>
+                <p>Imama, Tlemcen</p>
+                <p>+213 659 83 24 26</p>
+                <hr>
+                <p>فاتورة: ${s.receipt}</p>
+                <p>التاريخ: ${new Date().toLocaleDateString('ar-DZ')}</p>
+                <p>وقت: ${new Date().toLocaleTimeString('ar-DZ')}</p>
+            </div>
+            <hr>
+            <table>
+                <thead>
+                    <tr><th>المنتج</th><th>الكمية</th><th>المجموع</th></tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+            <hr>
+            <div style="display:flex;justify-content:space-between;">
+                <span>الإجمالي</span>
+                <span class="total-row">${s.total.toLocaleString()} DA</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:5px;">
+                <span>وسيلة الدفع</span>
+                <span>${methods[s.payment] || s.payment}</span>
+            </div>
+            <hr>
+            <div class="footer">
+                <p>شكراً لتسوقكم مع Royal Chaussures 👑</p>
+                <p>www.royalchaussures.com</p>
+            </div>
+            <script>
+                window.onload = function() { window.print(); window.close(); };
+            <\/script>
+        </body></html>`);
     printWindow.document.close();
 }
 
@@ -572,23 +672,18 @@ function closeModal(id) {
     document.getElementById(id).classList.remove('active');
 }
 
-// Click outside to close
 document.getElementById('payment-modal')?.addEventListener('click', function(e) {
     if (e.target === this) closeModal('payment-modal');
 });
 
-// Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
-    // F8 = Quick search focus
     if (e.key === 'F8') {
         e.preventDefault();
         document.getElementById('search-input')?.focus();
     }
-    // Escape = close modals
     if (e.key === 'Escape') {
         closeModal('payment-modal');
     }
-    // F2 = Barcode focus
     if (e.key === 'F2') {
         e.preventDefault();
         document.getElementById('barcode-input')?.focus();
@@ -596,31 +691,44 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ==============================================
+//  CONNECTION STATUS
+// ==============================================
+function updateConnectionStatus() {
+    const dot = document.getElementById('conn-dot');
+    const text = document.getElementById('conn-text');
+    
+    function check() {
+        const online = navigator.onLine;
+        if (dot) {
+            dot.className = 'dot ' + (online ? 'online' : 'offline');
+        }
+        if (text) text.textContent = online ? 'متصل' : 'غير متصل';
+        STATE.isOffline = !online;
+    }
+    
+    check();
+    window.addEventListener('online', check);
+    window.addEventListener('offline', check);
+}
+
+// ==============================================
 //  CART TOGGLE (Mobile)
 // ==============================================
 function toggleCart() {
     const panel = document.getElementById('cart-panel');
+    if (!panel) return;
     panel.classList.toggle('active');
-    if (panel.classList.contains('active')) {
-        document.querySelector('.btn-close').style.display = 'block';
-    } else {
-        document.querySelector('.btn-close').style.display = 'none';
-    }
 }
 
-// Close cart on product click (mobile)
+// Auto-close cart when selecting product on mobile
 document.getElementById('products-grid')?.addEventListener('click', function() {
-    if (window.innerWidth <= 768) {
-        const panel = document.getElementById('cart-panel');
-        if (panel.classList.contains('active')) {
-            panel.classList.remove('active');
-            document.querySelector('.btn-close').style.display = 'none';
-        }
+    if (window.innerWidth <= 900) {
+        document.getElementById('cart-panel')?.classList.remove('active');
     }
 });
 
 // ==============================================
-//  PENDING SALES SYNC (load saved)
+//  PENDING SALES SYNC
 // ==============================================
 (function() {
     const pending = JSON.parse(localStorage.getItem('pos_pending') || '[]');
@@ -630,4 +738,20 @@ document.getElementById('products-grid')?.addEventListener('click', function() {
     }
 })();
 
-console.log('🦁 Royal POS Engine Ready');
+// ==============================================
+//  TOAST NOTIFICATIONS
+// ==============================================
+function showToast(message, type) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = 'toast show ' + (type || 'success');
+    toast.style.display = 'block';
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.style.display = 'none';
+    }, 3000);
+}
+
+console.log('🦁 Royal POS Engine Ready — ShopLine Theme');
