@@ -917,6 +917,32 @@ def api_products():
 
 
 # ============================================================
+# POS Purchases API (Nouvel achat)
+# ============================================================
+
+@app.route('/api/v1/store/pos/purchases', methods=['POST'])
+def api_pos_record_purchase():
+    """Record a purchase from POS without auth requirement"""
+    try:
+        from routes.store import create_purchase_with_items
+        data = request.get_json()
+        if not data:
+            return json_utf8({"error": "Request body required"})
+        if "items" not in data or not data["items"]:
+            return json_utf8({"error": "Au moins un article est requis"})
+        
+        data["store_id"] = 1
+        data["recorded_by"] = "pos"
+        
+        result = create_purchase_with_items(data)
+        return json_utf8({"purchase": result["purchase"], "items": result["items"]})
+    except Exception as e:
+        import traceback
+        logger.error(f"[POS Purchase] Error: {e}\n{traceback.format_exc()}")
+        return json_utf8({"error": str(e)})
+
+
+# ============================================================
 # POS Products API (Liste des articles)
 # ============================================================
 
