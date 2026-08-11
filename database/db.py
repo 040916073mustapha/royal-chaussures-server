@@ -467,23 +467,67 @@ def get_store_sales(store_id=None, from_date=None, to_date=None, limit=100, offs
     return dicts_from_rows(db.execute(query, params).fetchall())
 
 
-def get_store_daily_summary(store_id, date_str=None):
-    """ملخص يومي للمبيعات"""
+def get_store_sales(store_id=None, from_date=None, to_date=None, limit=100, offset=0,
+                    code=None, client=None, vendeur=None, cancelled=None, credit=None, search=None):
+    """جلب مبيعات المحل مع فلترة متقدمة"""
     db = get_db()
-    if not date_str:
-        date_str = datetime.now().strftime("%Y-%m-%d")
     
-    row = db.execute("""
+    # تجميع المبيعات بكل عناصرها — نأخذ distinct receipt
+    query = """
         SELECT 
-            COUNT(*) as total_transactions,
-            SUM(total) as total_revenue,
-            SUM(discount) as total_discounts,
-            SUM(quantity) as total_items
-        FROM store_sales
-        WHERE store_id = ? AND DATE(sale_date) = ?
-    """, [store_id, date_str]).fetchone()
+            ss.id, ss.receipt_number, ss.sale_date, ss.total, ss.discount as remise,
+            ss.amount_received as amount_paid, ss.status, ss.payment_method,
+            ss.customer_name, ss.seller_name, ss.recorded_by, ss.created_at,
+            ss.cost_price
+        FROM store_sales ss
+        WHERE 1=1
+    """
+    params = []
     
-    return dict_from_row(row)
+    if store_id:
+        query += " AND ss.store_id = ?"
+        params.append(store_id)
+    if from_date:
+        query += " AND ss.sale_date >= ?"
+        params.append(f"{from_date} 00:00:00")
+    if to_date:
+        query += " AND ss.sale_date <= ?"
+        params.append(f"{to_date} 23:59:59")
+    if code:
+        query += " AND ss.receipt_number LIKE ?"
+        params.append(f"%{code}%")
+    if client:
+        query += " AND ss.customer_name LIKE ?"
+        params.append(f"%{client}%")
+    if vendeur:
+        query += " AND ss.seller_name LIKE ?"
+        params.append(f"%{vendeur}%")
+    if cancelled is None or not cancelled:
+        query += " AND (ss.status IS NULL OR ss.status != 'cancelled')"
+    if credit:
+        query += " AND ss.status = 'credit'"
+    if search:
+        query += " AND (ss.receipt_number LIKE ? OR ss.customer_name LIKE ? OR ss.seller_name LIKE ?)"
+        params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
+    
+    query += " ORDER BY ss.sale_date DESC, ss.id DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    
+    return dicts_from_rows(db.execute(query, params).fetchall())
+
+
+def get_store_sale_items(sale_id):
+    """جلب عناصر فاتورة مبيعة"""
+    db = get_db()
+    return dicts_from_rows(db.execute("""
+        SELECT 
+            ss.id, ss.product_id, ss.quantity, ss.unit_price, ss.discount,
+            ss.total as line_total, p.name as product_name, p.sku, p.barcode
+        FROM store_sales ss
+        JOIN products p ON p.id = ss.product_id
+        WHERE ss.id = ?
+        ORDER BY ss.id ASC
+    """, [sale_id]).fetchall())
 
 
 # ============================================================

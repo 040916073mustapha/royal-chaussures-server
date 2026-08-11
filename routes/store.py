@@ -13,7 +13,7 @@ from database.db import (
     get_products, get_product, get_product_by_barcode, get_product_by_sku,
     create_product, update_product, search_products,
     get_inventory, update_inventory, deduct_store_inventory, get_low_stock_items,
-    create_sale, get_store_sales, get_store_daily_summary,
+    create_sale, get_store_sales, get_store_sale_items, get_store_daily_summary,
     create_expense, get_expenses,
     create_purchase_with_items, get_purchases, get_purchase_items
 )
@@ -477,6 +477,51 @@ def generate_demo_data():
         })
     
     return jsonify({"articles": result})
+
+
+# ============================================================
+# 📋 Sales List (Liste des ventes)
+# ============================================================
+
+@store_bp.route("/sales", methods=["GET"])
+@store_manager_required
+def list_sales():
+    """جلب المبيعات مع فلترة"""
+    store_id = g.current_user.get("store_id") or request.args.get("store_id", type=int)
+    
+    filters = {
+        "store_id": store_id,
+        "from_date": request.args.get("date_from"),
+        "to_date": request.args.get("date_to"),
+        "code": request.args.get("code"),
+        "client": request.args.get("client"),
+        "vendeur": request.args.get("vendeur"),
+        "cancelled": request.args.get("cancelled") == "1",
+        "credit": request.args.get("credit") == "1",
+        "search": request.args.get("q"),
+        "limit": int(request.args.get("limit", 500)),
+        "offset": int(request.args.get("offset", 0))
+    }
+    
+    sales = get_store_sales(**filters)
+    return jsonify({"sales": sales, "count": len(sales)})
+
+
+@store_bp.route("/sales/<int:sale_id>", methods=["GET"])
+@store_manager_required
+def get_sale_detail(sale_id):
+    """جلب تفاصيل فاتورة + عناصرها"""
+    items = get_store_sale_items(sale_id)
+    
+    # Get the sale header
+    from database.db import get_db, dict_from_row
+    db = get_db()
+    sale = dict_from_row(db.execute("SELECT * FROM store_sales WHERE id = ?", [sale_id]).fetchone())
+    
+    if not sale:
+        return jsonify({"error": "Vente introuvable"}), 404
+    
+    return jsonify({"sale": sale, "items": items, "count": len(items)})
 
 
 # ============================================================

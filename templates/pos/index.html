@@ -296,6 +296,77 @@
         .purchase-footer .pf-shortcut{background:#fff8dc;border:1px solid #e0c840;border-radius:3px;padding:1px 6px;font-weight:700;font-size:10px;color:#5a4a00}
         .purchase-footer .pf-key{background:#f0e68c;border:1px solid #d4c020;border-radius:3px;padding:1px 5px;font-weight:700;font-size:10px;color:#5a4a00}
         
+        /* Sales List View */
+        .saleslist-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
+        .saleslist-top{background:#f5efe0;border-bottom:2px solid #d4c5a9;padding:8px 16px;display:flex;align-items:center;justify-content:space-between}
+        .saleslist-top .slt-left{display:flex;align-items:center;gap:12px}
+        .saleslist-top .slt-left .slt-icon{width:44px;height:44px;background:#3498db;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px}
+        .saleslist-top .slt-left h2{font-size:20px;font-weight:800}
+        .saleslist-top .slt-left .slt-count{background:#2c3e50;color:#fff;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600}
+        .saleslist-top .slt-right{display:flex;align-items:center;gap:8px}
+        .saleslist-top .slt-right .slt-search-btn{padding:8px 16px;background:var(--accent-blue);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;gap:5px}
+        .saleslist-body{display:flex;flex:1;overflow:hidden}
+        .saleslist-table-section{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px}
+        .saleslist-toolbar{display:flex;gap:4px;margin-bottom:5px}
+        .sl-toolbar-btn{padding:6px 12px;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:0.1s;display:flex;align-items:center;gap:5px}
+        .sl-toolbar-btn.btn-new{background:var(--accent-green);color:#fff}
+        .sl-toolbar-btn.btn-new:hover{background:var(--accent-green-dark)}
+        .sl-toolbar-btn.btn-edit{background:#f39c12;color:#fff}
+        .sl-toolbar-btn.btn-edit:hover{background:#d68910}
+        .sl-toolbar-btn.btn-print{background:#3498db;color:#fff}
+        .sl-toolbar-btn.btn-print:hover{background:var(--accent-blue-dark)}
+        .sl-toolbar-btn.btn-delete{background:#e74c3c;color:#fff}
+        .sl-toolbar-btn.btn-delete:hover{background:#c0392b}
+        .sl-toolbar-btn.btn-export{background:#6c5ce7;color:#fff}
+        .sl-toolbar-btn.btn-export:hover{background:#5a4bd1}
+        .sl-toolbar-btn:disabled{opacity:0.4;cursor:default}
+        .saleslist-table-wrap{flex:1;overflow:auto;background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-sm)}
+        .saleslist-table-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+        .saleslist-table-wrap thead{position:sticky;top:0;z-index:2}
+        .saleslist-table-wrap th{background:#f0f2f5;border-bottom:2px solid var(--border-color);padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text-secondary);white-space:nowrap;text-transform:uppercase}
+        .saleslist-table-wrap th:first-child{width:32px;text-align:center}
+        .saleslist-table-wrap td{padding:5px 8px;border-bottom:1px solid var(--border-light);font-size:12px;white-space:nowrap}
+        .saleslist-table-wrap td:first-child{text-align:center}
+        .saleslist-table-wrap .state-badge{padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block}
+        .saleslist-table-wrap .state-badge.completed{background:#d5f5e3;color:#1e8449}
+        .saleslist-table-wrap .state-badge.cancelled{background:#fadbd8;color:#c0392b}
+        .saleslist-table-wrap .state-badge.credit{background:#fef9e7;color:#b7950b}
+        .saleslist-table-wrap .no-items{text-align:center;padding:40px;color:var(--text-secondary);font-size:13px}
+        .saleslist-table-wrap .no-items i{font-size:40px;opacity:0.15;display:block;margin-bottom:8px}
+        .saleslist-table-wrap .sl-row{display:flex;align-items:center;gap:4px}
+        .saleslist-table-wrap .sl-row .btn-icon{border:none;background:none;cursor:pointer;color:var(--text-secondary);padding:2px;font-size:12px}
+        .saleslist-table-wrap .sl-row .btn-icon:hover{color:var(--accent-blue)}
+        .saleslist-table-wrap tr.selected{background:#d4e6f9!important;outline:2px solid #3498db}
+        .saleslist-summary{height:38px;min-height:38px;background:#2c3e50;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:13px;font-weight:600}
+        .saleslist-summary .sls-left{display:flex;gap:24px;align-items:center}
+        .saleslist-summary .sls-left span{display:flex;align-items:center;gap:4px}
+        .saleslist-summary .sls-left .sls-val{color:#f1c40f;font-weight:800}
+        .saleslist-summary .sls-right{display:flex;gap:20px}
+        .saleslist-summary .sls-right span{display:flex;align-items:center;gap:4px}
+        .saleslist-summary .sls-right .sls-val{color:#f1c40f;font-weight:800}
+        .saleslist-filter{width:320px;min-width:320px;background:#fff;border-left:1px solid var(--border-color);display:flex;flex-direction:column;overflow-y:auto}
+        .saleslist-filter .slf-header{padding:12px 14px;background:#f5efe0;border-bottom:2px solid #d4c5a9;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+        .saleslist-filter .slf-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+        .slf-group{display:flex;flex-direction:column;gap:3px}
+        .slf-group label{font-size:11px;font-weight:600;color:var(--text-secondary)}
+        .slf-group .slf-row{display:flex;gap:6px}
+        .slf-group input,.slf-group select{padding:7px 8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;flex:1}
+        .slf-group input:focus,.slf-group select:focus{outline:none;border-color:var(--accent-blue)}
+        .slf-group .slf-date{flex:1}
+        .slf-group .slf-checkbox{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
+        .slf-group .slf-checkbox input{width:16px;height:16px}
+        .slf-actions{display:flex;gap:6px;margin-top:4px}
+        .slf-actions button{padding:8px 16px;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;flex:1}
+        .slf-actions .btn-valider-f{background:var(--accent-blue);color:#fff}
+        .slf-actions .btn-valider-f:hover{background:var(--accent-blue-dark)}
+        .slf-actions .btn-annuler-f{background:var(--accent-red);color:#fff}
+        .slf-actions .btn-annuler-f:hover{background:#c0392b}
+        .saleslist-filter .slf-table{flex:1;overflow:auto;margin-top:4px}
+        .saleslist-filter .slf-table table{width:100%;border-collapse:collapse;font-size:11px}
+        .saleslist-filter .slf-table th{background:#f0f2f5;border-bottom:1px solid var(--border-color);padding:4px 6px;font-size:9px;font-weight:700;color:var(--text-secondary);text-align:left}
+        .saleslist-filter .slf-table td{padding:3px 6px;border-bottom:1px solid var(--border-light);font-size:11px}
+        
+        @media(max-width:1100px){.saleslist-filter{width:280px;min-width:280px}.saleslist-body{flex-direction:column}.saleslist-filter{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color);max-height:300px}}
         @media(max-width:900px){.sale-body{flex-direction:column}.sale-control-panel{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color)}.purchase-body{flex-direction:column}.purchase-sidebar{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color)}.home-menu .menu-grid{grid-template-columns:repeat(2,1fr)}.sale-header .sale-total{font-size:22px}.form-row{flex-direction:column}}
     </style>
 </head>
@@ -608,9 +679,100 @@
 
             <!-- SALES LIST -->
             <div class="view-container" id="view-sales-list">
-                <div class="generic-view">
-                    <div class="view-header"><h2>Liste des ventes</h2><p>Historique des factures</p></div>
-                    <div class="placeholder-card"><i class="fas fa-file-invoice"></i><p style="margin-top:10px;color:var(--text-secondary);">Bientot disponible</p></div>
+                <div class="saleslist-view">
+                    <div class="saleslist-top">
+                        <div class="slt-left">
+                            <div class="slt-icon"><i class="fas fa-shopping-cart"></i></div>
+                            <h2>Liste des ventes</h2>
+                            <span class="slt-count" id="sl-total-count">0</span>
+                        </div>
+                        <div class="slt-right">
+                            <input type="text" id="sl-quick-search" placeholder="Rechercher une vente..." style="padding:7px 12px;background:#fff;border:1px solid #b0a080;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;width:200px">
+                            <button class="slt-search-btn" onclick="loadSalesList()"><i class="fas fa-search"></i> Recherche</button>
+                        </div>
+                    </div>
+                    <div class="saleslist-body">
+                        <div class="saleslist-table-section">
+                            <div class="saleslist-toolbar">
+                                <button class="sl-toolbar-btn btn-new" onclick="switchView('sale')"><i class="fas fa-plus-circle"></i> Nouvelle</button>
+                                <button class="sl-toolbar-btn btn-edit" id="sl-btn-edit" disabled><i class="fas fa-edit"></i> Modifier</button>
+                                <button class="sl-toolbar-btn btn-print" id="sl-btn-print" disabled onclick="reprintReceipt()"><i class="fas fa-print"></i> Imprimer ticket</button>
+                                <button class="sl-toolbar-btn btn-delete" id="sl-btn-delete" disabled><i class="fas fa-trash-alt"></i> Supprimer</button>
+                                <button class="sl-toolbar-btn btn-export" onclick="exportSalesList()"><i class="fas fa-download"></i> Exporter</button>
+                            </div>
+                            <div class="saleslist-table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>&Eacute;tat</th>
+                                            <th>Code</th>
+                                            <th>Client</th>
+                                            <th>Vendeur</th>
+                                            <th>Date vente</th>
+                                            <th>Montant total</th>
+                                            <th>Somme vers&eacute;</th>
+                                            <th>Solde</th>
+                                            <th>Total remise</th>
+                                            <th>Cr&eacute;&eacute; le</th>
+                                            <th>Par</th>
+                                            <th>Co&ucirc;t d'achat</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sales-list-table-body">
+                                        <tr><td colspan="13"><div class="no-items"><i class="fas fa-shopping-cart"></i>Aucune vente enregistr&eacute;e</div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="saleslist-summary">
+                                <div class="sls-left">
+                                    <span><i class="fas fa-receipt"></i> Montant total: <span class="sls-val" id="sl-sum-total">0.00 DA</span></span>
+                                    <span><i class="fas fa-coins"></i> Somme vers&eacute;e: <span class="sls-val" id="sl-sum-paid">0.00 DA</span></span>
+                                </div>
+                                <div class="sls-right">
+                                    <span><i class="fas fa-balance-scale"></i> Solde: <span class="sls-val" id="sl-sum-balance">0.00 DA</span></span>
+                                    <span><i class="fas fa-chart-line"></i> Co&ucirc;t d'achat: <span class="sls-val" id="sl-sum-cost">0.00 DA</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="saleslist-filter">
+                            <div class="slf-header"><i class="fas fa-filter"></i> Filtres</div>
+                            <div class="slf-body">
+                                <div class="slf-group">
+                                    <label>P&eacute;riode</label>
+                                    <div class="slf-row">
+                                        <input type="date" id="sl-filter-date-from" class="slf-date" placeholder="Date du">
+                                        <span style="display:flex;align-items:center;color:var(--text-secondary);font-size:12px;">au</span>
+                                        <input type="date" id="sl-filter-date-to" class="slf-date" placeholder="Au">
+                                    </div>
+                                </div>
+                                <div class="slf-group">
+                                    <label>Code vente</label>
+                                    <input type="text" id="sl-filter-code" placeholder="Code vente...">
+                                </div>
+                                <div class="slf-group">
+                                    <label>Code article</label>
+                                    <input type="text" id="sl-filter-article" placeholder="Code article...">
+                                </div>
+                                <div class="slf-group">
+                                    <label>Client</label>
+                                    <input type="text" id="sl-filter-client" placeholder="Nom client...">
+                                </div>
+                                <div class="slf-group">
+                                    <label>Vendeur</label>
+                                    <input type="text" id="sl-filter-vendeur" placeholder="Vendeur...">
+                                </div>
+                                <div class="slf-group">
+                                    <label class="slf-checkbox"><input type="checkbox" id="sl-filter-cancelled"> Afficher les ventes annul&eacute;es</label>
+                                    <label class="slf-checkbox"><input type="checkbox" id="sl-filter-credit"> Ventes en cr&eacute;dit</label>
+                                </div>
+                                <div class="slf-actions">
+                                    <button class="btn-valider-f" onclick="loadSalesList()"><i class="fas fa-check"></i> Valider</button>
+                                    <button class="btn-annuler-f" onclick="resetSalesFilter()"><i class="fas fa-times"></i> Annuler</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
