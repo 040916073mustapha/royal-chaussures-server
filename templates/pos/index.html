@@ -78,8 +78,8 @@
         .sale-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
         .sale-header{background:#1e293b;border-bottom:2px solid #334155;padding:8px 16px;display:flex;align-items:center;justify-content:space-between}
         .sale-header .sale-info{display:flex;align-items:center;gap:20px}
-        .sale-header .sale-info .receipt-no{font-size:16px;font-weight:800;color:#f8fafc}
-        .sale-header .sale-info .receipt-no span{color:#60a5fa}
+        .sale-header .sale-info .receipt-no{font-size:15px;font-weight:700;color:#f8fafc;letter-spacing:0.5px}
+        .sale-header .sale-info .receipt-no span{color:#fbbf24;font-weight:800}
         .sale-header .sale-info .sale-date{font-size:12px;color:#94a3b8}
         .sale-header .sale-total{font-size:28px;font-weight:900;color:#4ade80;letter-spacing:1px}
         .sale-body{display:flex;flex:1;overflow:hidden}
@@ -88,9 +88,9 @@
         .sale-table-wrap table{width:100%;border-collapse:collapse;font-size:13px}
         .sale-table-wrap thead{position:sticky;top:0;z-index:2}
         .sale-table-wrap th{background:#f0f2f5;border-bottom:2px solid var(--border-color);padding:7px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--text-secondary);white-space:nowrap}
-        .sale-table-wrap th:first-child{width:40px;text-align:center}
-        .sale-table-wrap th:nth-child(2){width:110px}
-        .sale-table-wrap th:nth-child(4){width:60px;text-align:center}
+        .sale-table-wrap th:first-child{width:35px;text-align:center}
+        .sale-table-wrap th:nth-child(2){width:100px}
+        .sale-table-wrap th:nth-child(4){width:55px;text-align:center}
         .sale-table-wrap th:nth-child(5){width:90px;text-align:right}
         .sale-table-wrap th:nth-child(6){width:70px;text-align:right}
         .sale-table-wrap th:nth-child(7){width:90px;text-align:right}
@@ -573,7 +573,7 @@
                 <div class="sale-view">
                     <div class="sale-header">
                         <div class="sale-info">
-                            <div class="receipt-no">Vente N&deg; <span id="sale-receipt-no">000000001</span></div>
+                            <div class="receipt-no">Vente N&deg;1 / <span id="sale-receipt-no">000022026</span></div>
                             <div class="sale-date" id="sale-date"></div>
                         </div>
                         <div class="sale-total" id="sale-total-display">0.00 DA</div>
@@ -607,6 +607,11 @@
                                     <button class="btn-barcode-add" onclick="addBarcodeItem()" title="Ajouter"><i class="fas fa-plus"></i></button>
                                 </div>
                             </div>
+                            <div class="sale-actions-top" style="display:flex;gap:4px;margin-bottom:6px;">
+                                <button class="action-btn" onclick="showToast('Nouveau retour - en developpement','error')" style="flex:1;padding:8px;background:#e67e22;color:#fff;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+                                    <i class="fas fa-undo-alt"></i> Nouveau Retour
+                                </button>
+                            </div>
                             <div class="sale-fields" style="gap:4px;">
                                 <div class="field-row">
                                     <label>Client</label>
@@ -626,22 +631,22 @@
                                 </div>
                             </div>
                             <div class="sale-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:6px 0;">
-                                <button class="action-btn btn-valider" onclick="completeSale()" style="grid-column:1/-1;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-                                    <i class="fas fa-check-circle"></i> Valider <span style="font-size:10px;opacity:0.7;">[F1]</span>
+                                <button class="action-btn btn-valider" onclick="completeSale()" style="grid-column:1/-1;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+                                    <i class="fas fa-check-circle"></i> Valider <span style="font-size:10px;opacity:0.6;">[F1]</span>
                                 </button>
-                                <button class="action-btn" onclick="quitSale()" style="padding:10px;background:#dc2626;color:#fff;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
-                                    <i class="fas fa-times-circle"></i> Quitter
+                                <button class="action-btn" onclick="quitSale()" style="padding:10px;background:#e67e22;color:#fff;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                                    <i class="fas fa-times-circle"></i> Annuler
                                 </button>
-                                <button class="action-btn" onclick="adjustSelectedQty(1)" style="padding:10px;background:#2563eb;color:#fff;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+                                <button class="action-btn" onclick="adjustSelectedQty(1)" style="padding:10px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
                                     <i class="fas fa-plus"></i> Qte +1
                                 </button>
-                                <button class="action-btn" onclick="adjustSelectedQty(-1)" style="padding:10px;background:#475569;color:#fff;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+                                <button class="action-btn" onclick="adjustSelectedQty(-1)" style="padding:10px;background:#475569;color:#fff;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
                                     <i class="fas fa-minus"></i> Qte -1
                                 </button>
-                                <button class="action-btn" onclick="showToast('Impression code barre - en developpement','error')" style="padding:10px;background:#7c3aed;color:#fff;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+                                <button class="action-btn" onclick="showToast('Impression code barre - en developpement','error')" style="padding:10px;background:#3498db;color:#fff;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
                                     <i class="fas fa-print"></i> Imprimer CB
                                 </button>
-                                <button class="action-btn" onclick="removeSelectedCartItem()" style="padding:10px;background:#b91c1c;color:#fff;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+                                <button class="action-btn" onclick="removeSelectedCartItem()" style="padding:10px;background:#c0392b;color:#fff;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
                                     <i class="fas fa-trash-alt"></i> Suppr. ligne
                                 </button>
                             </div>
@@ -649,7 +654,7 @@
                                 <button class="numpad-btn" onclick="numpadInput('7')" style="padding:8px 0;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:var(--text-primary);">7</button>
                                 <button class="numpad-btn" onclick="numpadInput('8')" style="padding:8px 0;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:var(--text-primary);">8</button>
                                 <button class="numpad-btn" onclick="numpadInput('9')" style="padding:8px 0;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:var(--text-primary);">9</button>
-                                <button class="numpad-btn calc" onclick="numpadInput('calc')" style="padding:8px 0;background:#e8f4fd;color:var(--accent-blue);border:1px solid #c5ddf5;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;"><i class="fas fa-calculator"></i></button>
+                                <button class="numpad-btn calc" onclick="numpadInput('calc')" style="padding:8px 0;background:#e8f4fd;color:var(--accent-blue);border:1px solid #c5ddf5;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Calculette</button>
                                 <button class="numpad-btn" onclick="numpadInput('4')" style="padding:8px 0;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:var(--text-primary);">4</button>
                                 <button class="numpad-btn" onclick="numpadInput('5')" style="padding:8px 0;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:var(--text-primary);">5</button>
                                 <button class="numpad-btn" onclick="numpadInput('6')" style="padding:8px 0;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:var(--text-primary);">6</button>
