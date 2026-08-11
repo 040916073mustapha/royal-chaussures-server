@@ -414,6 +414,75 @@
         .saleslist-filter .slf-table th{background:#f0f2f5;border-bottom:1px solid var(--border-color);padding:4px 6px;font-size:9px;font-weight:700;color:var(--text-secondary);text-align:left}
         .saleslist-filter .slf-table td{padding:3px 6px;border-bottom:1px solid var(--border-light);font-size:11px}
         
+
+        /* Liste des articles (Mofidoc-style) */
+        .article-list-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
+        .article-header{background:#f0f4ff;border-bottom:2px solid #3b82f6;padding:8px 16px;display:flex;align-items:center;justify-content:space-between}
+        .article-header-left{display:flex;align-items:center;gap:12px}
+        .article-header-icon{width:40px;height:40px;background:#3b82f6;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px}
+        .article-header-left h2{font-size:18px;font-weight:700;color:#1e3a5f}
+        .article-count{background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600}
+        .article-body{display:flex;flex:1;overflow:hidden}
+        .article-table-section{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px}
+        .article-toolbar{display:flex;gap:3px;margin-bottom:5px;flex-wrap:wrap;background:#f0f2f5;padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--border-color)}
+        .art-btn{padding:5px 10px;border:none;border-radius:3px;font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:0.1s;display:flex;align-items:center;gap:4px}
+        .art-btn:disabled{opacity:0.4;cursor:default}
+        .art-btn-add{background:#3b82f6;color:#fff}
+        .art-btn-add:hover{background:#2563eb}
+        .art-btn-edit{background:#f59e0b;color:#fff}
+        .art-btn-edit:hover{background:#d97706}
+        .art-btn-del{background:#ef4444;color:#fff}
+        .art-btn-del:hover{background:#dc2626}
+        .art-btn-stock{background:#8b5cf6;color:#fff}
+        .art-btn-stock:hover{background:#7c3aed}
+        .art-btn-print{background:#6b7280;color:#fff}
+        .art-btn-print:hover{background:#4b5563}
+        .art-btn-remise{background:#ec4899;color:#fff}
+        .art-btn-remise:hover{background:#db2777}
+        .art-btn-export{background:#14b8a6;color:#fff}
+        .art-btn-export:hover{background:#0d9488}
+        .art-btn-import{background:#6366f1;color:#fff}
+        .art-btn-import:hover{background:#4f46e5}
+        .article-table-wrap{flex:1;overflow:auto;background:#fff;border:1px solid var(--border-color);border-radius:3px}
+        .article-table-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+        .article-table-wrap thead{position:sticky;top:0;z-index:2}
+        .article-table-wrap th{background:#f8fafc;border-bottom:2px solid var(--border-color);padding:6px 6px;text-align:left;font-size:10px;font-weight:700;color:var(--text-secondary);white-space:nowrap}
+        .article-table-wrap th.col-qte{background:#dcfce7}
+        .article-table-wrap td{padding:5px 6px;border-bottom:1px solid var(--border-light);font-size:12px;white-space:nowrap}
+        .article-table-wrap td:first-child{text-align:center;color:var(--text-secondary);font-size:11px}
+        .article-table-wrap td:nth-child(4){text-align:center;font-weight:700;background:#f0fdf4}
+        .article-table-wrap td:nth-child(5){text-align:center}
+        .article-table-wrap td:nth-child(7){text-align:right;color:#dc2626}
+        .article-table-wrap td:nth-child(8){text-align:right;font-weight:700;color:#1e40af}
+        .article-table-wrap td:nth-child(9){text-align:right;color:#059669}
+        .article-table-wrap td:nth-child(10){text-align:center}
+        .article-table-wrap td:nth-child(11){text-align:center}
+        .article-table-wrap tr.selected{background:#dbeafe!important;outline:2px solid #3b82f6}
+        .article-table-wrap tr:hover{background:#f8fafc}
+        .article-table-wrap .no-items{text-align:center;padding:40px;color:var(--text-secondary);font-size:13px}
+        .article-table-wrap .no-items i{font-size:40px;opacity:0.15;display:block;margin-bottom:8px}
+        .qte-rupture{color:#dc2626;font-weight:700}
+        .qte-low{color:#f59e0b;font-weight:600}
+        .qte-ok{color:#16a34a;font-weight:600}
+        .article-summary{height:32px;min-height:32px;background:#f0f4ff;border-top:2px solid #3b82f6;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:12px;font-weight:600;color:var(--text-primary)}
+        .article-summary strong{color:#3b82f6;font-weight:800}
+        .article-filter{width:280px;min-width:280px;background:#fff;border-left:1px solid var(--border-color);display:flex;flex-direction:column;overflow-y:auto}
+        .article-filter .af-header{padding:10px 12px;background:#f8fafc;border-bottom:1px solid var(--border-color);font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;color:#3b82f6}
+        .article-filter .af-body{padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+        .af-group{display:flex;flex-direction:column;gap:3px}
+        .af-group label{font-size:11px;font-weight:600;color:var(--text-secondary)}
+        .af-group .af-row{display:flex;gap:4px;align-items:center}
+        .af-group input,.af-group select{padding:6px 8px;background:#fff;border:1px solid var(--border-color);border-radius:3px;font-family:Inter,sans-serif;font-size:12px;flex:1}
+        .af-group input:focus,.af-group select:focus{outline:none;border-color:#3b82f6}
+        .af-actions{display:flex;gap:4px;margin-top:4px}
+        .af-actions button{padding:6px 12px;border:none;border-radius:3px;font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;flex:1}
+        .btn-af-valider{background:#3b82f6;color:#fff}
+        .btn-af-valider:hover{background:#2563eb}
+        .btn-af-vider{background:#94a3b8;color:#fff}
+        .btn-af-vider:hover{background:#64748b}
+        .photo-icon{color:#94a3b8;font-size:14px}
+        .photo-icon.has-photo{color:#22c55e}
+        @media(max-width:1100px){.article-filter{width:240px;min-width:240px}.article-body{flex-direction:column}.article-filter{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color);max-height:250px}}
         @media(max-width:1100px){.saleslist-filter{width:280px;min-width:280px}.saleslist-body{flex-direction:column}.saleslist-filter{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color);max-height:300px}}
         @media(max-width:900px){.sale-body{flex-direction:column}.sale-control-panel{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color)}.purchase-body{flex-direction:column}.purchase-sidebar{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color)}.home-menu .menu-grid{grid-template-columns:repeat(2,1fr)}.sale-header .sale-total{font-size:22px}.form-row{flex-direction:column}}
     </style>
@@ -716,16 +785,93 @@
                 </div>
             </div>
 
-            <!-- PRODUCTS -->
+            <!-- PRODUCTS (Liste des articles) -->
             <div class="view-container" id="view-products">
-                <div class="generic-view">
-                    <div class="view-header"><h2>Liste des produits</h2><p>Catalogue complet du magasin</p></div>
-                    <div style="margin-bottom:14px;"><input type="text" id="products-search" placeholder="Rechercher..." style="width:100%;max-width:400px;padding:10px 14px;background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:14px;"></div>
-                    <div class="products-table-wrap">
-                        <table>
-                            <thead><tr><th>Produit</th><th>Couleur</th><th>Prix magasin</th><th>Stock</th></tr></thead><tbody id="products-table-body"><tr><td colspan="4" style="padding:30px;text-align:center;color:var(--text-secondary);">Chargement...</td></tr></tbody></table></div></div></div>
+                <div class="article-list-view">
+                    <div class="article-header">
+                        <div class="article-header-left">
+                            <div class="article-header-icon"><i class="fas fa-box"></i></div>
+                            <h2>Liste des articles</h2>
+                            <span class="article-count" id="article-total-badge">0</span>
+                        </div>
+                    </div>
+                    <div class="article-body">
+                        <div class="article-table-section">
+                            <div class="article-toolbar">
+                                <button class="art-btn art-btn-add" onclick="openArticleModal()"><i class="fas fa-plus-circle"></i> Ajouter</button>
+                                <button class="art-btn art-btn-edit" id="art-btn-edit" disabled onclick="editSelectedArticle()"><i class="fas fa-edit"></i> Modifier</button>
+                                <button class="art-btn art-btn-del" id="art-btn-del" disabled onclick="deleteSelectedArticle()"><i class="fas fa-trash-alt"></i> Supprimer</button>
+                                <button class="art-btn art-btn-stock" id="art-btn-stock" disabled><i class="fas fa-cubes"></i> Gestion stock</button>
+                                <button class="art-btn art-btn-print" id="art-btn-print" disabled><i class="fas fa-print"></i> Imprimer</button>
+                                <button class="art-btn art-btn-remise" id="art-btn-remise" disabled><i class="fas fa-percent"></i> Remise</button>
+                                <button class="art-btn art-btn-export" onclick="exportArticles()"><i class="fas fa-download"></i> Exporter</button>
+                                <button class="art-btn art-btn-import" onclick="importArticles()"><i class="fas fa-upload"></i> Importer</button>
+                            </div>
+                            <div class="article-table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:38px;text-align:center;">Pos</th>
+                                            <th style="width:90px;">Code</th>
+                                            <th>Designation</th>
+                                            <th style="width:80px;text-align:center;" class="col-qte">Qte Dispo.</th>
+                                            <th style="width:50px;text-align:center;">Photo</th>
+                                            <th style="width:80px;">Famille</th>
+                                            <th style="width:95px;text-align:right;">Prix achat</th>
+                                            <th style="width:100px;text-align:right;">Prix vente</th>
+                                            <th style="width:105px;text-align:right;">Px Revendeur</th>
+                                            <th style="width:85px;text-align:center;">Stock alerte</th>
+                                            <th style="width:70px;text-align:center;">Remise</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="articles-table-body">
+                                        <tr><td colspan="11"><div class="no-items"><i class="fas fa-box-open"></i>Aucun article trouve</div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="article-summary">
+                                <div class="as-left">
+                                    <span><i class="fas fa-cubes"></i> Total Qte: <strong id="article-sum-qty">0</strong></span>
+                                </div>
+                                <div class="as-right">
+                                    <span><i class="fas fa-tags"></i> Total Articles: <strong id="article-sum-total">0</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="article-filter">
+                            <div class="af-header"><i class="fas fa-search"></i> Recherche</div>
+                            <div class="af-body">
+                                <div class="af-group">
+                                    <label>Prix de / a</label>
+                                    <div class="af-row">
+                                        <input type="number" id="af-prix-de" placeholder="de" min="0" step="0.01">
+                                        <span style="color:var(--text-secondary);font-size:12px;">/</span>
+                                        <input type="number" id="af-prix-a" placeholder="a" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="af-group">
+                                    <label>Code barre</label>
+                                    <input type="text" id="af-cb" placeholder="Code barre...">
+                                </div>
+                                <div class="af-group">
+                                    <label>Designation</label>
+                                    <input type="text" id="af-designation" placeholder="Article...">
+                                </div>
+                                <div class="af-group">
+                                    <label>Famille</label>
+                                    <input type="text" id="af-famille" placeholder="Famille...">
+                                </div>
+                                <div class="af-actions">
+                                    <button class="btn-af-valider" onclick="filterArticles()"><i class="fas fa-search"></i> Chercher</button>
+                                    <button class="btn-af-vider" onclick="clearFilterArticles()"><i class="fas fa-eraser"></i> Vider champs</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <!-- SALES LIST -->
+            <!-- SALES LIST -->            <!-- SALES LIST -->
             <div class="view-container" id="view-sales-list">
                 <div class="saleslist-view">
                     <div class="saleslist-top">

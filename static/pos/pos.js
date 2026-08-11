@@ -1,6 +1,6 @@
 /** Royal POS — JS Engine */
 var STATE={token:null,user:null,cart:[],products:[],allProducts:[],categories:new Set(),selectedPayment:'cash',lastSale:null,isOffline:false,pendingSales:JSON.parse(localStorage.getItem('pos_pending')||'[]'),_lastBarcodeTime:0,_barcodeBuffer:''};
-var API=(()=>{const b='/api/v1/store';return{headers:()=>({'Content-Type':'application/json','Authorization':'Bearer '+(STATE.token||'')}),async login(u,p){const r=await fetch(b+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});return r.json()},async getProducts(){const r=await fetch(b+'/products',{headers:this.headers()});return r.json()},async searchProducts(q){const r=await fetch(b+'/products/search?q='+encodeURIComponent(q)+'&limit=50',{headers:this.headers()});return r.json()},async getByBarcode(code){const r=await fetch(b+'/products/barcode/'+encodeURIComponent(code),{headers:this.headers()});return r.json()},async recordSale(d){if(STATE.isOffline)return this._saveOffline(d);const r=await fetch(b+'/sales',{method:'POST',headers:this.headers(),body:JSON.stringify(d)});const res=await r.json();if(!r.ok&&res.error&&(res.error.includes('timeout')||r.status>=500))return this._saveOffline(d);return res},async _saveOffline(d){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');p.push({...d,_offlineId:Date.now(),_createdAt:new Date().toISOString()});localStorage.setItem('pos_pending',JSON.stringify(p));return{sale:{receipt_number:'OFFLINE-'+Date.now(),total:d.total||0},_offline:true}},async syncPending(){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');if(!p.length)return;const s=[];for(const x of p){try{const r=await fetch(b+'/sales',{method:'POST',headers:this.headers(),body:JSON.stringify(x)});if(!r.ok)s.push(x)}catch{s.push(x)}}localStorage.setItem('pos_pending',JSON.stringify(s))}}})();
+var API=(()=>{const b='/api/v1/store';return{headers:()=>({'Content-Type':'application/json','Authorization':'Bearer '+(STATE.token||'')}),async login(u,p){const r=await fetch(b+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});return r.json()},async getProducts(){const r=await fetch(b+'/products',{headers:this.headers()});return r.json()},async searchProducts(q){const r=await fetch(b+'/products/search?q='+encodeURIComponent(q)+'&limit=50',{headers:this.headers()});return r.json()},async getByBarcode(code){const r=await fetch(b+'/products/barcode/'+encodeURIComponent(code),{headers:this.headers()});return r.json()},async recordSale(d){if(STATE.isOffline)return this._saveOffline(d);const r=await fetch(b+'/sales',{method:'POST',headers:this.headers(),body:JSON.stringify(d)});const res=await r.json();if(!r.ok&&res.error&&(res.error.includes('timeout')||r.status>=500))return this._saveOffline(d);return res},async _saveOffline(d){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');p.push({...d,_offlineId:Date.now(),_createdAt:new Date().toISOString()});localStorage.setItem('pos_pending',JSON.stringify(p));return{sale:{receipt_number:'OFFLINE-'+Date.now(),total:d.total||0},_offline:true}},async getPosProducts(){const r=await fetch('/api/v1/store/pos/products',{headers:this.headers()});return r.json()},async syncPending(){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');if(!p.length)return;const s=[];for(const x of p){try{const r=await fetch(b+'/sales',{method:'POST',headers:this.headers(),body:JSON.stringify(x)});if(!r.ok)s.push(x)}catch{s.push(x)}}localStorage.setItem('pos_pending',JSON.stringify(s))}}})();
 
 function startClock(){function u(){const n=new Date();const e=document.getElementById('digital-clock');if(e)e.textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0')}u();setInterval(u,1000)}
 
@@ -66,7 +66,139 @@ function closeModal(id){document.getElementById(id).classList.remove('active')}
 document.getElementById('payment-modal')?.addEventListener('click',function(e){if(e.target===this)closeModal('payment-modal')});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal('payment-modal');if(e.key==='F1'){e.preventDefault();completeSale()};if(e.key==='F2'){e.preventDefault();document.getElementById('sale-barcode')?.focus()}});
 
-function renderProductsTable(){const t=document.getElementById('products-table-body');if(!t)return;if(!STATE.allProducts?.length){t.innerHTML='<tr><td colspan="4" style="padding:30px;text-align:center;color:var(--text-secondary);">Aucun produit</td></tr>';return}t.innerHTML=STATE.allProducts.map(p=>{const s=p.store_quantity||0;let ss='',st=''+s;if(s<=0){ss='color:var(--accent-red);';st='Rupture'}else if(s<=5){ss='color:var(--accent-orange);'};return'<tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 14px;font-weight:500;">'+p.name+'</td><td style="padding:10px 14px;color:var(--text-secondary);">'+(p.color||'---')+'</td><td style="padding:10px 14px;color:var(--accent-blue-dark);font-weight:700;">'+(p.store_price||p.online_price||0).toLocaleString()+' DA</td><td style="padding:10px 14px;'+ss+'font-weight:500;">'+st+'</td></tr>'}).join('');const si=document.getElementById('products-search');if(si){si.oninput=function(){const q=this.value.toLowerCase();t.querySelectorAll('tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'})}}}
+var ARTICLES_DATA=[];var ARTICLES_SELECTED=null;
+
+async function renderProductsTable(){
+    const t=document.getElementById('articles-table-body');
+    if(!t)return;
+    try{
+        const res=await API.getPosProducts();
+        ARTICLES_DATA=res.products||[];
+        document.getElementById('article-total-badge').textContent=res.total_articles||0;
+    }catch(e){
+        ARTICLES_DATA=[];
+        showToast('Erreur chargement articles','error');
+    }
+    renderArticleTableRows();
+}
+
+function renderArticleTableRows(filteredData){
+    const t=document.getElementById('articles-table-body');
+    if(!t)return;
+    const data=filteredData||ARTICLES_DATA;
+    if(!data.length){
+        t.innerHTML='<tr><td colspan="11"><div class="no-items"><i class="fas fa-box-open"></i>Aucun article trouve</div></td></tr>';
+        document.getElementById('article-sum-qty').textContent='0';
+        document.getElementById('article-sum-total').textContent='0';
+        return;
+    }
+    let totalQty=0;
+    t.innerHTML=data.map(function(p,i){
+        const q=p.total_quantity||p.store_quantity||0;
+        totalQty+=q;
+        var qcls='qte-ok',qdisp=q;
+        if(q<=0){qcls='qte-rupture';qdisp=0}
+        else if(q<=5){qcls='qte-low'}
+        var ph='<i class="fas fa-camera photo-icon'+(p.image_url?' has-photo':'')+'"></i>';
+        var pa=p.cost_price||0;
+        var pv=p.store_price||p.online_price||0;
+        var pr=p.store_price||0;
+        var sa=p.low_stock_threshold||5;
+        var rm=p.remise_pct||0;
+        var cat=p.category||'---';
+        return '<tr onclick="selectArticleRow(this,'+p.id+')" data-id="'+p.id+'">'+
+            '<td>'+(i+1)+'</td>'+
+            '<td>'+(p.sku||'---')+'</td>'+
+            '<td>'+(p.name||'')+'</td>'+
+            '<td class="'+qcls+'">'+qdisp+'</td>'+
+            '<td>'+ph+'</td>'+
+            '<td>'+cat+'</td>'+
+            '<td>'+pa.toLocaleString()+'</td>'+
+            '<td>'+pv.toLocaleString()+'</td>'+
+            '<td>'+pr.toLocaleString()+'</td>'+
+            '<td>'+(q<=sa?'<span style="color:#dc2626;font-weight:700;"><i class="fas fa-exclamation-triangle"></i>'+sa+'</span>':sa)+'</td>'+
+            '<td>'+(rm>0?rm+'%':'---')+'</td>'+
+            '</tr>';
+    }).join('');
+    document.getElementById('article-sum-qty').textContent=totalQty;
+    document.getElementById('article-sum-total').textContent=data.length;
+    ARTICLES_SELECTED=null;
+    document.getElementById('art-btn-edit').disabled=true;
+    document.getElementById('art-btn-del').disabled=true;
+    document.getElementById('art-btn-stock').disabled=true;
+    document.getElementById('art-btn-print').disabled=true;
+    document.getElementById('art-btn-remise').disabled=true;
+}
+
+function selectArticleRow(row,id){
+    document.querySelectorAll('#articles-table-body tr').forEach(function(r){r.classList.remove('selected')});
+    row.classList.add('selected');
+    ARTICLES_SELECTED=id;
+    document.getElementById('art-btn-edit').disabled=false;
+    document.getElementById('art-btn-del').disabled=false;
+    document.getElementById('art-btn-stock').disabled=false;
+    document.getElementById('art-btn-print').disabled=false;
+    document.getElementById('art-btn-remise').disabled=false;
+}
+
+function filterArticles(){
+    var de=document.getElementById('af-prix-de').value;
+    var a=document.getElementById('af-prix-a').value;
+    var cb=document.getElementById('af-cb').value.toLowerCase().trim();
+    var des=document.getElementById('af-designation').value.toLowerCase().trim();
+    var fam=document.getElementById('af-famille').value.toLowerCase().trim();
+    var filtered=ARTICLES_DATA.filter(function(p){
+        if(de&&(p.store_price||0)<parseFloat(de))return false;
+        if(a&&(p.store_price||0)>parseFloat(a))return false;
+        if(cb&&!(p.barcode||'').toLowerCase().includes(cb))return false;
+        if(des&&!(p.name||'').toLowerCase().includes(des))return false;
+        if(fam&&!(p.category||'').toLowerCase().includes(fam))return false;
+        return true;
+    });
+    renderArticleTableRows(filtered);
+}
+
+function clearFilterArticles(){
+    document.getElementById('af-prix-de').value='';
+    document.getElementById('af-prix-a').value='';
+    document.getElementById('af-cb').value='';
+    document.getElementById('af-designation').value='';
+    document.getElementById('af-famille').value='';
+    renderArticleTableRows(ARTICLES_DATA);
+}
+
+function openArticleModal(){
+    showToast('Ajout article - en developpement','error');
+}
+
+function editSelectedArticle(){
+    if(!ARTICLES_SELECTED){showToast('Selectionnez un article','error');return}
+    showToast('Modification article #'+ARTICLES_SELECTED+' - en developpement','error');
+}
+
+function deleteSelectedArticle(){
+    if(!ARTICLES_SELECTED){showToast('Selectionnez un article','error');return}
+    if(!confirm('Supprimer cet article ?'))return;
+    showToast('Suppression - en developpement','error');
+}
+
+function exportArticles(){
+    if(!ARTICLES_DATA.length){showToast('Aucun article a exporter','error');return}
+    var csv='Pos,Code,Designation,Qte,Photo,Famille,Prix achat,Prix vente,Px Revendeur,Stock alerte,Remise\n';
+    ARTICLES_DATA.forEach(function(p,i){
+        csv+=(i+1)+','+(p.sku||'')+','+(p.name||'')+','+(p.total_quantity||0)+',,'+(p.category||'')+','+(p.cost_price||0)+','+(p.store_price||0)+','+(p.store_price||0)+','+(p.low_stock_threshold||5)+','+(p.remise_pct||0)+'\n';
+    });
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    var link=document.createElement('a');
+    link.href=URL.createObjectURL(blob);
+    link.download='articles_'+new Date().toISOString().slice(0,10)+'.csv';
+    link.click();
+    showToast('Exporte: '+ARTICLES_DATA.length+' articles','success');
+}
+
+function importArticles(){
+    showToast('Import - en developpement','error');
+}
 
 function updateConnectionStatus(){const d=document.getElementById('conn-dot');const t=document.getElementById('conn-text');function c(){const o=navigator.onLine;if(d)d.className='dot '+(o?'online':'offline');if(t)t.textContent=o?'Connecte':'Hors ligne';STATE.isOffline=!o}c();window.addEventListener('online',c);window.addEventListener('offline',c)}
 

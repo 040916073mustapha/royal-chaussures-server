@@ -915,6 +915,55 @@ def api_products():
     return json_utf8({"products": [{"id": p["id"], "title": p["title"], "variants": len(p.get("variants", [])), "stock": sum(int(v.get("inventory_quantity", 0)) for v in p.get("variants", [])), "price_min": min((float(v.get("price", 0)) for v in p.get("variants", [])), default=0), "price_max": max((float(v.get("price", 0)) for v in p.get("variants", [])), default=0), "image": (p.get("images") or [{}])[0].get("src", ""), "status": p.get("status")} for p in data["products"]]})
 
 
+
+# ============================================================
+# POS Products API (Liste des articles)
+# ============================================================
+
+@app.route('/api/v1/store/pos/products')
+def api_pos_products():
+    """Fetch products with inventory and pricing for Liste des articles page"""
+    try:
+        from database.db import get_db
+        db = get_db()
+        rows = db.execute("""
+            SELECT 
+                p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,
+                p.cost_price, p.store_price, p.online_price,
+                p.description, p.image_url, p.is_active, p.supplier,
+                COALESCE(i.store_quantity, 0) as store_quantity,
+                COALESCE(i.online_quantity, 0) as online_quantity,
+                COALESCE(i.warehouse_quantity, 0) as warehouse_quantity,
+                COALESCE(i.low_stock_threshold, 5) as low_stock_threshold
+            FROM products p
+            LEFT JOIN inventory i ON i.product_id = p.id
+            WHERE p.is_active = 1
+            ORDER BY p.name ASC
+        """).fetchall()
+        products = []
+        for r in rows:
+            d = dict(r)
+            d['total_quantity'] = d['store_quantity'] + d['online_quantity'] + d['warehouse_quantity']
+            d['remise_pct'] = 0.0
+            sp = d['store_price'] or d['online_price'] or 0
+            cp = d['cost_price'] or 0
+            if sp > 0 and cp > 0:
+                d['remise_pct'] = round((1 - cp / sp) * 100, 1)
+            d['store_price'] = sp
+            products.append(d)
+        total_qty = sum(p['total_quantity'] for p in products)
+        total_articles = len(products)
+        return json_utf8({
+            'success': True,
+            'products': products,
+            'total_quantity': total_qty,
+            'total_articles': total_articles
+        })
+    except Exception as e:
+        import traceback
+        logger.error(f'[POS Products API] Error: {e}\n{traceback.format_exc()}')
+        return json_utf8({'success': False, 'products': [], 'total_quantity': 0, 'total_articles': 0, 'error': str(e)})
+
 @app.route('/api/clients')
 def api_clients():
     conn = sqlite3.connect(_DB_PATH)
