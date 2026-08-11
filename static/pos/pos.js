@@ -70,7 +70,9 @@ function closeModal(id){document.getElementById(id).classList.remove('active')}
 document.getElementById('payment-modal')?.addEventListener('click',function(e){if(e.target===this)closeModal('payment-modal')});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal('payment-modal');if(e.key==='F1'){e.preventDefault();completeSale()};if(e.key==='F2'){e.preventDefault();document.getElementById('sale-barcode')?.focus()}});
 
-var ARTICLES_DATA=[];var ARTICLES_SELECTED=null;
+var ARTICLES_DATA=[];
+document.getElementById('btn-validate-article')?.addEventListener('click',function(e){e.preventDefault();validateArticle()});
+var ARTICLES_SELECTED=null;
 
 async function renderProductsTable(){
     const t=document.getElementById('articles-table-body');
