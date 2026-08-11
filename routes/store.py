@@ -14,7 +14,8 @@ from database.db import (
     create_product, update_product, search_products,
     get_inventory, update_inventory, deduct_store_inventory, get_low_stock_items,
     create_sale, get_store_sales, get_store_daily_summary,
-    create_expense, get_expenses
+    create_expense, get_expenses,
+    create_purchase_with_items, get_purchases, get_purchase_items
 )
 from middleware.auth import store_manager_required, token_required, generate_token
 from werkzeug.security import check_password_hash
@@ -384,6 +385,98 @@ def list_expenses():
     )
     
     return jsonify({"expenses": expenses, "count": len(expenses)})
+
+
+# ============================================================
+# 📦 Purchases (Nouvel achat — Tamin al-makhzoun)
+# ============================================================
+
+@store_bp.route("/purchases", methods=["POST"])
+@store_manager_required
+def record_purchase():
+    """تسجيل فاتورة شراء + إنشاء/تحديث المنتجات + تموين المخزون"""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+    
+    if "items" not in data or not data["items"]:
+        return jsonify({"error": "Au moins un article est requis"}), 400
+    
+    data["store_id"] = g.current_user.get("store_id") or 1
+    data["recorded_by"] = g.current_user.get("username", "store")
+    
+    result = create_purchase_with_items(data)
+    
+    return jsonify({"purchase": result["purchase"], "items": result["items"]}), 201
+
+
+@store_bp.route("/purchases", methods=["GET"])
+@store_manager_required
+def list_purchases():
+    """جلب فواتير الشراء"""
+    store_id = g.current_user.get("store_id") or request.args.get("store_id", type=int)
+    limit = int(request.args.get("limit", 50))
+    offset = int(request.args.get("offset", 0))
+    
+    purchases = get_purchases(store_id=store_id, limit=limit, offset=offset)
+    return jsonify({"purchases": purchases, "count": len(purchases)})
+
+
+@store_bp.route("/purchases/<int:purchase_id>/items", methods=["GET"])
+@store_manager_required
+def get_purchase_items_route(purchase_id):
+    """جلب عناصر فاتورة شراء"""
+    items = get_purchase_items(purchase_id)
+    return jsonify({"items": items, "count": len(items)})
+
+
+@store_bp.route("/products/barcode/generate", methods=["POST"])
+@store_manager_required
+def generate_barcode():
+    """توليد باركود عشوائي"""
+    import random
+    import string
+    # توليد باركود EAN-13 وهمي
+    code = "2" + "".join(random.choices(string.digits, k=11))
+    # حساب checksum بسيط
+    total = sum(int(code[i]) * (1 if i % 2 == 0 else 3) for i in range(12))
+    check = (10 - (total % 10)) % 10
+    barcode = code + str(check)
+    
+    return jsonify({"barcode": barcode})
+
+
+@store_bp.route("/products/demo-data", methods=["GET"])
+@store_manager_required
+def generate_demo_data():
+    """توليد بيانات وهمية للاختبار السريع"""
+    import random
+    articles = [
+        {"designation": "lazio 01", "prix_achat": 2500, "prix_vente": 3500},
+        {"designation": "lazio 02", "prix_achat": 2800, "prix_vente": 3900},
+        {"designation": "nike air max", "prix_achat": 4500, "prix_vente": 6500},
+        {"designation": "adidas superstar", "prix_achat": 3200, "prix_vente": 4800},
+        {"designation": "puma rs-x", "prix_achat": 3600, "prix_vente": 5200},
+        {"designation": "reebok classic", "prix_achat": 2100, "prix_vente": 3200},
+        {"designation": "converse all star", "prix_achat": 1800, "prix_vente": 2800},
+        {"designation": "vans old skool", "prix_achat": 2200, "prix_vente": 3400}
+    ]
+    
+    # توليد باركود عشوائي لكل منتج
+    result = []
+    for art in articles:
+        code = "2" + "".join(random.choices("0123456789", k=11))
+        total = sum(int(code[i]) * (1 if i % 2 == 0 else 3) for i in range(12))
+        check = (10 - (total % 10)) % 10
+        barcode = code + str(check)
+        result.append({
+            **art,
+            "barcode": barcode,
+            "marge_pct": round(((art["prix_vente"] - art["prix_achat"]) / art["prix_achat"]) * 100, 1),
+            "marge_montant": art["prix_vente"] - art["prix_achat"]
+        })
+    
+    return jsonify({"articles": result})
 
 
 # ============================================================

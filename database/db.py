@@ -527,6 +527,210 @@ def get_expenses(store_id=None, from_date=None, to_date=None, limit=100):
 
 
 # ============================================================
+# Store Purchase Operations (Nouvel achat)
+# ============================================================
+
+def create_purchase(data):
+    """إنشاء عملية شراء جديدة (تموين المخزون)"""
+    db = get_db()
+    total = data.get("total", 0)
+    cursor = db.execute("""
+        INSERT INTO store_purchases (supplier, purchase_date, total, notes, store_id, recorded_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, [
+        data.get("supplier", "divers"),
+        data.get("purchase_date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        total,
+        data.get("notes", ""),
+        data.get("store_id", 1),
+        data.get("recorded_by", "store")
+    ])
+    purchase_id = cursor.lastrowid
+    db.commit()
+    
+    _log_sync("purchase", purchase_id, "create", "store")
+    
+    return dict_from_row(db.execute("SELECT * FROM store_purchases WHERE id = ?", [purchase_id]).fetchone())
+
+
+def add_purchase_item(purchase_id, item_data):
+    """إضافة منتج إلى فاتورة شراء"""
+    db = get_db()
+    prix_total = item_data["prix_achat"] * item_data["quantite"]
+    cursor = db.execute("""
+        INSERT INTO store_purchase_items (purchase_id, product_id, barcode, designation, prix_achat, prix_vente, quantite, prix_total)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, [
+        purchase_id,
+        item_data.get("product_id"),
+        item_data.get("barcode", ""),
+        item_data["designation"],
+        item_data["prix_achat"],
+        item_data["prix_vente"],
+        item_data["quantite"],
+        prix_total
+    ])
+    item_id = cursor.lastrowid
+    
+    # تحديث إجمالي فاتورة الشراء
+    db.execute("UPDATE store_purchases SET total = (SELECT COALESCE(SUM(prix_total), 0) FROM store_purchase_items WHERE purchase_id = ?) WHERE id = ?",
+               [purchase_id, purchase_id])
+    db.commit()
+    
+    return dict_from_row(db.execute("SELECT * FROM store_purchase_items WHERE id = ?", [item_id]).fetchone())
+
+
+def get_purchases(store_id=None, limit=100, offset=0):
+    """جلب فواتير الشراء"""
+    db = get_db()
+    query = "SELECT * FROM store_purchases WHERE 1=1"
+    params = []
+    if store_id:
+        query += " AND store_id = ?"
+        params.append(store_id)
+    query += " ORDER BY purchase_date DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    return dicts_from_rows(db.execute(query, params).fetchall())
+
+
+def get_purchase_items(purchase_id):
+    """جلب عناصر فاتورة شراء"""
+    db = get_db()
+    return dicts_from_rows(db.execute("""
+        SELECT * FROM store_purchase_items WHERE purchase_id = ? ORDER BY id ASC
+    """, [purchase_id]).fetchall())
+
+
+def create_purchase_with_items(data):
+    """إنشاء فاتورة شراء مع عناصرها دفعة واحدة + تحديث المخزون"""
+    db = get_db()
+    
+    # 1. إنشاء الفاتورة
+    total = sum(
+        item.get("prix_achat", 0) * item.get("quantite", 1)
+        for item in data.get("items", [])
+    )
+    cursor = db.execute("""
+        INSERT INTO store_purchases (supplier, purchase_date, total, notes, store_id, recorded_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, [
+        data.get("supplier", "divers"),
+        data.get("purchase_date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        total,
+        data.get("notes", ""),
+        data.get("store_id", 1),
+        data.get("recorded_by", "store")
+    ])
+    purchase_id = cursor.lastrowid
+    
+    # 2. إضافة العناصر + تحديث المخزون
+    created_items = []
+    for item in data.get("items", []):
+        designation = item.get("designation", "")
+        barcode = item.get("barcode", "")
+        prix_achat = item.get("prix_achat", 0)
+        prix_vente = item.get("prix_vente", 0)
+        quantite = item.get("quantite", 1)
+        prix_total = prix_achat * quantite
+        
+        # البحث عن منتج موجود بالباركود أو إنشاء جديد
+        product_id = item.get("product_id")
+        if not product_id and barcode:
+            existing = dict_from_row(db.execute("SELECT id FROM products WHERE barcode = ?", [barcode]).fetchone())
+            if existing:
+                product_id = existing["id"]
+        
+        # إذا لا يوجد منتج — ننشئ واحد جديد
+        if not product_id:
+            # توليد SKU من الباركود أو عشوائي
+            sku = barcode if barcode else f"PUR-{datetime.now().strftime('%Y%m%d%H%M%S')}-{item.get('pos', 0)}"
+            cursor2 = db.execute("""
+                INSERT INTO products (sku, name, barcode, cost_price, store_price, category, supplier, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            """, [
+                sku,
+                designation,
+                barcode,
+                prix_achat,
+                prix_vente,
+                data.get("category", ""),
+                data.get("supplier", "divers")
+            ])
+            product_id = cursor2.lastrowid
+            # إنشاء سجل مخزون
+            db.execute("INSERT INTO inventory (product_id, store_quantity) VALUES (?, ?)",
+                       [product_id, quantite])
+        else:
+            # تحديث المخزون — زيادة الكمية
+            existing_inv = dict_from_row(db.execute(
+                "SELECT store_quantity FROM inventory WHERE product_id = ?", [product_id]
+            ).fetchone())
+            if existing_inv:
+                new_qty = existing_inv["store_quantity"] + quantite
+                db.execute("UPDATE inventory SET store_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE product_id = ?",
+                           [new_qty, product_id])
+            else:
+                db.execute("INSERT INTO inventory (product_id, store_quantity) VALUES (?, ?)",
+                           [product_id, quantite])
+            
+            # تحديث السعر إذا كانت القيم الجديدة مختلفة
+            db.execute("UPDATE products SET cost_price = ?, store_price = ? WHERE id = ? AND (cost_price != ? OR store_price != ?)",
+                       [prix_achat, prix_vente, product_id, prix_achat, prix_vente])
+        
+        # إضافة عنصر الشراء
+        db.execute("""
+            INSERT INTO store_purchase_items (purchase_id, product_id, barcode, designation, prix_achat, prix_vente, quantite, prix_total)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, [purchase_id, product_id, barcode, designation, prix_achat, prix_vente, quantite, prix_total])
+        
+        created_items.append({
+            "product_id": product_id,
+            "designation": designation,
+            "barcode": barcode,
+            "prix_achat": prix_achat,
+            "prix_vente": prix_vente,
+            "quantite": quantite,
+            "prix_total": prix_total
+        })
+    
+    db.commit()
+    _log_sync("purchase", purchase_id, "create", "store")
+    
+    return {
+        "purchase": dict_from_row(db.execute("SELECT * FROM store_purchases WHERE id = ?", [purchase_id]).fetchone()),
+        "items": created_items
+    }
+
+
+def update_inventory_from_purchase(product_id, quantity, cost_price, store_price):
+    """تحديث المخزون وسعر الشراء بعد عملية شراء"""
+    db = get_db()
+    existing_inv = dict_from_row(db.execute(
+        "SELECT store_quantity FROM inventory WHERE product_id = ?", [product_id]
+    ).fetchone())
+    
+    if existing_inv:
+        new_qty = existing_inv["store_quantity"] + quantity
+        db.execute(
+            "UPDATE inventory SET store_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE product_id = ?",
+            [new_qty, product_id]
+        )
+    else:
+        db.execute(
+            "INSERT INTO inventory (product_id, store_quantity) VALUES (?, ?)",
+            [product_id, quantity]
+        )
+    
+    # تحديث أسعار المنتج
+    db.execute(
+        "UPDATE products SET cost_price = ?, store_price = ? WHERE id = ?",
+        [cost_price, store_price, product_id]
+    )
+    db.commit()
+    return {"success": True, "new_quantity": quantity}
+
+
+# ============================================================
 # Online Orders Operations
 # ============================================================
 

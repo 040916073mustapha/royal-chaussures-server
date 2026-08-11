@@ -12,7 +12,7 @@ function showApp(){document.getElementById('login-screen').classList.add('hidden
 
 function logout(){STATE.token=null;STATE.user=null;STATE.cart=[];localStorage.removeItem('pos_token');localStorage.removeItem('pos_user');document.getElementById('pos-app').classList.remove('active');document.getElementById('login-screen').classList.remove('hidden');document.getElementById('login-user').value='';document.getElementById('login-pass').value='';document.getElementById('login-btn').disabled=false;document.getElementById('login-btn').innerHTML='<i class="fas fa-sign-in-alt"></i> Connexion'}
 
-function switchView(v){document.querySelectorAll('.nav-item').forEach(i=>i.classList.toggle('active',i.dataset.view===v));document.querySelectorAll('.view-container').forEach(c=>c.classList.remove('active'));const t=document.getElementById('view-'+v);if(t)t.classList.add('active');if(v==='sale'){setTimeout(()=>document.getElementById('sale-barcode')?.focus(),100);updateSaleUI();updateSaleDate()}if(v==='products')renderProductsTable()}
+function switchView(v){document.querySelectorAll('.nav-item').forEach(i=>i.classList.toggle('active',i.dataset.view===v));document.querySelectorAll('.view-container').forEach(c=>c.classList.remove('active'));const t=document.getElementById('view-'+v);if(t)t.classList.add('active');if(v==='sale'){setTimeout(()=>document.getElementById('sale-barcode')?.focus(),100);updateSaleUI();updateSaleDate()}if(v==='purchase'){if(!STATE._purchaseInitialized){updatePurchaseDate();STATE._purchaseInitialized=true}updatePurchaseUI()}if(v==='products')renderProductsTable()}
 
 function updateSaleDate(){const e=document.getElementById('sale-date');if(e){const d=new Date();e.textContent=d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}}
 
@@ -74,4 +74,40 @@ function updateConnectionStatus(){const d=document.getElementById('conn-dot');co
 
 function showToast(msg,type){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.className='toast show '+(type||'success');t.style.display='block';setTimeout(()=>{t.classList.remove('show');t.style.display='none'},3000)}
 
+// ============================================================
+// PURCHASE ENGINE (Nouvel achat)
+// ============================================================
+
+function updatePurchaseDate(){const e=document.getElementById('purchase-date');if(e){const d=new Date();e.value=d.toISOString().split('T')[0]}updatePurchaseNumber()}function updatePurchaseNumber(){const e=document.getElementById('purchase-number');if(e){const n=STATE._purchaseCounter||0;e.textContent=String(1000001+n).padStart(9,'0');STATE._purchaseCounter=(STATE._purchaseCounter||0)+1}}
+function updatePurchaseUI(){if(!document.getElementById('purchase-cart-table'))return;const table=document.getElementById('purchase-cart-table');if(!STATE.purchaseCart.length){table.innerHTML='<tr><td colspan="8"><div class="no-items"><i class="fas fa-cart-plus"></i>Cliquez sur "Ajouter article" pour commencer</div></td></tr>';updatePurchaseSummary();return}table.innerHTML=STATE.purchaseCart.map((item,i)=>{const t=item.prix_achat*item.quantite;return'<tr>'+
+'<td>'+(i+1)+'</td>'+
+'<td>'+(item.barcode||'---')+'</td>'+
+'<td style="font-weight:500;">'+item.designation+'</td>'+
+'<td style="color:var(--accent-blue-dark);font-weight:700;">'+item.prix_vente.toLocaleString()+'</td>'+
+'<td><input type="number" value="'+item.quantite+'" min="1" style="width:40px;text-align:center;padding:2px;border:1px solid var(--border-color);border-radius:3px;font-family:Inter,sans-serif;" onchange="updatePurchaseQty('+i+',this.value)"></td>'+
+'<td style="color:var(--accent-red);">'+item.prix_achat.toLocaleString()+'</td>'+
+'<td>'+t.toLocaleString()+'</td>'+
+'<td><button class="btn-del-item" onclick="removePurchaseItem('+i+')"><i class="fas fa-trash-alt"></i></button></td>'+
+'</tr>'}).join('');updatePurchaseSummary()}
+
+function updatePurchaseQty(idx,val){const q=parseInt(val);if(isNaN(q)||q<1){STATE.purchaseCart.splice(idx,1)}else{STATE.purchaseCart[idx].quantite=q}updatePurchaseUI()}
+function removePurchaseItem(idx){STATE.purchaseCart.splice(idx,1);updatePurchaseUI()}
+
+function updatePurchaseSummary(){let total=0;let qty=0;let last=STATE.purchaseCart[STATE.purchaseCart.length-1];STATE.purchaseCart.forEach(i=>{total+=i.prix_achat*i.quantite;qty+=i.quantite});const td=document.getElementById('purchase-total-display');if(td)td.textContent=total.toLocaleString()+' DA';const s=document.getElementById('purchase-summary-total');if(s)s.textContent=total.toLocaleString()+' DA';const ic=document.getElementById('purchase-item-count');if(ic)ic.textContent=STATE.purchaseCart.length;const tq=document.getElementById('purchase-total-qty');if(tq)tq.textContent=qty;const st=document.getElementById('purchase-status-msg');if(st){if(last){st.innerHTML='<i class="fas fa-check-circle"></i> Article: '+last.designation+' quantite: '+last.quantite+' total: '+total.toLocaleString()+' DA'}else{st.innerHTML='<i class="fas fa-info-circle"></i> Pret a saisir'}}}
+
+function openArticleModal(){document.getElementById('art-barcode').value='';document.getElementById('art-designation').value='';document.getElementById('art-qty').value='1';document.getElementById('art-prix-achat').value='';document.getElementById('art-prix-vente').value='';document.getElementById('art-marge-pct').textContent='0%';document.getElementById('art-marge-mt').textContent='0 DA';document.getElementById('article-modal').classList.add('active');setTimeout(()=>document.getElementById('art-designation')?.focus(),200)}
+
+async function generateBarcode(){const btn=document.querySelector('.btn-gen');btn.disabled=true;btn.innerHTML='<span class=\"spinner\"></span>';try{const r=await API.generateBarcode();if(r.barcode){document.getElementById('art-barcode').value=r.barcode;showToast('Code barre genere: '+r.barcode)}}catch{showToast('Erreur generation','error')}finally{btn.disabled=false;btn.innerHTML='<i class=\"fas fa-qrcode\"></i> Generer'}}
+
+function calcMarge(){const pa=parseFloat(document.getElementById('art-prix-achat').value)||0;const pv=parseFloat(document.getElementById('art-prix-vente').value)||0;const marge=Math.max(0,pv-pa);const pct=pa>0?((marge/pa)*100).toFixed(1):0;document.getElementById('art-marge-pct').textContent=pct+'%';document.getElementById('art-marge-mt').textContent=marge.toLocaleString()+' DA'}
+
+function validateArticle(){const designation=document.getElementById('art-designation').value.trim();const qty=parseInt(document.getElementById('art-qty').value)||1;const prixAchat=parseFloat(document.getElementById('art-prix-achat').value)||0;const prixVente=parseFloat(document.getElementById('art-prix-vente').value)||0;const barcode=document.getElementById('art-barcode').value.trim();if(!designation){showToast('Veuillez entrer la designation','error');document.getElementById('art-designation').focus();return}if(prixAchat<=0){showToast('Veuillez entrer le prix achat','error');document.getElementById('art-prix-achat').focus();return}if(prixVente<=0){showToast('Veuillez entrer le prix vente','error');document.getElementById('art-prix-vente').focus();return}STATE.purchaseCart.push({designation,quantite:qty,prix_achat:prixAchat,prix_vente:prixVente,barcode});closeModal('article-modal');updatePurchaseUI();showToast(designation+' ajoute(e) a l\'achat')}
+
+async function fillDemoData(){try{showToast('Generation des donnees de test...');const r=await API.getDemoData();if(r.articles&&r.articles.length){r.articles.forEach(a=>{STATE.purchaseCart.push({designation:a.designation,quantite:1,prix_achat:a.prix_achat,prix_vente:a.prix_vente,barcode:a.barcode})});updatePurchaseUI();showToast(r.articles.length+' articles de test ajoutes!','success')}}catch(e){showToast('Erreur: '+e.message,'error')}}
+
+async function validatePurchase(){if(!STATE.purchaseCart.length){showToast('Ajoutez au moins un article','error');return}if(!confirm('Valider l\'achat de '+STATE.purchaseCart.length+' article(s) ?'))return;const btn=document.getElementById('btn-validate-purchase');btn.disabled=true;btn.innerHTML='<span class=\"spinner\"></span> Validation...';try{const supplier=document.getElementById('purchase-supplier')?.value||'divers';const dateInput=document.getElementById('purchase-date')?.value||'';const payload={supplier,purchase_date:dateInput,items:STATE.purchaseCart.map((item,i)=>({...item,pos:i+1}))};const r=await API.recordPurchase(payload);if(r.purchase){showToast('Achat valide! Total: '+r.purchase.total.toLocaleString()+' DA','success');STATE.purchaseCart=[];STATE._purchaseInitialized=false;updatePurchaseUI();updatePurchaseDate()}else if(r.error){showToast('Erreur: '+r.error,'error')}}catch(e){showToast('Erreur: '+e.message,'error')}finally{btn.disabled=false;btn.innerHTML='<i class=\"fas fa-check-circle\"></i> Valider l\'achat <span class=\"shortcut\">[F1]</span>'}}
+
+function clearPurchaseCart(){if(!STATE.purchaseCart.length)return;if(!confirm('Vider tous les articles ?'))return;STATE.purchaseCart=[];updatePurchaseUI()}
+
 console.log('Royal POS Engine Ready');
+console.log('Purchase Engine Ready');

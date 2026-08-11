@@ -116,6 +116,33 @@ CREATE TABLE IF NOT EXISTS sync_log (
 );
 
 -- 🔹 باركود المنتجات (سجل الطباعة)
+-- 🔹 مشتريات المحل (تموين المخزون)
+CREATE TABLE IF NOT EXISTS store_purchases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    supplier TEXT DEFAULT 'divers',
+    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total DECIMAL(12,2) DEFAULT 0,
+    notes TEXT DEFAULT '',
+    store_id INTEGER NOT NULL DEFAULT 1,
+    recorded_by TEXT NOT NULL DEFAULT 'store',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 🔹 عناصر المشتريات (المنتجات المشتراة)
+CREATE TABLE IF NOT EXISTS store_purchase_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_id INTEGER NOT NULL REFERENCES store_purchases(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id),
+    barcode TEXT DEFAULT '',
+    designation TEXT NOT NULL,
+    prix_achat DECIMAL(10,2) NOT NULL,
+    prix_vente DECIMAL(10,2) NOT NULL,
+    quantite INTEGER NOT NULL DEFAULT 1,
+    prix_total DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 🔹 باركود المنتجات (سجل الطباعة)
 CREATE TABLE IF NOT EXISTS barcode_print_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL REFERENCES products(id),
@@ -132,6 +159,8 @@ CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 CREATE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);
 CREATE INDEX IF NOT EXISTS idx_store_sales_date ON store_sales(sale_date);
 CREATE INDEX IF NOT EXISTS idx_store_sales_store ON store_sales(store_id);
+CREATE INDEX IF NOT EXISTS idx_store_purchases_date ON store_purchases(purchase_date);
+CREATE INDEX IF NOT EXISTS idx_store_purchase_items_purchase ON store_purchase_items(purchase_id);
 CREATE INDEX IF NOT EXISTS idx_online_orders_status ON online_orders(status);
 CREATE INDEX IF NOT EXISTS idx_online_orders_created ON online_orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
