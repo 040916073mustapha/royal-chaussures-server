@@ -250,7 +250,18 @@
         .purchase-info-note i{font-size:16px;margin-top:1px}
         
         /* Article Modal */
-        .modal-box-lg{max-width:560px!important}
+        .modal-box-lg{max-width:720px!important}
+        .article-photo-panel{width:200px;min-width:200px;display:flex;flex-direction:column}
+        .photo-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f9f9f9;border:2px dashed #ccc;border-radius:8px;cursor:pointer;padding:20px;gap:6px;transition:0.12s}
+        .photo-placeholder:hover{background:#f0f0f0;border-color:#aaa}
+        .photo-placeholder i{font-size:40px;color:#bbb}
+        .photo-placeholder span{font-size:13px;font-weight:600;color:#999}
+        .photo-placeholder .photo-hint{font-size:10px;color:#ccc}
+        .photo-preview{width:100%;height:100%;object-fit:contain;border-radius:6px}
+        .secondary-barcodes{display:flex;flex-direction:column;gap:4px}
+        .sb-row{display:flex;gap:4px}
+        .sb-row input{flex:1}
+        .btn-add-sb{background:#3498db;border:none;border-radius:4px;color:#fff;cursor:pointer;padding:0 10px;font-size:16px}
         .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border-light)}
         .modal-header h2{font-size:19px;font-weight:700;margin:0;display:flex;align-items:center;gap:8px}
         .modal-header h2 i{color:var(--accent-blue)}
@@ -622,52 +633,96 @@
             <h2><i class="fas fa-box-open"></i> Edition article</h2>
             <button class="modal-close" onclick="closeModal('article-modal')"><i class="fas fa-times"></i></button>
         </div>
-        <div class="article-form">
-            <div class="form-row">
-                <div class="form-group flex-1">
-                    <label>Code barre</label>
-                    <div class="barcode-gen-row">
-                        <input type="text" id="art-barcode" class="input-lg" placeholder="Code barre..." autocomplete="off">
-                        <button class="btn-gen" onclick="generateBarcode()" title="Générer un code barre">
-                            <i class="fas fa-qrcode"></i> Générer
-                        </button>
+        <div class="article-form" style="flex-direction:row;gap:20px;">
+                <!-- Left: Form fields -->
+                <div style="flex:1;display:flex;flex-direction:column;gap:14px;">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label>Code barre</label>
+                            <div class="barcode-gen-row">
+                                <input type="text" id="art-barcode" class="input-lg" placeholder="Code barre..." autocomplete="off">
+                                <button class="btn-gen" onclick="generateBarcode()" title="Générer un code barre">
+                                    <i class="fas fa-qrcode"></i> Générer
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group flex-2">
+                            <label>Désignation <span class="required">*</span></label>
+                            <input type="text" id="art-designation" class="input-lg" placeholder="Nom du produit..." autofocus>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Famille</label>
+                            <select id="art-famille" class="input-lg">
+                                <option value="">Choisir...</option>
+                                <option value="chaussures">Chaussures</option>
+                                <option value="accessoires">Accessoires</option>
+                                <option value="sacs">Sacs</option>
+                                <option value="ceintures">Ceintures</option>
+                                <option value="autres">Autres</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label>Quantité</label>
+                            <input type="number" id="art-qty" class="input-lg" value="1" min="1">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Remise %</label>
+                            <input type="number" id="art-remise" class="input-lg" value="0" min="0" max="100" step="0.5">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Stock alerte</label>
+                            <input type="number" id="art-stock-alert" class="input-lg" value="5" min="0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label>Prix achat <span class="required">*</span></label>
+                            <div class="input-currency">
+                                <input type="number" id="art-prix-achat" class="input-lg" placeholder="0" min="0" step="1">
+                                <span class="currency-label">DA</span>
+                            </div>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Prix vente <span class="required">*</span></label>
+                            <div class="input-currency">
+                                <input type="number" id="art-prix-vente" class="input-lg" placeholder="0" min="0" step="1" oninput="calcMarge()">
+                                <span class="currency-label">DA</span>
+                            </div>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Marge</label>
+                            <div class="marge-display">
+                                <span class="marge-pct" id="art-marge-pct">0%</span>
+                                <span class="marge-mt" id="art-marge-mt">0 DA</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label>Codes à barre secondaires</label>
+                            <div class="secondary-barcodes" id="secondary-barcodes">
+                                <div class="sb-row">
+                                    <input type="text" class="input-lg" placeholder="Code barre supplémentaire...">
+                                    <button class="btn-add-sb" onclick="addSecondaryBarcode()" title="Ajouter"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right: Product Photo -->
+                <div class="article-photo-panel">
+                    <div class="photo-placeholder" id="art-photo-placeholder">
+                        <i class="fas fa-camera"></i>
+                        <span>Photo produit</span>
+                        <span class="photo-hint">Cliquez pour ajouter</span>
+                    </div>
+                    <input type="file" id="art-photo-input" accept="image/*" style="display:none" onchange="previewArticlePhoto(event)">
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group flex-2">
-                    <label>Designation <span class="required">*</span></label>
-                    <input type="text" id="art-designation" class="input-lg" placeholder="Nom du produit..." autofocus>
-                </div>
-                <div class="form-group flex-1">
-                    <label>Quantité</label>
-                    <input type="number" id="art-qty" class="input-lg" value="1" min="1">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group flex-1">
-                    <label>Prix achat <span class="required">*</span></label>
-                    <div class="input-currency">
-                        <input type="number" id="art-prix-achat" class="input-lg" placeholder="0" min="0" step="0.01">
-                        <span class="currency-label">DA</span>
-                    </div>
-                </div>
-                <div class="form-group flex-1">
-                    <label>Prix vente <span class="required">*</span></label>
-                    <div class="input-currency">
-                        <input type="number" id="art-prix-vente" class="input-lg" placeholder="0" min="0" step="0.01" oninput="calcMarge()">
-                        <span class="currency-label">DA</span>
-                    </div>
-                </div>
-                <div class="form-group flex-1 marge-box">
-                    <label>Marge</label>
-                    <div class="marge-display">
-                        <span class="marge-pct" id="art-marge-pct">0%</span>
-                        <span class="marge-mt" id="art-marge-mt">0 DA</span>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div class="modal-actions" style="margin-top:20px;">
             <button class="btn-secondary" onclick="closeModal('article-modal')">
                 <i class="fas fa-times"></i> Annuler
