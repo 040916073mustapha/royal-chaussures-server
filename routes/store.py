@@ -136,6 +136,43 @@ def pos_products():
         return jsonify({'success': False, 'products': [], 'total_quantity': 0, 'total_articles': 0, 'error': str(e)}), 500
 
 
+@store_bp.route('/pos/products/barcode/<barcode>')
+def pos_product_by_barcode(barcode):
+    """Lookup product by barcode from POS — no auth required"""
+    try:
+        import os
+        _db_path = os.environ.get("STORE_DB_PATH",
+                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
+        conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("""
+            SELECT
+                p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,
+                p.cost_price, p.store_price, p.online_price,
+                p.description, p.image_url, p.is_active, p.supplier,
+                COALESCE(i.store_quantity, 0) as store_quantity,
+                COALESCE(i.online_quantity, 0) as online_quantity,
+                COALESCE(i.warehouse_quantity, 0) as warehouse_quantity,
+                COALESCE(i.low_stock_threshold, 5) as low_stock_threshold
+            FROM products p
+            LEFT JOIN inventory i ON i.product_id = p.id
+            WHERE p.barcode = ? AND p.is_active = 1
+            LIMIT 1
+        """, [barcode]).fetchone()
+        conn.close()
+        if row:
+            d = dict(row)
+            d['total_quantity'] = d['store_quantity'] + d['online_quantity'] + d['warehouse_quantity']
+            d['store_price'] = d['store_price'] or d['online_price'] or 0
+            return jsonify({"product": d})
+        else:
+            return jsonify({"product": None})
+    except Exception as e:
+        import traceback
+        print(f'[POS Product Barcode] Error: {e}\n{traceback.format_exc()}')
+        return jsonify({"product": None, "error": str(e)}), 500
+
+
 # ============================================================
 # 🔐 Auth
 # ============================================================
