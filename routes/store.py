@@ -22,6 +22,7 @@ from middleware.auth import store_manager_required, token_required, generate_tok
 from werkzeug.security import check_password_hash
 
 import sqlite3
+import os
 from database.db import get_db, dict_from_row
 
 store_bp = Blueprint("store", __name__, template_folder="../templates", static_folder="../static")
@@ -66,7 +67,15 @@ def pos_record_purchase():
 def pos_list_purchases():
     """List purchases from POS without auth requirement"""
     try:
-        purchases = get_purchases(store_id=1, limit=100, offset=0)
+        _db_path = os.environ.get("STORE_DB_PATH",
+                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
+        conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        query = "SELECT * FROM store_purchases WHERE store_id = ? ORDER BY purchase_date DESC LIMIT ? OFFSET ?"
+        params = [1, 100, 0]
+        rows = conn.execute(query, params).fetchall()
+        purchases = [dict(r) for r in rows]
+        conn.close()
         return jsonify({"success": True, "purchases": purchases})
     except Exception as e:
         import traceback
@@ -82,9 +91,12 @@ def pos_list_purchases():
 def pos_products():
     """Fetch products with inventory and pricing for Liste des articles page"""
     try:
-        from database.db import get_db
-        db = get_db()
-        rows = db.execute("""
+        import os
+        _db_path = os.environ.get("STORE_DB_PATH",
+                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
+        conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
             SELECT 
                 p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,
                 p.cost_price, p.store_price, p.online_price,
@@ -111,6 +123,7 @@ def pos_products():
             products.append(d)
         total_qty = sum(p['total_quantity'] for p in products)
         total_articles = len(products)
+        conn.close()
         return jsonify({
             'success': True,
             'products': products,
