@@ -28,17 +28,15 @@ def get_db():
 
 
 def _connect_or_repair(db_path):
-    """محاولة الاتصال بقاعدة البيانات، وإذا كانت تالفة يتم حذفها وإعادة إنشائها"""
-    # التحقق من صحة الملف قبل الاتصال
+    """محاولة الاتصال بقاعدة البيانات — لا تمسح الملف أبداً"""
     import time as _time
-    _check_and_remove_corrupted(db_path)
     
-    for attempt in range(3):
+    for attempt in range(5):
         try:
-            conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
+            conn = sqlite3.connect(db_path, timeout=60, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA busy_timeout=10000")
+            conn.execute("PRAGMA busy_timeout=30000")
             conn.execute("PRAGMA synchronous=NORMAL")
             conn.execute("PRAGMA foreign_keys=ON")
             conn.execute("PRAGMA cache_size=-8000")
@@ -52,52 +50,21 @@ def _connect_or_repair(db_path):
                 _init_tables(conn)
             return conn
         except sqlite3.DatabaseError as e:
-            print(f"[DB] Database corrupted (attempt {attempt+1}): {e}")
+            print(f"[DB] Database error (attempt {attempt+1}/5): {e}")
             try:
                 conn.close()
             except:
                 pass
-            _time.sleep(0.5 * (attempt + 1))
-            _check_and_remove_corrupted(db_path)
+            _time.sleep(1.0 * (attempt + 1))
     
-    # بعد 3 محاولات — ننشئ من الصفر
-    print(f"[DB] Creating fresh database (after 3 failed attempts)...")
-    conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=10000")
-    conn.execute("PRAGMA synchronous=NORMAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA cache_size=-8000")
-    _init_tables(conn)
-    return conn
+    # بعد 5 محاولات — أرمي استثناء، لا تمسح الـ DB
+    raise RuntimeError(f"Cannot connect to database after 5 attempts: {db_path}")
 
 
 def _check_and_remove_corrupted(db_path):
-    """فحص وحذف الملفات التالفة"""
-    import time
-    # إغلاق أي اتصال قديم
-    if hasattr(_local, "connection") and _local.connection is not None:
-        try:
-            _local.connection.close()
-        except:
-            pass
-        _local.connection = None
-        time.sleep(0.3)
-    
-    # حذف الملفات
-    for p in [db_path, db_path + "-wal", db_path + "-shm"]:
-        if os.path.exists(p):
-            for retry in range(3):
-                try:
-                    os.remove(p)
-                    print(f"[DB] Removed: {os.path.basename(p)}")
-                    break
-                except Exception as e:
-                    if retry < 2:
-                        time.sleep(0.5)
-                    else:
-                        print(f"[DB] Could not remove {os.path.basename(p)}: {e}")
+    """معطل — لا تمسح قاعدة البيانات أبداً في الإنتاج"""
+    # لم نعد نحذف قاعدة البيانات. WAL mode + busy_timeout كافيان للتعامل مع التنافس.
+    pass
 
 
 def close_db():

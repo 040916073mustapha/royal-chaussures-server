@@ -179,9 +179,6 @@ def pos_product_by_barcode(barcode):
 def pos_record_sale():
     """Record a sale from POS without auth requirement"""
     try:
-        import os
-        _db_path = os.environ.get("STORE_DB_PATH",
-                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
         data = request.get_json()
         if not data:
             return jsonify({"error": "Request body required"}), 400
