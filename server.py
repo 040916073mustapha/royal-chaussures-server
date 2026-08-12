@@ -99,7 +99,9 @@ def upsert_order_from_shopify(od):
         items = od.get("line_items", [])
         product = items[0].get("title", "") if items else ""
         variant = items[0].get("variant_title", "") if items else ""
-        conn = sqlite3.connect(_DB_PATH)
+        conn = sqlite3.connect(_DB_PATH, timeout=30)
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA journal_mode=WAL")
         c = conn.cursor()
         c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (oid, name, phone, wilaya, city, product, variant, total))
         if phone:
