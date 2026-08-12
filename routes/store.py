@@ -186,6 +186,9 @@ def pos_record_sale():
             return jsonify({"error": "product_id and quantity required"}), 400
 
         from database.db import create_sale
+        # Add required fields for create_sale
+        data["store_id"] = data.get("store_id", 1)
+        data["cashier"] = data.get("cashier", "caisse")
         result = create_sale(data)
         if "error" in result:
             return jsonify(result), 400
