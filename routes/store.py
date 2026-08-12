@@ -195,8 +195,7 @@ def pos_record_sale():
         return jsonify({"sale": result})
     except Exception as e:
         import traceback
-        print(f"[POS Sale] Error: {e}
-{traceback.format_exc()}")
+        print(f"[POS Sale] Error: {e}\n{traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -225,8 +224,7 @@ def pos_list_sales():
         return jsonify({"success": True, "sales": sales})
     except Exception as e:
         import traceback
-        print(f"[POS Sales List] Error: {e}
-{traceback.format_exc()}")
+        print(f"[POS Sales List] Error: {e}\n{traceback.format_exc()}")
         return jsonify({"success": False, "sales": [], "error": str(e)}), 500
 
 
