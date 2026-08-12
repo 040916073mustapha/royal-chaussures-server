@@ -367,7 +367,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/api/chatbot", "/api/v1", "/pos")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/api/chatbot", "/api/v1", "/pos", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products")
 
 
 @app.before_request
@@ -917,78 +917,11 @@ def api_products():
 
 
 # ============================================================
-# POS Purchases API (Nouvel achat)
+# POS Purchases API (Nouvel achat) — handled in routes/store.py blueprint
 # ============================================================
 
-@app.route('/api/v1/store/pos/purchases', methods=['POST'])
-def api_pos_record_purchase():
-    """Record a purchase from POS without auth requirement"""
-    try:
-        from routes.store import create_purchase_with_items
-        data = request.get_json()
-        if not data:
-            return json_utf8({"error": "Request body required"})
-        if "items" not in data or not data["items"]:
-            return json_utf8({"error": "Au moins un article est requis"})
-        
-        data["store_id"] = 1
-        data["recorded_by"] = "pos"
-        
-        result = create_purchase_with_items(data)
-        return json_utf8({"purchase": result["purchase"], "items": result["items"]})
-    except Exception as e:
-        import traceback
-        logger.error(f"[POS Purchase] Error: {e}\n{traceback.format_exc()}")
-        return json_utf8({"error": str(e)})
-
-
+# POS Products API (Liste des articles) — handled in routes/store.py blueprint
 # ============================================================
-# POS Products API (Liste des articles)
-# ============================================================
-
-@app.route('/api/v1/store/pos/products')
-def api_pos_products():
-    """Fetch products with inventory and pricing for Liste des articles page"""
-    try:
-        from database.db import get_db
-        db = get_db()
-        rows = db.execute("""
-            SELECT 
-                p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,
-                p.cost_price, p.store_price, p.online_price,
-                p.description, p.image_url, p.is_active, p.supplier,
-                COALESCE(i.store_quantity, 0) as store_quantity,
-                COALESCE(i.online_quantity, 0) as online_quantity,
-                COALESCE(i.warehouse_quantity, 0) as warehouse_quantity,
-                COALESCE(i.low_stock_threshold, 5) as low_stock_threshold
-            FROM products p
-            LEFT JOIN inventory i ON i.product_id = p.id
-            WHERE p.is_active = 1
-            ORDER BY p.name ASC
-        """).fetchall()
-        products = []
-        for r in rows:
-            d = dict(r)
-            d['total_quantity'] = d['store_quantity'] + d['online_quantity'] + d['warehouse_quantity']
-            d['remise_pct'] = 0.0
-            sp = d['store_price'] or d['online_price'] or 0
-            cp = d['cost_price'] or 0
-            if sp > 0 and cp > 0:
-                d['remise_pct'] = round((1 - cp / sp) * 100, 1)
-            d['store_price'] = sp
-            products.append(d)
-        total_qty = sum(p['total_quantity'] for p in products)
-        total_articles = len(products)
-        return json_utf8({
-            'success': True,
-            'products': products,
-            'total_quantity': total_qty,
-            'total_articles': total_articles
-        })
-    except Exception as e:
-        import traceback
-        logger.error(f'[POS Products API] Error: {e}\n{traceback.format_exc()}')
-        return json_utf8({'success': False, 'products': [], 'total_quantity': 0, 'total_articles': 0, 'error': str(e)})
 
 @app.route('/api/clients')
 def api_clients():

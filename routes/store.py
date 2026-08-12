@@ -38,6 +38,92 @@ def pos_page():
 
 
 # ============================================================
+# 📦 POS Purchases API (Nouvel achat) — no auth required
+# ============================================================
+
+@store_bp.route('/pos/purchases', methods=['POST'])
+def pos_record_purchase():
+    """Record a purchase from POS without auth requirement"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
+        if "items" not in data or not data["items"]:
+            return jsonify({"error": "Au moins un article est requis"}), 400
+        
+        data["store_id"] = 1
+        data["recorded_by"] = "pos"
+        
+        result = create_purchase_with_items(data)
+        return jsonify({"purchase": result["purchase"], "items": result["items"]})
+    except Exception as e:
+        import traceback
+        print(f"[POS Purchase] Error: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
+@store_bp.route('/pos/purchases', methods=['GET'])
+def pos_list_purchases():
+    """List purchases from POS without auth requirement"""
+    try:
+        purchases = get_purchases(store_id=1, limit=100, offset=0)
+        return jsonify({"success": True, "purchases": purchases})
+    except Exception as e:
+        import traceback
+        print(f"[POS Purchases List] Error: {e}\n{traceback.format_exc()}")
+        return jsonify({"success": False, "purchases": [], "error": str(e)}), 500
+
+
+# ============================================================
+# 🏷️ POS Products API (Liste des articles) — no auth required
+# ============================================================
+
+@store_bp.route('/pos/products')
+def pos_products():
+    """Fetch products with inventory and pricing for Liste des articles page"""
+    try:
+        from database.db import get_db
+        db = get_db()
+        rows = db.execute("""
+            SELECT 
+                p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,
+                p.cost_price, p.store_price, p.online_price,
+                p.description, p.image_url, p.is_active, p.supplier,
+                COALESCE(i.store_quantity, 0) as store_quantity,
+                COALESCE(i.online_quantity, 0) as online_quantity,
+                COALESCE(i.warehouse_quantity, 0) as warehouse_quantity,
+                COALESCE(i.low_stock_threshold, 5) as low_stock_threshold
+            FROM products p
+            LEFT JOIN inventory i ON i.product_id = p.id
+            WHERE p.is_active = 1
+            ORDER BY p.name ASC
+        """).fetchall()
+        products = []
+        for r in rows:
+            d = dict(r)
+            d['total_quantity'] = d['store_quantity'] + d['online_quantity'] + d['warehouse_quantity']
+            d['remise_pct'] = 0.0
+            sp = d['store_price'] or d['online_price'] or 0
+            cp = d['cost_price'] or 0
+            if sp > 0 and cp > 0:
+                d['remise_pct'] = round((1 - cp / sp) * 100, 1)
+            d['store_price'] = sp
+            products.append(d)
+        total_qty = sum(p['total_quantity'] for p in products)
+        total_articles = len(products)
+        return jsonify({
+            'success': True,
+            'products': products,
+            'total_quantity': total_qty,
+            'total_articles': total_articles
+        })
+    except Exception as e:
+        import traceback
+        print(f'[POS Products API] Error: {e}\n{traceback.format_exc()}')
+        return jsonify({'success': False, 'products': [], 'total_quantity': 0, 'total_articles': 0, 'error': str(e)}), 500
+
+
+# ============================================================
 # 🔐 Auth
 # ============================================================
 
