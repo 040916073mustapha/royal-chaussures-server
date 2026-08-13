@@ -24,6 +24,11 @@ CREATE TABLE IF NOT EXISTS stores (
     features JSONB DEFAULT '{}',
     settings JSONB DEFAULT '{}',
     is_active BOOLEAN DEFAULT TRUE,
+    trial_ends_at TIMESTAMP,                          -- تاريخ انتهاء الفترة التجريبية
+    subscribed_at TIMESTAMP,                           -- تاريخ بداية الاشتراك المدفوع
+    next_billing_at TIMESTAMP,                         -- تاريخ التجديد القادم
+    billing_period VARCHAR(20) DEFAULT 'monthly',      -- monthly, yearly
+    baridi_ccp VARCHAR(50) DEFAULT '',                 -- رقم CCP للتاجر
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

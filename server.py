@@ -371,10 +371,12 @@ try:
     from routes.store import store_bp
     from routes.admin import admin_bp
     from routes.inventory_agent import inv_agent_bp
+    from routes.subscriptions import subs_bp
     app.register_blueprint(store_bp, url_prefix="/api/v1/store")
     app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
     app.register_blueprint(inv_agent_bp, url_prefix="/api/v1/agent")
-    logger.info("[Store POS] Blueprints registered: /api/v1/store, /api/v1/admin, /api/v1/agent")
+    app.register_blueprint(subs_bp, url_prefix="/api/v1/subscription")
+    logger.info("[Store POS] Blueprints registered: /api/v1/store, /api/v1/admin, /api/v1/agent, /api/v1/subscription")
     from database.db import close_db as close_store_db
     app.teardown_appcontext(lambda exc: close_store_db() if callable(close_store_db) else None)
     logger.info("[Store POS] DB teardown handler registered")
