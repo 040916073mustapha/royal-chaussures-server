@@ -365,31 +365,81 @@ except Exception as _db_err:
     except Exception as _del_err:
         logger.error(f"[Store POS] Could not delete corrupted DB: {_del_err}")
 # ==============================================================
+# ========== Initialize Store POS Database ==========
+_db_init_ok = False
 try:
     from database.db import init_db as init_store_db
     init_store_db()
-    from routes.store import store_bp
-    from routes.admin import admin_bp
-    from routes.inventory_agent import inv_agent_bp
-    from routes.subscriptions import subs_bp
-    app.register_blueprint(store_bp, url_prefix="/api/v1/store")
-    app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
-    app.register_blueprint(inv_agent_bp, url_prefix="/api/v1/agent")
-    app.register_blueprint(subs_bp, url_prefix="/api/v1/subscription")
-    logger.info("[Store POS] Blueprints registered: /api/v1/store, /api/v1/admin, /api/v1/agent, /api/v1/subscription")
-    from database.db import close_db as close_store_db
-    app.teardown_appcontext(lambda exc: close_store_db() if callable(close_store_db) else None)
-    logger.info("[Store POS] DB teardown handler registered")
-    
+    _db_init_ok = True
+    logger.info("[Store POS] Database initialized successfully")
 except Exception as e:
     import traceback as _tb
-    logger.warning(f"[Store POS] Blueprint registration skipped: {e}\n{_tb.format_exc()}")
-    
-    # Direct POS route when blueprint fails
-    @app.route('/api/v1/store/pos', endpoint='pos_direct', methods=['GET'])
-    def _pos_fallback_direct():
-        return render_template('pos/index.html')
-    logger.info("[Store POS] POS direct route registered (blueprint fallback)")
+    logger.error(f"[Store POS] Database init FAILED: {e}\n{_tb.format_exc()}")
+
+# ========== Register Store Blueprint ==========
+_store_bp_ok = False
+if _db_init_ok:
+    try:
+        from routes.store import store_bp
+        app.register_blueprint(store_bp, url_prefix="/api/v1/store")
+        _store_bp_ok = True
+        logger.info("[Store POS] /api/v1/store blueprint registered")
+    except Exception as e:
+        import traceback as _tb
+        logger.error(f"[Store POS] Store blueprint FAILED: {e}\n{_tb.format_exc()}")
+
+# ========== Register Admin Blueprint ==========
+if _db_init_ok:
+    try:
+        from routes.admin import admin_bp
+        app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
+        logger.info("[Store POS] /api/v1/admin blueprint registered")
+    except Exception as e:
+        import traceback as _tb
+        logger.error(f"[Store POS] Admin blueprint FAILED: {e}\n{_tb.format_exc()}")
+
+# ========== Register Inventory Agent Blueprint ==========
+if _db_init_ok:
+    try:
+        from routes.inventory_agent import inv_agent_bp
+        app.register_blueprint(inv_agent_bp, url_prefix="/api/v1/agent")
+        logger.info("[Store POS] /api/v1/agent blueprint registered")
+    except Exception as e:
+        import traceback as _tb
+        logger.error(f"[Store POS] Agent blueprint FAILED: {e}\n{_tb.format_exc()}")
+
+# ========== Register Subscriptions Blueprint ==========
+if _db_init_ok:
+    try:
+        from routes.subscriptions import subs_bp
+        app.register_blueprint(subs_bp, url_prefix="/api/v1/subscription")
+        logger.info("[Store POS] /api/v1/subscription blueprint registered")
+    except Exception as e:
+        import traceback as _tb
+        logger.error(f"[Store POS] Subscription blueprint FAILED: {e}\n{_tb.format_exc()}")
+
+# ========== Teardown Handler ==========
+if _db_init_ok:
+    try:
+        from database.db import close_db as close_store_db
+        app.teardown_appcontext(lambda exc: close_store_db() if callable(close_store_db) else None)
+        logger.info("[Store POS] DB teardown handler registered")
+    except Exception as e:
+        logger.error(f"[Store POS] Teardown handler FAILED: {e}")
+
+# ========== POS Fallback Route ==========
+@app.route('/api/v1/store/pos', endpoint='pos_direct', methods=['GET'])
+def _pos_fallback_direct():
+    return render_template('pos/index.html')
+
+# ========== Debug endpoint to check registration status ==========
+@app.route('/api/v1/debug/routes', methods=['GET'])
+def _debug_routes():
+    routes = []
+    for rule in sorted(app.url_map.iter_rules(), key=lambda r: r.rule):
+        methods = ','.join(sorted(rule.methods - {'HEAD', 'OPTIONS'}))
+        routes.append({"path": rule.rule, "methods": methods, "endpoint": rule.endpoint})
+    return jsonify({"db_ok": _db_init_ok, "store_ok": _store_bp_ok, "routes": routes})
 
 # SaaS Onboarding page (register / login for new tenants)
 @app.route('/api/v1/store/onboard', endpoint='nexus_onboard', methods=['GET'])
