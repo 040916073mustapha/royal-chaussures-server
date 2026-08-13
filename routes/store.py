@@ -19,13 +19,144 @@ from database.db import (
     get_store_purchases, get_purchase_detail
 )
 from middleware.auth import store_manager_required, token_required, generate_token
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
+from database.db import create_store, get_store_by_slug, get_stores, _ensure_default_store
 
 import sqlite3
 import os
-from database.db import get_db, dict_from_row
+import re
+import json
+import time
+from database.db import get_db, dict_from_row, get_current_store_id
 
 store_bp = Blueprint("store", __name__, template_folder="../templates", static_folder="../static")
+
+
+def _resolve_store_id():
+    """تحديد store_id من الطلب: X-Store-ID header > g.store_id > 1"""
+    sid = request.headers.get("X-Store-ID", "")
+    if sid.isdigit():
+        return int(sid)
+    if hasattr(g, "store_id") and g.store_id:
+        return g.store_id
+    return get_current_store_id()
+
+
+# ============================================================
+# 🔗 Nexus POS — SaaS Multi-Tenant Auth & Onboarding
+# ============================================================
+
+@store_bp.route("/register", methods=["POST"])
+def register_store():
+    """
+    تسجيل متجر جديد في Nexus POS
+    يقوم بإنشاء المتجر + مستخدم مدير له
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
+        
+        # الحقول المطلوبة
+        store_name = data.get("store_name", "").strip()
+        admin_username = data.get("username", "").strip()
+        admin_password = data.get("password", "").strip()
+        
+        if not store_name or not admin_username or not admin_password:
+            return jsonify({"error": "store_name, username, password are required"}), 400
+        
+        # توليد slug من اسم المتجر
+        slug = store_name.lower().replace(" ", "-")
+        slug = re.sub(r"[^a-z0-9-]", "", slug)
+        if not slug:
+            slug = f"store-{int(time.time())}"
+        
+        # التأكد من عدم تكرار الـ slug
+        existing = get_store_by_slug(slug)
+        if existing:
+            # إضافة لاحقة عددية
+            counter = 1
+            while get_store_by_slug(f"{slug}-{counter}"):
+                counter += 1
+            slug = f"{slug}-{counter}"
+        
+        db = get_db()
+        
+        # التأكد من عدم تكرار username
+        existing_user = db.execute(
+            "SELECT id FROM users WHERE username = ?", [admin_username]
+        ).fetchone()
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 409
+        
+        # إنشاء المتجر
+        store = create_store({
+            "name": store_name,
+            "slug": slug,
+            "email": data.get("email", ""),
+            "phone": data.get("phone", ""),
+            "address": data.get("address", ""),
+            "subscription_tier": data.get("subscription_tier", "free"),
+            "settings": {
+                "currency": "DZD",
+                "language": "ar",
+                "timezone": "Africa/Algiers"
+            }
+        })
+        
+        # إنشاء مستخدم مدير المتجر
+        db.execute(
+            """INSERT INTO users (username, password_hash, role, store_id, display_name, permissions)
+               VALUES (?, ?, 'store_manager', ?, ?, ?)""",
+            [
+                admin_username,
+                generate_password_hash(admin_password),
+                store["id"],
+                data.get("display_name", store_name),
+                json.dumps([
+                    "store:products:*",
+                    "store:sales:*",
+                    "store:inventory:*",
+                    "store:customers:*",
+                    "store:print:*",
+                    "store:expenses:*",
+                    "shared:products:read",
+                    "shared:inventory:read"
+                ])
+            ]
+        )
+        db.commit()
+        
+        return jsonify({
+            "success": True,
+            "store": store,
+            "message": f"تم إنشاء متجر '{store_name}' بنجاح!"
+        }), 201
+        
+    except Exception as e:
+        import traceback
+        print(f"[SaaS Register] Error: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
+@store_bp.route("/stores", methods=["GET"])
+def list_stores():
+    """قائمة المتاجر المسجلة (للاستعلام العام)"""
+    try:
+        stores = get_stores()
+        return jsonify({"stores": stores, "count": len(stores)})
+    except Exception as e:
+        return jsonify({"stores": [], "count": 0, "error": str(e)}), 500
+
+
+@store_bp.route("/stores/check-slug", methods=["GET"])
+def check_slug_availability():
+    """التحقق من توفر slug لمتجر"""
+    slug = request.args.get("slug", "").strip()
+    if not slug:
+        return jsonify({"available": False, "error": "Slug required"}), 400
+    existing = get_store_by_slug(slug)
+    return jsonify({"available": existing is None, "slug": slug})
 
 
 # ============================================================
@@ -52,7 +183,7 @@ def pos_record_purchase():
         if "items" not in data or not data["items"]:
             return jsonify({"error": "Au moins un article est requis"}), 400
         
-        data["store_id"] = 1
+        data["store_id"] = _resolve_store_id()
         data["recorded_by"] = "pos"
         
         result = create_purchase_with_items(data)
@@ -72,7 +203,7 @@ def pos_list_purchases():
         conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         query = "SELECT * FROM store_purchases WHERE store_id = ? ORDER BY purchase_date DESC LIMIT ? OFFSET ?"
-        params = [1, 100, 0]
+        params = [_resolve_store_id(), 100, 0]
         rows = conn.execute(query, params).fetchall()
         purchases = [dict(r) for r in rows]
         conn.close()
@@ -215,10 +346,10 @@ def pos_list_sales():
                 ss.customer_name, ss.cashier as seller_name, ss.cashier as recorded_by,
                 ss.sale_date as created_at, ss.unit_price as cost_price
             FROM store_sales ss
-            WHERE ss.store_id = 1
+            WHERE ss.store_id = ?
             ORDER BY ss.sale_date DESC
             LIMIT 100 OFFSET 0
-        """).fetchall()
+        """, [_resolve_store_id()]).fetchall()
         sales = [dict(r) for r in rows]
         conn.close()
         return jsonify({"success": True, "sales": sales})

@@ -88,8 +88,9 @@ def admin_login():
 @admin_bp.route("/dashboard", methods=["GET"])
 @admin_required
 def unified_dashboard():
-    """لوحة التحكم الموحدة — إحصائيات المحل + الأونلاين"""
-    dashboard = get_unified_dashboard()
+    """لوحة التحكم الموحدة — إحصائيات المحل + الأونلاين (مع دعم Multi-Tenant)"""
+    store_id = request.headers.get("X-Store-ID", type=int) or None
+    dashboard = get_unified_dashboard(store_id=store_id)
     return jsonify(dashboard)
 
 

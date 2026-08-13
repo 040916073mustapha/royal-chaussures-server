@@ -1,7 +1,8 @@
 """
-Royal Chaussures — Unified Database Module
-===========================================
-قاعدة بيانات موحدة للمحل الفيزيائي و المتجر الإلكتروني
+Nexus POS — Unified Multi-Tenant Database Module
+==================================================
+قاعدة بيانات موحدة متعددة المتاجر (Multi-Tenant) لمنصة Nexus POS
+Royal Chaussures هو المتجر الأول (store_id=1)
 تستخدم SQLite — قابلة للترقية إلى PostgreSQL لاحقاً
 """
 
@@ -78,6 +79,119 @@ def close_db():
         _local.connection = None
 
 
+# ============================================================
+# Store Management (Multi-Tenant)
+# ============================================================
+
+DEFAULT_STORE_SLUG = "royal-chaussures"
+DEFAULT_STORE_NAME = "Royal Chaussures"
+
+def _ensure_default_store():
+    """التأكد من وجود المتجر الافتراضي (Royal Chaussures = store_id=1)"""
+    db = get_db()
+    store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = 1").fetchone())
+    if not store:
+        db.execute(
+            "INSERT INTO stores (id, name, slug, email, phone, subscription_tier, subscription_status) "
+            "VALUES (1, ?, ?, ?, ?, 'pro', 'active')",
+            [DEFAULT_STORE_NAME, DEFAULT_STORE_SLUG,
+             "royalchaussures2@gmail.com", "+213659832426"]
+        )
+        db.commit()
+        store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = 1").fetchone())
+        print(f"[DB] Default store '{DEFAULT_STORE_NAME}' created (id=1)")
+    return store
+
+
+def get_store(store_id):
+    """جلب متجر حسب المعرف"""
+    db = get_db()
+    return dict_from_row(db.execute("SELECT * FROM stores WHERE id = ?", [store_id]).fetchone())
+
+
+def get_store_by_slug(slug):
+    """جلب متجر حسب الرابط المختصر"""
+    db = get_db()
+    return dict_from_row(db.execute("SELECT * FROM stores WHERE slug = ?", [slug]).fetchone())
+
+
+def get_stores(active_only=True):
+    """جلب قائمة المتاجر"""
+    db = get_db()
+    query = "SELECT * FROM stores"
+    if active_only:
+        query += " WHERE is_active = 1"
+    query += " ORDER BY name ASC"
+    return dicts_from_rows(db.execute(query).fetchall())
+
+
+def create_store(data):
+    """إنشاء متجر جديد"""
+    db = get_db()
+    cursor = db.execute(
+        "INSERT INTO stores (name, slug, email, phone, address, logo_url, subscription_tier, settings) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            data["name"],
+            data["slug"],
+            data.get("email", ""),
+            data.get("phone", ""),
+            data.get("address", ""),
+            data.get("logo_url", ""),
+            data.get("subscription_tier", "free"),
+            json.dumps(data.get("settings", {}))
+        ]
+    )
+    store_id = cursor.lastrowid
+    db.commit()
+    return get_store(store_id)
+
+
+def update_store(store_id, data):
+    """تحديث بيانات متجر"""
+    db = get_db()
+    allowed_fields = ["name", "slug", "email", "phone", "address", "logo_url",
+                      "subscription_tier", "subscription_status", "features",
+                      "settings", "is_active"]
+    updates = []
+    params = []
+    for field in allowed_fields:
+        if field in data:
+            if field in ("features", "settings"):
+                updates.append(f"{field} = ?")
+                params.append(json.dumps(data[field]))
+            else:
+                updates.append(f"{field} = ?")
+                params.append(data[field])
+    if not updates:
+        return get_store(store_id)
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(store_id)
+    db.execute(f"UPDATE stores SET {', '.join(updates)} WHERE id = ?", params)
+    db.commit()
+    return get_store(store_id)
+
+
+def get_store_db(store_id=None):
+    """
+    الحصول على اتصال قاعدة البيانات مع store_id مُحدد مسبقاً
+    يُستخدم في الـ routes لعزل بيانات كل متجر
+    """
+    db = get_db()
+    if store_id is not None:
+        # نخزن store_id في thread-local للاستخدام في الاستعلامات
+        _local.store_id = store_id
+    return db
+
+
+def get_current_store_id():
+    """الحصول على store_id الخاص بالطلب الحالي"""
+    return getattr(_local, "store_id", 1)
+
+
+# ============================================================
+
+
 def _init_tables(db):
     """إنشاء الجداول من schema.sql (داخلي)"""
     schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
@@ -119,6 +233,9 @@ def _seed_default_users(db):
     """إنشاء المستخدمين الافتراضيين عند التشغيل الأول"""
     from werkzeug.security import generate_password_hash
     
+    # التأكد من وجود المتجر الافتراضي أولاً
+    _ensure_default_store()
+    
     # Super Admin (مصطفى)
     admin_exists = db.execute("SELECT id FROM users WHERE username = ?", ["admin"]).fetchone()
     if not admin_exists:
@@ -134,8 +251,8 @@ def _seed_default_users(db):
         )
         print("[DB] Default admin user created")
     
-    # Store Manager (أخوك)
-    store_exists = db.execute("SELECT id FROM users WHERE username = ?", ["store"]).fetchone()
+    # Store Manager (أخوك) — مرتبط بـ Royal Chaussures (store_id=1)
+    store_exists = db.execute("SELECT id FROM users WHERE username = ? AND store_id = 1", ["store"]).fetchone()
     if not store_exists:
         db.execute(
             "INSERT INTO users (username, password_hash, role, store_id, display_name, permissions) VALUES (?, ?, ?, ?, ?, ?)",
@@ -157,7 +274,7 @@ def _seed_default_users(db):
                 ])
             ]
         )
-        print("[DB] Default store manager user created")
+        print("[DB] Default store manager user created (store_id=1)")
     
     db.commit()
 
@@ -178,46 +295,61 @@ def dicts_from_rows(rows):
 # Product Operations
 # ============================================================
 
-def get_products(active_only=True, limit=200, offset=0):
-    """جلب قائمة المنتجات"""
+def get_products(active_only=True, limit=200, offset=0, store_id=None):
+    """جلب قائمة المنتجات (ضمن المتجر الحالي أو المحدد)"""
     db = get_db()
-    query = "SELECT * FROM products"
-    params = []
+    if store_id is None:
+        store_id = get_current_store_id()
+    query = "SELECT * FROM products WHERE store_id = ?"
+    params = [store_id]
     if active_only:
-        query += " WHERE is_active = 1"
+        query += " AND is_active = 1"
     query += " ORDER BY name ASC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
     return dicts_from_rows(db.execute(query, params).fetchall())
 
 
-def get_product(product_id):
-    """جلب منتج حسب ID"""
+def get_product(product_id, store_id=None):
+    """جلب منتج حسب ID (ضمن المتجر المحدد أو الحالي)"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
+    if store_id and store_id != getattr(_local, 'is_admin_override', None):
+        return dict_from_row(db.execute("SELECT * FROM products WHERE id = ? AND store_id = ?", [product_id, store_id]).fetchone())
     return dict_from_row(db.execute("SELECT * FROM products WHERE id = ?", [product_id]).fetchone())
 
 
-def get_product_by_sku(sku):
-    """جلب منتج حسب SKU"""
+def get_product_by_sku(sku, store_id=None):
+    """جلب منتج حسب SKU (ضمن المتجر المحدد أو الحالي)"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
+    if store_id and store_id != getattr(_local, 'is_admin_override', None):
+        return dict_from_row(db.execute("SELECT * FROM products WHERE sku = ? AND store_id = ?", [sku, store_id]).fetchone())
     return dict_from_row(db.execute("SELECT * FROM products WHERE sku = ?", [sku]).fetchone())
 
 
-def get_product_by_barcode(barcode):
-    """جلب منتج حسب الباركود"""
+def get_product_by_barcode(barcode, store_id=None):
+    """جلب منتج حسب الباركود (ضمن المتجر المحدد أو الحالي)"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
+    if store_id and store_id != getattr(_local, 'is_admin_override', None):
+        return dict_from_row(db.execute("SELECT * FROM products WHERE barcode = ? AND store_id = ?", [barcode, store_id]).fetchone())
     return dict_from_row(db.execute("SELECT * FROM products WHERE barcode = ?", [barcode]).fetchone())
 
 
 def create_product(data):
-    """إنشاء منتج جديد"""
+    """إنشاء منتج جديد (ضمن المتجر الحالي أو المحدد)"""
     db = get_db()
+    store_id = data.get("store_id", get_current_store_id())
     cursor = db.execute("""
-        INSERT INTO products (sku, name, description, category, color, size,
+        INSERT INTO products (store_id, sku, name, description, category, color, size,
                               cost_price, online_price, store_price,
                               supplier, barcode, image_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, [
-        data.get("sku"), data.get("name"), data.get("description", ""),
+        store_id, data.get("sku"), data.get("name"), data.get("description", ""),
         data.get("category", ""), data.get("color", ""), data.get("size", ""),
         data.get("cost_price", 0), data.get("online_price", 0), data.get("store_price", 0),
         data.get("supplier", ""), data.get("barcode"), data.get("image_url", "")
@@ -225,7 +357,7 @@ def create_product(data):
     product_id = cursor.lastrowid
     
     # إنشاء سجل مخزون للمنتج الجديد
-    db.execute("INSERT INTO inventory (product_id) VALUES (?)", [product_id])
+    db.execute("INSERT INTO inventory (store_id, product_id) VALUES (?, ?)", [store_id, product_id])
     db.commit()
     
     _log_sync("product", product_id, "create", "store")
@@ -261,16 +393,18 @@ def update_product(product_id, data):
     return get_product(product_id)
 
 
-def search_products(query, limit=50):
-    """البحث في المنتجات حسب الاسم أو SKU أو الباركود"""
+def search_products(query, limit=50, store_id=None):
+    """البحث في المنتجات حسب الاسم أو SKU أو الباركود (ضمن المتجر الحالي)"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
     like_query = f"%{query}%"
     rows = db.execute("""
         SELECT * FROM products 
-        WHERE (name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR category LIKE ?)
+        WHERE store_id = ? AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR category LIKE ?)
         AND is_active = 1
         ORDER BY name ASC LIMIT ?
-    """, [like_query, like_query, like_query, like_query, limit]).fetchall()
+    """, [store_id, like_query, like_query, like_query, like_query, limit]).fetchall()
     return dicts_from_rows(rows)
 
 
@@ -278,30 +412,36 @@ def search_products(query, limit=50):
 # Inventory Operations
 # ============================================================
 
-def get_inventory(product_id=None):
-    """جلب المخزون — لكل المنتجات أو منتج معين"""
+def get_inventory(product_id=None, store_id=None):
+    """جلب المخزون — لكل المنتجات أو منتج معين (ضمن المتجر المحدد أو الحالي)"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
+    
     if product_id:
         row = db.execute("""
             SELECT i.*, p.name, p.sku, p.barcode
             FROM inventory i
             JOIN products p ON p.id = i.product_id
-            WHERE i.product_id = ?
-        """, [product_id]).fetchone()
+            WHERE i.product_id = ? AND i.store_id = ?
+        """, [product_id, store_id]).fetchone()
         return dict_from_row(row)
     
     rows = db.execute("""
         SELECT i.*, p.name, p.sku, p.barcode
         FROM inventory i
         JOIN products p ON p.id = i.product_id
+        WHERE i.store_id = ?
         ORDER BY p.name ASC
-    """).fetchall()
+    """, [store_id]).fetchall()
     return dicts_from_rows(rows)
 
 
-def update_inventory(product_id, store_qty=None, online_qty=None, warehouse_qty=None):
-    """تحديث كميات المخزون"""
+def update_inventory(product_id, store_qty=None, online_qty=None, warehouse_qty=None, store_id=None):
+    """تحديث كميات المخزون (ضمن المتجر الحالي)"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
     updates = []
     params = []
     
@@ -321,7 +461,7 @@ def update_inventory(product_id, store_qty=None, online_qty=None, warehouse_qty=
     updates.append("updated_at = CURRENT_TIMESTAMP")
     params.append(product_id)
     
-    db.execute(f"UPDATE inventory SET {', '.join(updates)} WHERE product_id = ?", params)
+    db.execute(f"UPDATE inventory SET {', '.join(updates)} WHERE product_id = ? AND store_id = ?", params + [store_id])
     db.commit()
     
     _log_sync("inventory", product_id, "update", "store")
@@ -329,11 +469,13 @@ def update_inventory(product_id, store_qty=None, online_qty=None, warehouse_qty=
     return get_inventory(product_id)
 
 
-def deduct_store_inventory(product_id, quantity):
-    """خصم كمية من مخزون المحل (عند البيع)"""
+def deduct_store_inventory(product_id, quantity, store_id=None):
+    """خصم كمية من مخزون المحل (عند البيع) — ضمن المتجر الحالي"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
     current = db.execute(
-        "SELECT store_quantity FROM inventory WHERE product_id = ?", [product_id]
+        "SELECT store_quantity FROM inventory WHERE product_id = ? AND store_id = ?", [product_id, store_id]
     ).fetchone()
     
     if not current:
@@ -343,8 +485,8 @@ def deduct_store_inventory(product_id, quantity):
     if new_qty < 0:
         return {"error": f"Insufficient stock. Available: {current['store_quantity']}"}
     
-    db.execute("UPDATE inventory SET store_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE product_id = ?",
-               [new_qty, product_id])
+    db.execute("UPDATE inventory SET store_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE product_id = ? AND store_id = ?",
+               [new_qty, product_id, store_id])
     db.commit()
     
     _log_sync("inventory", product_id, "deduct", "store")
@@ -352,17 +494,19 @@ def deduct_store_inventory(product_id, quantity):
     return {"success": True, "new_quantity": new_qty}
 
 
-def get_low_stock_items():
-    """جلب المنتجات التي وصلت للحد الأدنى"""
+def get_low_stock_items(store_id=None):
+    """جلب المنتجات التي وصلت للحد الأدنى (ضمن المتجر الحالي)"""
     db = get_db()
+    if store_id is None:
+        store_id = get_current_store_id()
     rows = db.execute("""
         SELECT i.*, p.name, p.sku, p.barcode
         FROM inventory i
         JOIN products p ON p.id = i.product_id
-        WHERE i.store_quantity <= i.low_stock_threshold
-        OR i.online_quantity <= i.low_stock_threshold
+        WHERE i.store_id = ? AND (i.store_quantity <= i.low_stock_threshold
+        OR i.online_quantity <= i.low_stock_threshold)
         ORDER BY (i.store_quantity + i.online_quantity) ASC
-    """).fetchall()
+    """, [store_id]).fetchall()
     return dicts_from_rows(rows)
 
 
@@ -373,9 +517,10 @@ def get_low_stock_items():
 def create_sale(data):
     """تسجيل عملية بيع في المحل مع خصم المخزون"""
     db = get_db()
+    store_id = data.get("store_id", get_current_store_id())
     
     # خصم المخزون أولاً
-    result = deduct_store_inventory(data["product_id"], data["quantity"])
+    result = deduct_store_inventory(data["product_id"], data["quantity"], store_id)
     if "error" in result:
         return result
     
@@ -389,7 +534,7 @@ def create_sale(data):
     total = (unit_price * quantity) - discount
     
     # توليد رقم فاتورة
-    receipt = f"POS-{datetime.now().strftime('%Y%m%d%H%M%S')}-{data['store_id']}"
+    receipt = f"POS-{datetime.now().strftime('%Y%m%d%H%M%S')}-{store_id}"
     
     cursor = db.execute("""
         INSERT INTO store_sales (product_id, quantity, unit_price, total, discount,
@@ -399,7 +544,7 @@ def create_sale(data):
     """, [
         data["product_id"], quantity, unit_price, total, discount,
         data.get("payment_method", "cash"), data.get("notes", ""),
-        data["store_id"], data["cashier"],
+        store_id, data["cashier"],
         data.get("customer_phone", ""), data.get("customer_name", ""),
         receipt
     ])
@@ -576,14 +721,15 @@ def get_purchase_detail(purchase_id):
 # ============================================================
 
 def create_expense(data):
-    """تسجيل مصروف في المحل"""
+    """تسجيل مصروف في المحل (مع store_id)"""
     db = get_db()
+    store_id = data.get("store_id", get_current_store_id())
     cursor = db.execute("""
         INSERT INTO store_expenses (category, amount, description, store_id, recorded_by)
         VALUES (?, ?, ?, ?, ?)
     """, [
         data["category"], data["amount"], data.get("description", ""),
-        data["store_id"], data["recorded_by"]
+        store_id, data["recorded_by"]
     ])
     db.commit()
     return dict_from_row(db.execute("SELECT * FROM store_expenses WHERE id = ?", [cursor.lastrowid]).fetchone())
@@ -689,6 +835,7 @@ def get_purchase_items(purchase_id):
 def create_purchase_with_items(data):
     """إنشاء فاتورة شراء مع عناصرها دفعة واحدة + تحديث المخزون"""
     db = get_db()
+    store_id = data.get("store_id", get_current_store_id())
     
     # 1. إنشاء الفاتورة
     total = sum(
@@ -703,7 +850,7 @@ def create_purchase_with_items(data):
         data.get("purchase_date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
         total,
         data.get("notes", ""),
-        data.get("store_id", 1),
+        store_id,
         data.get("recorded_by", "store")
     ])
     purchase_id = cursor.lastrowid
@@ -718,21 +865,23 @@ def create_purchase_with_items(data):
         quantite = item.get("quantite", 1)
         prix_total = prix_achat * quantite
         
-        # البحث عن منتج موجود بالباركود أو إنشاء جديد
+        # البحث عن منتج موجود بالباركود (خاص بالمتجر) أو إنشاء جديد
         product_id = item.get("product_id")
         if not product_id and barcode:
-            existing = dict_from_row(db.execute("SELECT id FROM products WHERE barcode = ?", [barcode]).fetchone())
+            existing = dict_from_row(db.execute(
+                "SELECT id FROM products WHERE barcode = ? AND store_id = ?", [barcode, store_id]
+            ).fetchone())
             if existing:
                 product_id = existing["id"]
         
-        # إذا لا يوجد منتج — ننشئ واحد جديد
+        # إذا لا يوجد منتج — ننشئ واحد جديد لهذا المتجر
         if not product_id:
-            # توليد SKU من الباركود أو عشوائي
-            sku = barcode if barcode else f"PUR-{datetime.now().strftime('%Y%m%d%H%M%S')}-{item.get('pos', 0)}"
+            sku = barcode if barcode else f"PUR-{store_id}-{datetime.now().strftime('%y%m%d%H%M%S')}-{item.get('pos', 0)}"
             cursor2 = db.execute("""
-                INSERT INTO products (sku, name, barcode, cost_price, store_price, category, supplier, is_active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                INSERT INTO products (store_id, sku, name, barcode, cost_price, store_price, category, supplier, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, [
+                store_id,
                 sku,
                 designation,
                 barcode,
@@ -743,8 +892,8 @@ def create_purchase_with_items(data):
             ])
             product_id = cursor2.lastrowid
             # إنشاء سجل مخزون
-            db.execute("INSERT INTO inventory (product_id, store_quantity) VALUES (?, ?)",
-                       [product_id, quantite])
+            db.execute("INSERT INTO inventory (store_id, product_id, store_quantity) VALUES (?, ?, ?)",
+                       [store_id, product_id, quantite])
         else:
             # تحديث المخزون — زيادة الكمية
             existing_inv = dict_from_row(db.execute(
@@ -755,8 +904,8 @@ def create_purchase_with_items(data):
                 db.execute("UPDATE inventory SET store_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE product_id = ?",
                            [new_qty, product_id])
             else:
-                db.execute("INSERT INTO inventory (product_id, store_quantity) VALUES (?, ?)",
-                           [product_id, quantite])
+                db.execute("INSERT INTO inventory (store_id, product_id, store_quantity) VALUES (?, ?, ?)",
+                           [store_id, product_id, quantite])
             
             # تحديث السعر إذا كانت القيم الجديدة مختلفة
             db.execute("UPDATE products SET cost_price = ?, store_price = ? WHERE id = ? AND (cost_price != ? OR store_price != ?)",
@@ -819,14 +968,16 @@ def update_inventory_from_purchase(product_id, quantity, cost_price, store_price
 # Online Orders Operations
 # ============================================================
 
-def get_online_orders(status=None, limit=50, offset=0):
-    """جلب الطلبات الأونلاين"""
+def get_online_orders(store_id=None, status=None, limit=50, offset=0):
+    """جلب الطلبات الأونلاين (ضمن المتجر الحالي)"""
     db = get_db()
-    query = "SELECT * FROM online_orders"
-    params = []
+    if store_id is None:
+        store_id = get_current_store_id()
+    query = "SELECT * FROM online_orders WHERE store_id = ?"
+    params = [store_id]
     
     if status:
-        query += " WHERE status = ?"
+        query += " AND status = ?"
         params.append(status)
     
     query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
@@ -836,15 +987,15 @@ def get_online_orders(status=None, limit=50, offset=0):
 
 
 def upsert_online_order(shopify_data):
-    """إضافة أو تحديث طلب من Shopify"""
+    """إضافة أو تحديث طلب من Shopify (مدعوم بـ store_id = 1 للآن)"""
     db = get_db()
+    store_id = shopify_data.get("store_id", 1)  # Royal Chaussures default
     existing = db.execute(
-        "SELECT id FROM online_orders WHERE shopify_order_id = ?",
-        [shopify_data["shopify_order_id"]]
+        "SELECT id FROM online_orders WHERE shopify_order_id = ? AND store_id = ?",
+        [shopify_data["shopify_order_id"], store_id]
     ).fetchone()
     
     if existing:
-        # تحديث
         updates = []
         params = []
         for field in ["status", "payment_status", "shipping_status", "total", "notes"]:
@@ -861,12 +1012,13 @@ def upsert_online_order(shopify_data):
         return dict_from_row(db.execute("SELECT * FROM online_orders WHERE id = ?", [existing["id"]]).fetchone())
     else:
         cursor = db.execute("""
-            INSERT INTO online_orders (shopify_order_id, order_number, customer_name, customer_phone,
+            INSERT INTO online_orders (store_id, shopify_order_id, order_number, customer_name, customer_phone,
                                        customer_email, customer_address, wilaya, commune,
                                        total, subtotal, shipping_cost, discount, status,
                                        payment_status, shipping_status, items, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, [
+            store_id,
             shopify_data.get("shopify_order_id"),
             shopify_data.get("order_number"),
             shopify_data.get("customer_name", ""),
@@ -896,43 +1048,84 @@ def upsert_online_order(shopify_data):
 # Dashboard / Reports
 # ============================================================
 
-def get_unified_dashboard():
-    """إحصائيات موحدة للـ Super Admin Dashboard"""
+def get_unified_dashboard(store_id=None):
+    """إحصائيات موحدة — للـ Super Admin (كل المتاجر) أو لمتجر معين"""
     db = get_db()
+    admin_view = (store_id is None and get_current_store_id() == 1)
     
-    # إجمالي مبيعات اليوم
     today = datetime.now().strftime("%Y-%m-%d")
     
-    store_today = dict_from_row(db.execute("""
+    if store_id:
+        store_condition = " AND store_id = ?"
+        store_params = [store_id]
+    elif admin_view:
+        store_condition = ""
+        store_params = []
+    else:
+        sid = get_current_store_id()
+        store_condition = " AND store_id = ?"
+        store_params = [sid]
+    
+    store_today = dict_from_row(db.execute(f"""
         SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
-        FROM store_sales WHERE DATE(sale_date) = ?
-    """, [today]).fetchone())
+        FROM store_sales WHERE DATE(sale_date) = ?{store_condition}
+    """, [today] + store_params).fetchone()) if not admin_view or store_id else \
+        dict_from_row(db.execute(f"""
+            SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
+            FROM store_sales WHERE DATE(sale_date) = ?
+        """, [today]).fetchone())
     
-    # آخر 10 مبيعات محل
-    recent_store = dicts_from_rows(db.execute("""
-        SELECT ss.*, p.name as product_name
-        FROM store_sales ss
-        JOIN products p ON p.id = ss.product_id
-        ORDER BY ss.sale_date DESC LIMIT 10
-    """).fetchall())
-    
-    # آخر 10 طلبات أونلاين
-    recent_online = dicts_from_rows(db.execute("""
-        SELECT * FROM online_orders
-        ORDER BY created_at DESC LIMIT 10
-    """).fetchall())
-    
-    # إجمالي المخزون
-    inventory_summary = dict_from_row(db.execute("""
-        SELECT 
-            COUNT(*) as total_products,
-            SUM(store_quantity) as total_store_stock,
-            SUM(online_quantity) as total_online_stock
-        FROM inventory
-    """).fetchone())
-    
-    # المنتجات المنخفضة
-    low_stock = len(get_low_stock_items())
+    if admin_view and not store_id:
+        store_today = dict_from_row(db.execute("""
+            SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
+            FROM store_sales WHERE DATE(sale_date) = ?
+        """, [today]).fetchone())
+        recent_store = dicts_from_rows(db.execute("""
+            SELECT ss.*, p.name as product_name, s.name as store_name
+            FROM store_sales ss
+            JOIN products p ON p.id = ss.product_id
+            LEFT JOIN stores s ON s.id = ss.store_id
+            ORDER BY ss.sale_date DESC LIMIT 10
+        """).fetchall())
+        recent_online = dicts_from_rows(db.execute("""
+            SELECT o.*, s.name as store_name
+            FROM online_orders o
+            LEFT JOIN stores s ON s.id = o.store_id
+            ORDER BY o.created_at DESC LIMIT 10
+        """).fetchall())
+        inventory_summary = dict_from_row(db.execute("""
+            SELECT 
+                COUNT(*) as total_products,
+                SUM(store_quantity) as total_store_stock,
+                SUM(online_quantity) as total_online_stock
+            FROM inventory
+        """).fetchone())
+        low_stock = len(get_low_stock_items())
+    else:
+        sid = store_id or get_current_store_id()
+        store_today = dict_from_row(db.execute("""
+            SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
+            FROM store_sales WHERE DATE(sale_date) = ? AND store_id = ?
+        """, [today, sid]).fetchone())
+        recent_store = dicts_from_rows(db.execute("""
+            SELECT ss.*, p.name as product_name
+            FROM store_sales ss
+            JOIN products p ON p.id = ss.product_id
+            WHERE ss.store_id = ?
+            ORDER BY ss.sale_date DESC LIMIT 10
+        """, [sid]).fetchall())
+        recent_online = dicts_from_rows(db.execute("""
+            SELECT * FROM online_orders WHERE store_id = ?
+            ORDER BY created_at DESC LIMIT 10
+        """, [sid]).fetchall())
+        inventory_summary = dict_from_row(db.execute("""
+            SELECT 
+                COUNT(*) as total_products,
+                SUM(store_quantity) as total_store_stock,
+                SUM(online_quantity) as total_online_stock
+            FROM inventory WHERE store_id = ?
+        """, [sid]).fetchone())
+        low_stock = len(get_low_stock_items(sid))
     
     return {
         "store_today": store_today,
@@ -940,6 +1133,7 @@ def get_unified_dashboard():
         "recent_online_orders": recent_online,
         "inventory_summary": inventory_summary,
         "low_stock_count": low_stock,
+        "store_id": store_id or get_current_store_id(),
         "date": today
     }
 
@@ -949,10 +1143,11 @@ def get_unified_dashboard():
 # ============================================================
 
 def _log_sync(entity_type, entity_id, action, source, details=None):
-    """تسجيل عملية في سجل التزامن"""
+    """تسجيل عملية في سجل التزامن مع store_id"""
     db = get_db()
+    store_id = get_current_store_id()
     db.execute("""
-        INSERT INTO sync_log (entity_type, entity_id, action, source, details)
-        VALUES (?, ?, ?, ?, ?)
-    """, [entity_type, entity_id, action, source, json.dumps(details or {})])
+        INSERT INTO sync_log (store_id, entity_type, entity_id, action, source, details)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, [store_id, entity_type, entity_id, action, source, json.dumps(details or {})])
     db.commit()

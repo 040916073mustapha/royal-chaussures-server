@@ -1,6 +1,6 @@
 # 🧠 Long-Term Memory — Royal Chaussures System
 
-> آخر تحديث: 7 أغسطس 2026
+> آخر تحديث: 13 أغسطس 2026
 
 ## 🏆 GOLDEN RELEASE v3 — RC Agent v2.0 (Dark Neon Cyberpunk Complete)
 
@@ -95,6 +95,32 @@
 ---
 
 ## ✅ النسخة المستقرة السابقة (أرشيف)
+
+---
+
+## 🏆 GOLDEN CHECKPOINT v2.1 — POS Stable 🛡️
+
+| العنصر | القيمة |
+|--------|--------|
+| **Tag** | `v2.1-pos-stable` |
+| **Commit** | `8105308` |
+| **التاريخ** | 13 أغسطس 2026 |
+| **الفرع** | `feature/store-pos` |
+| **الحالة** | 🟢 **Safe Checkpoint** |
+
+### 🎯 المحتوى
+- POS System الأساسي مع SQLite
+- إصلاح `database is locked` → WAL + busy_timeout
+- Shopify order sync مستقر
+
+### 🧠 أمر الرجوع السريع (في أي خطأ مستقبلي)
+```bash
+git checkout tags/v2.1-pos-stable
+# أو:
+git reset --hard v2.1-pos-stable
+```
+
+---
 
 ## 🔑 المبادئ الهندسية (Royal System)
 
