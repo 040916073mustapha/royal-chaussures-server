@@ -485,7 +485,108 @@
         @media(max-width:1100px){.article-filter{width:240px;min-width:240px}.article-body{flex-direction:column}.article-filter{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color);max-height:250px}}
         @media(max-width:1100px){.saleslist-filter{width:280px;min-width:280px}.saleslist-body{flex-direction:column}.saleslist-filter{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color);max-height:300px}}
         @media(max-width:900px){.sale-body{flex-direction:column}.sale-control-panel{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color)}.purchase-body{flex-direction:column}.purchase-sidebar{width:100%;min-width:auto;border-left:none;border-top:1px solid var(--border-color)}.home-menu .menu-grid{grid-template-columns:repeat(2,1fr)}.sale-header .sale-total{font-size:22px}.form-row{flex-direction:column}}
-    </style>
+    
+
+        /* ===== AI Agent Chat Widget ===== */
+        .ai-agent-chat {
+            width: 380px; min-width: 380px;
+            display: flex; flex-direction: column;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+        }
+        .ai-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 18px;
+            background: #1a1a2e;
+            color: #fff;
+            font-weight: 600;
+            border-bottom: 1px solid #16213e;
+        }
+        .ai-header .fa-robot { color: #00e5ff; font-size: 18px; }
+        .ai-status {
+            margin-left: auto;
+            font-size: 11px; color: #4ade80;
+            background: rgba(74,222,128,0.15);
+            padding: 2px 10px; border-radius: 10px;
+        }
+        .ai-messages {
+            flex: 1; overflow-y: auto; padding: 14px;
+            display: flex; flex-direction: column; gap: 10px;
+            background: #f8f9fc;
+        }
+        .ai-msg { display: flex; flex-direction: column; }
+        .ai-msg.ai-bot { align-items: flex-start; }
+        .ai-msg.ai-user { align-items: flex-end; }
+        .ai-msg-bubble {
+            max-width: 90%; padding: 10px 14px;
+            border-radius: 12px; font-size: 13px; line-height: 1.5;
+        }
+        .ai-bot .ai-msg-bubble {
+            background: #fff; color: #333;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+        .ai-user .ai-msg-bubble {
+            background: #2563eb; color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .ai-msg-time {
+            font-size: 10px; color: #999; margin-top: 2px;
+        }
+        .ai-input-area {
+            display: flex; gap: 8px; padding: 10px 14px;
+            background: #fff; border-top: 1px solid #e0e0e0;
+        }
+        .ai-input {
+            flex: 1; padding: 10px 14px;
+            border: 1px solid #ddd; border-radius: 24px;
+            font-size: 13px; outline: none;
+            background: var(--bg-input);
+        }
+        .ai-input:focus { border-color: #2563eb; }
+        .ai-send-btn {
+            width: 40px; height: 40px; border: none;
+            background: #2563eb; color: #fff;
+            border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.15s;
+        }
+        .ai-send-btn:hover { background: #1d4ed8; }
+        .ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ai-typing .ai-msg-bubble::after {
+            content: ''; display: inline-block;
+            width: 8px; height: 8px; background: #999;
+            border-radius: 50%; animation: ai-blink 1s infinite;
+        }
+        @keyframes ai-blink { 50% { opacity: 0; } }
+
+        /* AI Logs (side panel) */
+        .ai-logs {
+            flex: 1; display: flex; flex-direction: column;
+            background: #fff; min-width: 200px;
+        }
+        .ai-logs-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 14px 18px;
+            background: #f8f9fc; border-bottom: 1px solid #e0e0e0;
+            font-weight: 600; font-size: 13px; color: #555;
+        }
+        .ai-logs-content {
+            flex: 1; overflow-y: auto; padding: 10px 14px;
+        }
+        .ai-log-item {
+            padding: 8px 10px; margin-bottom: 6px;
+            border-radius: 6px; font-size: 12px;
+            border-left: 3px solid #2563eb;
+            background: #f8f9fc;
+        }
+        .ai-log-item.success { border-left-color: #4ade80; background: #f0fdf4; }
+        .ai-log-item.error { border-left-color: #ef4444; background: #fef2f2; }
+        .ai-log-item .log-action { font-weight: 600; color: #333; }
+        .ai-log-item .log-detail { color: #666; margin-top: 2px; }
+        .ai-log-empty { color: #999; font-size: 12px; text-align: center; padding: 30px 10px; }
+
+</style>
 </head>
 <body>
 
@@ -527,6 +628,8 @@
             <button class="nav-item" data-view="products" onclick="switchView('products')" title="Liste produits"><i class="fas fa-box"></i></button>
             <button class="nav-item" data-view="sales-list" onclick="switchView('sales-list')" title="Liste ventes"><i class="fas fa-file-invoice"></i></button>
             <button class="nav-item" data-view="purchases-list" onclick="switchView('purchases-list')" title="Liste achats"><i class="fas fa-file-import"></i></button>
+            <button class="nav-item" data-view="ai-agent" onclick="switchView('ai-agent')" title="AI Inventory Agent"><i class="fas fa-robot" style="color:#00e5ff"></i></button>
+            <div class="sidebar-spacer"
             <div class="sidebar-spacer"></div>
             <div class="sidebar-footer">
                 <div class="avatar" id="sidebar-avatar" title="Profil">M</div>
@@ -1237,5 +1340,90 @@
 <div class="toast" id="toast"></div>
 
 <script src="/static/pos/pos.js?v=20260812"></script>
+
+<script>
+/* ===== AI Agent Chat ===== */
+function aiSendMessage() {
+    var input = document.getElementById('ai-input');
+    var text = input.value.trim();
+    if (!text) return;
+    
+    input.value = '';
+    var msgs = document.getElementById('ai-messages');
+    
+    // Add user message
+    var userDiv = document.createElement('div');
+    userDiv.className = 'ai-msg ai-user';
+    userDiv.innerHTML = '<div class="ai-msg-bubble">' + escapeHtml(text) + '</div><div class="ai-msg-time">' + new Date().toLocaleTimeString() + '</div>';
+    msgs.appendChild(userDiv);
+    msgs.scrollTop = msgs.scrollHeight;
+    
+    // Show typing indicator
+    var typingDiv = document.createElement('div');
+    typingDiv.className = 'ai-msg ai-bot ai-typing';
+    typingDiv.id = 'ai-typing';
+    typingDiv.innerHTML = '<div class="ai-msg-bubble">...</div>';
+    msgs.appendChild(typingDiv);
+    msgs.scrollTop = msgs.scrollHeight;
+    
+    var sBtn = document.querySelector('.ai-send-btn');
+    sBtn.disabled = true;
+    
+    // Call API
+    fetch('/api/v1/agent/process', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: text})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        // Remove typing
+        var typing = document.getElementById('ai-typing');
+        if (typing) typing.remove();
+        
+        var botDiv = document.createElement('div');
+        botDiv.className = 'ai-msg ai-bot';
+        var msg = data.message || '';
+        botDiv.innerHTML = '<div class="ai-msg-bubble">' + escapeHtml(msg).replace(/\n/g, '<br>') + '</div><div class="ai-msg-time">' + new Date().toLocaleTimeString() + '</div>';
+        msgs.appendChild(botDiv);
+        msgs.scrollTop = msgs.scrollHeight;
+        
+        // Add action log
+        if (data.action && data.action !== 'unknown') {
+            addAiLog(data.action, data.message || 'Action executed', data.success);
+        }
+    })
+    .catch(function(err) {
+        var typing = document.getElementById('ai-typing');
+        if (typing) typing.remove();
+        var errDiv = document.createElement('div');
+        errDiv.className = 'ai-msg ai-bot';
+        errDiv.innerHTML = '<div class="ai-msg-bubble" style="background:#fef2f2;color:#dc2626;border-color:#fca5a5;">Erreur de connexion au serveur</div>';
+        msgs.appendChild(errDiv);
+    })
+    .finally(function() {
+        sBtn.disabled = false;
+    });
+}
+
+function addAiLog(action, detail, success) {
+    var logContent = document.getElementById('ai-logs-content');
+    var empty = logContent.querySelector('.ai-log-empty');
+    if (empty) empty.remove();
+    
+    var item = document.createElement('div');
+    item.className = 'ai-log-item' + (success ? ' success' : ' error');
+    item.innerHTML = '<div class="log-action">' + action + '</div><div class="log-detail">' + escapeHtml(detail).substring(0, 80) + '</div>';
+    logContent.insertBefore(item, logContent.firstChild);
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(s));
+    return div.innerHTML;
+}
+</script>
+
 </body>
 </html>
