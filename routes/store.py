@@ -31,9 +31,12 @@ from database.db import get_db, dict_from_row, get_current_store_id
 
 
 def _pos_db():
-    """اتصال آمن لقاعدة الرويال ستور عبر database.db (WAL + busy_timeout)"""
+    """اتصال آمن لقاعدة الرويال ستور - متوافق مع SQLite و PostgreSQL"""
     db = get_db()
-    db.row_factory = sqlite3.Row
+    # SQLite Row Factory (آمن: فقط إذا كان sqlite3 connection)
+    import sqlite3 as _sqlite3
+    if isinstance(db, _sqlite3.Connection):
+        db.row_factory = _sqlite3.Row
     return db
 
 store_bp = Blueprint("store", __name__, template_folder="../templates", static_folder="../static")
