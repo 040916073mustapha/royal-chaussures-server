@@ -399,6 +399,16 @@ def login():
         permissions=permissions
     )
     
+    # جلب اسم المتجر من جدول stores
+    store_name = user["username"]
+    store_id = user.get("store_id")
+    if store_id:
+        store_row = dict_from_row(db.execute(
+            "SELECT name FROM stores WHERE id = ?", [store_id]
+        ).fetchone())
+        if store_row:
+            store_name = store_row["name"]
+    
     return jsonify({
         "token": token,
         "user": {
@@ -406,7 +416,8 @@ def login():
             "username": user["username"],
             "role": user["role"],
             "display_name": user["display_name"],
-            "store_id": user["store_id"]
+            "store_id": store_id,
+            "store_name": store_name
         }
     })
 
