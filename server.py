@@ -84,36 +84,56 @@ def init_db():
 
 
 def upsert_order_from_shopify(od):
-    try:
-        oid = str(od.get("id", ""))
-        if not oid:
+    # Retry logic for database lock
+    max_retries = 3
+    retry_delay = 1
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            oid = str(od.get("id", ""))
+            if not oid:
+                return
+            cust = od.get("customer", {}) or {}
+            name = " ".join(filter(None, [cust.get("first_name", ""), cust.get("last_name", "")]))
+            addr = cust.get("default_address", {}) or {}
+            phone = cust.get("phone", "") or addr.get("phone", "")
+            ship = od.get("shipping_address", {}) or {}
+            wilaya = ship.get("province", "")
+            city = ship.get("city", "")
+            total = float(od.get("total_price", 0))
+            items = od.get("line_items", [])
+            product = items[0].get("title", "") if items else ""
+            variant = items[0].get("variant_title", "") if items else ""
+            conn = sqlite3.connect(_DB_PATH, timeout=30)
+            conn.execute("PRAGMA busy_timeout=30000")
+            conn.execute("PRAGMA journal_mode=WAL")
+            c = conn.cursor()
+            c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (oid, name, phone, wilaya, city, product, variant, total))
+            if phone:
+                c.execute("SELECT id FROM clients WHERE phone=?", (phone,))
+                if c.fetchone():
+                    c.execute("UPDATE clients SET total_orders=total_orders+1, total_spent=total_spent+?, last_order_at=datetime('now') WHERE phone=?", (total, phone))
+                else:
+                    c.execute("INSERT INTO clients (name, phone, wilaya, municipality, total_orders, total_spent, last_order_at) VALUES (?,?,?,?,1,?,datetime('now'))", (name, phone, wilaya, city, total))
+            conn.commit()
+            conn.close()
+            return  # Success, exit retry loop
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e):
+                import time
+                last_error = e
+                logger.warning(f"[DB LOCK] Attempt {attempt+1}/{max_retries} failed, retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+                retry_delay *= 2
+                continue
+            raise  # Not a lock error, propagate
+        except Exception as e:
+            logger.error(f"upsert error: {_safe_str(e)}")
             return
-        cust = od.get("customer", {}) or {}
-        name = " ".join(filter(None, [cust.get("first_name", ""), cust.get("last_name", "")]))
-        addr = cust.get("default_address", {}) or {}
-        phone = cust.get("phone", "") or addr.get("phone", "")
-        ship = od.get("shipping_address", {}) or {}
-        wilaya = ship.get("province", "")
-        city = ship.get("city", "")
-        total = float(od.get("total_price", 0))
-        items = od.get("line_items", [])
-        product = items[0].get("title", "") if items else ""
-        variant = items[0].get("variant_title", "") if items else ""
-        conn = sqlite3.connect(_DB_PATH, timeout=30)
-        conn.execute("PRAGMA busy_timeout=30000")
-        conn.execute("PRAGMA journal_mode=WAL")
-        c = conn.cursor()
-        c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (oid, name, phone, wilaya, city, product, variant, total))
-        if phone:
-            c.execute("SELECT id FROM clients WHERE phone=?", (phone,))
-            if c.fetchone():
-                c.execute("UPDATE clients SET total_orders=total_orders+1, total_spent=total_spent+?, last_order_at=datetime('now') WHERE phone=?", (total, phone))
-            else:
-                c.execute("INSERT INTO clients (name, phone, wilaya, municipality, total_orders, total_spent, last_order_at) VALUES (?,?,?,?,1,?,datetime('now'))", (name, phone, wilaya, city, total))
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        logger.error(f"upsert error: {_safe_str(e)}")
+    
+    # If we exhausted retries
+    logger.error(f"[DB LOCK] All {max_retries} attempts failed. Last error: {last_error}")
 
 
 def get_zr_shipments():
@@ -361,6 +381,13 @@ except Exception as e:
     def _pos_fallback_direct():
         return render_template('pos/index.html')
     logger.info("[Store POS] POS direct route registered (blueprint fallback)")
+
+# SaaS Onboarding page (register / login for new tenants)
+@app.route('/api/v1/store/onboard', endpoint='nexus_onboard', methods=['GET'])
+def _nexus_onboard():
+    return render_template('nexus_auth.html')
+
+
 # ====================================================================
 
 # ????????? Dashboard HTTP Basic Auth ??????????????????????????????????????????????????????????????????????????????????
@@ -369,7 +396,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/api/chatbot", "/api/v1", "/pos", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/api/chatbot", "/api/v1", "/pos", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request

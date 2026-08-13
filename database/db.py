@@ -193,17 +193,77 @@ def get_current_store_id():
 
 
 def _init_tables(db):
-    """إنشاء الجداول من schema.sql (داخلي)"""
+    """إنشاء الجداول من schema.sql (داخلي)
+       مع دعم ALTER TABLE للجداول الموجودة (ترقية schema)
+    """
     schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
     if os.path.exists(schema_path):
         with open(schema_path, "r", encoding="utf-8") as f:
             schema_sql = f.read()
         try:
-            db.executescript(schema_sql)
+            # تقسيم الـ SQL إلى عبارات منفصلة
+            statements = []
+            current = ""
+            for line in schema_sql.split("\n"):
+                stripped = line.strip()
+                if stripped.startswith("--") or stripped.startswith("/*"):
+                    continue
+                if stripped == "":
+                    continue
+                current += line + "\n"
+                if stripped.endswith(";"):
+                    statements.append(current.strip())
+                    current = ""
+            
+            for stmt in statements:
+                try:
+                    db.execute(stmt)
+                except Exception as stmt_err:
+                    err_msg = str(stmt_err)
+                    # تجاهل أخطاء الجداول/الأعمدة الموجودة بهدوء
+                    if "already exists" in err_msg or "duplicate column" in err_msg:
+                        continue
+                    if "no such table" in err_msg and "REFERENCES" in stmt:
+                        continue
+                    # الأخطاء الحقيقية نطبعها فقط
+                    if "no such column" not in err_msg and "cannot add" not in err_msg:
+                        print(f"[DB] Schema statement warning: {stmt_err}")
             db.commit()
         except Exception as e:
             print(f"[DB] Schema execution error: {e}")
+    
+    # ترقية الجداول القديمة: إضافة store_id إذا لم يكن موجوداً
+    _migrate_existing_tables(db)
+    
     _seed_default_users(db)
+
+
+def _migrate_existing_tables(db):
+    """ترقية الجداول القديمة التي لا تحتوي store_id"""
+    tables_with_store = ["products", "inventory", "online_orders", "sync_log", "barcode_print_log"]
+    for table in tables_with_store:
+        try:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN store_id INTEGER NOT NULL DEFAULT 1")
+            db.commit()
+            print(f"[DB] Migrated table '{table}' — added store_id")
+        except Exception:
+            pass  # العمود موجود بالفعل — تجاهل
+    # تحديث بيانات store_sales و store_expenses و store_purchases القديمة
+    try:
+        db.execute("UPDATE store_sales SET store_id = 1 WHERE store_id IS NULL OR store_id = 0")
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute("UPDATE store_expenses SET store_id = 1 WHERE store_id IS NULL OR store_id = 0")
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute("UPDATE store_purchases SET store_id = 1 WHERE store_id IS NULL OR store_id = 0")
+        db.commit()
+    except Exception:
+        pass
 
 
 def init_db():
