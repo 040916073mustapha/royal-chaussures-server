@@ -29,6 +29,13 @@ import json
 import time
 from database.db import get_db, dict_from_row, get_current_store_id
 
+
+def _pos_db():
+    """اتصال آمن لقاعدة الرويال ستور عبر database.db (WAL + busy_timeout)"""
+    db = get_db()
+    db.row_factory = sqlite3.Row
+    return db
+
 store_bp = Blueprint("store", __name__, template_folder="../templates", static_folder="../static")
 
 
@@ -198,15 +205,11 @@ def pos_record_purchase():
 def pos_list_purchases():
     """List purchases from POS without auth requirement"""
     try:
-        _db_path = os.environ.get("STORE_DB_PATH",
-                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
-        conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
+        db = _pos_db()
         query = "SELECT * FROM store_purchases WHERE store_id = ? ORDER BY purchase_date DESC LIMIT ? OFFSET ?"
         params = [_resolve_store_id(), 100, 0]
-        rows = conn.execute(query, params).fetchall()
+        rows = db.execute(query, params).fetchall()
         purchases = [dict(r) for r in rows]
-        conn.close()
         return jsonify({"success": True, "purchases": purchases})
     except Exception as e:
         import traceback
@@ -222,12 +225,8 @@ def pos_list_purchases():
 def pos_products():
     """Fetch products with inventory and pricing for Liste des articles page"""
     try:
-        import os
-        _db_path = os.environ.get("STORE_DB_PATH",
-                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
-        conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute("""
+        db = _pos_db()
+        rows = db.execute("""
             SELECT 
                 p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,
                 p.cost_price, p.store_price, p.online_price,
@@ -254,7 +253,6 @@ def pos_products():
             products.append(d)
         total_qty = sum(p['total_quantity'] for p in products)
         total_articles = len(products)
-        conn.close()
         return jsonify({
             'success': True,
             'products': products,
@@ -271,12 +269,8 @@ def pos_products():
 def pos_product_by_barcode(barcode):
     """Lookup product by barcode from POS — no auth required"""
     try:
-        import os
-        _db_path = os.environ.get("STORE_DB_PATH",
-                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
-        conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        row = conn.execute("""
+        db = _pos_db()
+        row = db.execute("""
             SELECT
                 p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,
                 p.cost_price, p.store_price, p.online_price,
@@ -290,7 +284,6 @@ def pos_product_by_barcode(barcode):
             WHERE p.barcode = ? AND p.is_active = 1
             LIMIT 1
         """, [barcode]).fetchone()
-        conn.close()
         if row:
             d = dict(row)
             d['total_quantity'] = d['store_quantity'] + d['online_quantity'] + d['warehouse_quantity']
@@ -334,12 +327,8 @@ def pos_record_sale():
 def pos_list_sales():
     """List sales from POS without auth requirement"""
     try:
-        import os
-        _db_path = os.environ.get("STORE_DB_PATH",
-                         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "royal_store.db"))
-        conn = sqlite3.connect(_db_path, timeout=10, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute("""
+        db = _pos_db()
+        rows = db.execute("""
             SELECT
                 ss.id, ss.receipt_number, ss.sale_date, ss.total, ss.discount as remise,
                 ss.total as amount_paid, '' as status, ss.payment_method,
@@ -351,7 +340,6 @@ def pos_list_sales():
             LIMIT 100 OFFSET 0
         """, [_resolve_store_id()]).fetchall()
         sales = [dict(r) for r in rows]
-        conn.close()
         return jsonify({"success": True, "sales": sales})
     except Exception as e:
         import traceback

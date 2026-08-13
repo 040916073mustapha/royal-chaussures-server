@@ -68,8 +68,17 @@ AUTO_CONFIRM_WA = {"enabled": False, "trigger_status": "confirmed", "messages_se
 _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "royal_orders.db")
 
 
+def _open_orders_db():
+    """فتح اتصال بـ royal_orders.db مع WAL + busy_timeout لمنع القفل"""
+    conn = sqlite3.connect(_DB_PATH, timeout=60, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    return conn
+
+
 def init_db():
-    conn = sqlite3.connect(_DB_PATH, timeout=15)
+    conn = _open_orders_db()
     c = conn.cursor()
     c.execute("PRAGMA journal_mode=WAL")
     c.execute("CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, shopify_order_id TEXT UNIQUE, customer_name TEXT, customer_phone TEXT, wilaya TEXT, municipality TEXT, product TEXT, variant TEXT, quantity INTEGER DEFAULT 1, total_price REAL DEFAULT 0, status TEXT DEFAULT 'Nouveau', delivery_method TEXT DEFAULT 'Home', delivery_fee REAL DEFAULT 0, source TEXT DEFAULT 'Shopify', notes TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
@@ -105,9 +114,7 @@ def upsert_order_from_shopify(od):
             items = od.get("line_items", [])
             product = items[0].get("title", "") if items else ""
             variant = items[0].get("variant_title", "") if items else ""
-            conn = sqlite3.connect(_DB_PATH, timeout=30)
-            conn.execute("PRAGMA busy_timeout=30000")
-            conn.execute("PRAGMA journal_mode=WAL")
+            conn = _open_orders_db()
             c = conn.cursor()
             c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (oid, name, phone, wilaya, city, product, variant, total))
             if phone:
@@ -576,7 +583,7 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
 def save_message_db(platform, sender_id, message, reply):
     """Save a message and its reply to the database for dashboard display"""
     try:
-        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        conn = _open_orders_db()
         c = conn.cursor()
         c.execute("INSERT INTO messages (platform, sender_id, message, reply) VALUES (?,?,?,?)",
                   (platform, sender_id, str(message)[:1000], str(reply)[:1000]))
@@ -878,7 +885,7 @@ def _maybe_sync():
 
 @app.route('/api/stats')
 def api_stats():
-    conn = sqlite3.connect(_DB_PATH)
+    conn = _open_orders_db()
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM orders"); total = c.fetchone()[0]
     c.execute("SELECT COUNT(*) FROM orders WHERE status='Confirme'"); confirmed = c.fetchone()[0]
@@ -894,7 +901,7 @@ def api_stats():
 def api_orders():
     sf = str(request.args.get('status', '')).strip()
     q = str(request.args.get('search', '')).strip()
-    conn = sqlite3.connect(_DB_PATH)
+    conn = _open_orders_db()
     c = conn.cursor()
     sql = "SELECT id, shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, quantity, total_price, status, delivery_method, created_at FROM orders WHERE 1=1"
     params = []
@@ -915,7 +922,7 @@ def api_update_status(oid):
     ns = data.get("status", "")
     if ns not in ("Nouveau", "Confirme", "Annule", "Livre"):
         return json_utf8({"error": "Invalid status"}, 400)
-    conn = sqlite3.connect(_DB_PATH)
+    conn = _open_orders_db()
     c = conn.cursor()
     c.execute("UPDATE orders SET status=?, updated_at=datetime('now') WHERE id=?", (ns, oid))
     conn.commit(); ok = c.rowcount > 0; conn.close()
@@ -954,7 +961,7 @@ def api_products():
 
 @app.route('/api/clients')
 def api_clients():
-    conn = sqlite3.connect(_DB_PATH)
+    conn = _open_orders_db()
     c = conn.cursor()
     c.execute("SELECT id, name, phone, wilaya, municipality, total_orders, total_spent, last_order_at FROM clients ORDER BY total_orders DESC LIMIT 100")
     return json_utf8({"clients": [{"id": r[0], "name": r[1], "phone": r[2], "wilaya": r[3], "municipality": r[4], "orders": r[5], "spent": r[6], "last_order": r[7] or ""} for r in c.fetchall()]})
@@ -1170,7 +1177,7 @@ def send_confirmation_whatsapp(order):
         # Fallback: look up in local DB by shopify_order_id
         if not phone:
             try:
-                _conn = sqlite3.connect(_DB_PATH)
+                conn = _open_orders_db()
                 _c = _conn.cursor()
                 _c.execute("SELECT customer_phone FROM orders WHERE shopify_order_id=?", (str(order.get("id")),))
                 _row = _c.fetchone()
@@ -1252,7 +1259,7 @@ def api_wa_confirm_send():
         # Step 1: Look up local DB to get shopify_order_id
         shopify_order_id = None
         try:
-            _conn = sqlite3.connect(_DB_PATH, timeout=15)
+            conn = _open_orders_db()
             _c = _conn.cursor()
             # Try as local id first
             _c.execute("SELECT shopify_order_id FROM orders WHERE id=? OR shopify_order_id=?", (order_id, order_id))
@@ -1274,7 +1281,7 @@ def api_wa_confirm_send():
         # Step 3: If still not found, build a minimal order dict from local DB
         if not order:
             try:
-                _conn2 = sqlite3.connect(_DB_PATH, timeout=15)
+                conn = _open_orders_db()
                 _c2 = _conn2.cursor()
                 _c2.execute("SELECT shopify_order_id, customer_name, customer_phone, product, total_price FROM orders WHERE id=? OR shopify_order_id=?", (order_id, order_id))
                 _row2 = _c2.fetchone()
@@ -1321,7 +1328,7 @@ def api_messages():
         limit = int(request.args.get("limit", 50))
         platform = request.args.get("platform", "")
         search = str(request.args.get("search", "")).strip()
-        conn = sqlite3.connect(_DB_PATH)
+        conn = _open_orders_db()
         c = conn.cursor()
         query = "SELECT * FROM messages"
         params = []
