@@ -141,7 +141,7 @@ def get_store_subscription(store_id=None):
     db = get_db()
     if store_id is None:
         store_id = get_current_store_id()
-    store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = %s", [store_id]).fetchone())
+    store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = ?", [store_id]).fetchone())
     if not store:
         return None
 
@@ -220,7 +220,7 @@ def activate_trial():
         store_id = data.get("store_id") or getattr(g, "store_id", None) or get_current_store_id()
 
         db = get_db()
-        store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = %s", [store_id]).fetchone())
+        store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = ?", [store_id]).fetchone())
         if not store:
             return jsonify({"error": "Store not found"}), 404
 
@@ -232,7 +232,7 @@ def activate_trial():
         trial_end = now + timedelta(days=30)
 
         db.execute(
-            "UPDATE stores SET trial_ends_at = %s, subscription_status = 'active', updated_at = NOW() WHERE id = %s",
+            "UPDATE stores SET trial_ends_at = ?, subscription_status = 'active', updated_at = NOW() WHERE id = ?",
             [trial_end.isoformat(), store_id]
         )
         db.commit()
@@ -295,7 +295,7 @@ def chargily_create_checkout():
         # حفظ في قاعدة البيانات (جدول invoices اختياري — مؤقتاً في JSON)
         db = get_db()
         db.execute(
-            "UPDATE stores SET features = jsonb_set(COALESCE(features, '{}'::jsonb), '{pending_payment}', %s::jsonb) WHERE id = %s",
+            "UPDATE stores SET features = jsonb_set(COALESCE(features, '{}'::jsonb), '{pending_payment}', ?::jsonb) WHERE id = ?",
             [json.dumps(pending), store_id]
         )
         db.commit()
@@ -345,7 +345,7 @@ def chargily_webhook():
             # البحث عن المتجر المرتبط بالفاتورة
             db = get_db()
             stores = dicts_from_rows(db.execute(
-                "SELECT id, features FROM stores WHERE features->'pending_payment'->>'invoice_id' = %s",
+                "SELECT id, features FROM stores WHERE features->'pending_payment'->>'invoice_id' = ?",
                 [invoice_id]
             ).fetchall())
 
@@ -363,10 +363,10 @@ def chargily_webhook():
                         next_billing = now + timedelta(days=30)
 
                     db.execute(
-                        "UPDATE stores SET subscription_tier = %s, subscription_status = 'active', "
-                        "subscribed_at = %s, next_billing_at = %s, "
+                        "UPDATE stores SET subscription_tier = ?, subscription_status = 'active', "
+                        "subscribed_at = ?, next_billing_at = ?, "
                         "features = features - 'pending_payment', updated_at = NOW() "
-                        "WHERE id = %s",
+                        "WHERE id = ?",
                         [tier, now.isoformat(), next_billing.isoformat(), store["id"]]
                     )
                     print(f"[Subs] Payment confirmed: Store #{store['id']} upgraded to {tier}")
@@ -398,7 +398,7 @@ def baridi_confirm():
             return jsonify({"error": "رقم التحويل مطلوب"}), 400
 
         db = get_db()
-        store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = %s", [store_id]).fetchone())
+        store = dict_from_row(db.execute("SELECT * FROM stores WHERE id = ?", [store_id]).fetchone())
         if not store:
             return jsonify({"error": "Store not found"}), 404
 
@@ -413,7 +413,7 @@ def baridi_confirm():
         }
 
         db.execute(
-            "UPDATE stores SET features = jsonb_set(COALESCE(features, '{}'::jsonb), '{pending_payment}', %s::jsonb) WHERE id = %s",
+            "UPDATE stores SET features = jsonb_set(COALESCE(features, '{}'::jsonb), '{pending_payment}', ?::jsonb) WHERE id = ?",
             [json.dumps(pending), store_id]
         )
         db.commit()
@@ -488,10 +488,10 @@ def admin_confirm_subscription():
         next_billing = now + timedelta(days=30 if period == "monthly" else 365)
 
         db.execute(
-            "UPDATE stores SET subscription_tier = %s, subscription_status = 'active', "
-            "subscribed_at = %s, next_billing_at = %s, "
+            "UPDATE stores SET subscription_tier = ?, subscription_status = 'active', "
+            "subscribed_at = ?, next_billing_at = ?, "
             "features = features - 'pending_payment', updated_at = NOW() "
-            "WHERE id = %s",
+            "WHERE id = ?",
             [tier, now.isoformat(), next_billing.isoformat(), store_id]
         )
         db.commit()

@@ -44,7 +44,7 @@
                 {% endif %}
                 <div class="text-2xl font-bold text-white mb-1">{{ plan['name_ar'] }}</div>
                 <div class="text-3xl font-extrabold text-purple-400 my-4" id="price-{{ slug }}">
-                    {% if slug == 'free' %}مجاني{% elif slug == 'enterprise' %}مخصص{% else %}{{ plan['price_dzd']:, }} دج{% endif %}
+                    {% if slug == 'free' %}مجاني{% elif slug == 'enterprise' %}مخصص{% else %}{{ "{:,}".format(plan['price_dzd']) }} دج{% endif %}
                 </div>
                 <div class="text-gray-500 text-sm mb-4" id="period-{{ slug }}">
                     {% if slug == 'free' %}دائماً{% elif slug == 'enterprise' %}تواصل معنا{% else %}/شهر{% endif %}
