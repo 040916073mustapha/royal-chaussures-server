@@ -27,7 +27,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.db import get_db, dict_from_row, dicts_from_rows, get_current_store_id
 
-subs_bp = Blueprint("subscriptions", __name__, template_folder="../templates", url_prefix="/api/v1/subscription")
+subs_bp = Blueprint("subscriptions", __name__, template_folder="../templates")
 
 
 # ============================================================
