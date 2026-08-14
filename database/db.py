@@ -32,7 +32,15 @@ if _DB_ENGINE == "postgres":
             init_db as _pg_init_db,
             _ensure_default_store as _pg_default_store,
             get_store, get_store_by_slug, get_stores, create_store, update_store,
-            get_current_store_id
+            get_current_store_id,
+            get_products, get_product, get_product_by_barcode, get_product_by_sku,
+            create_product, update_product, search_products,
+            get_inventory, update_inventory, deduct_store_inventory, get_low_stock_items,
+            create_sale, get_store_sales, get_store_sale_items, get_store_daily_summary,
+            create_expense, get_expenses,
+            create_purchase_with_items, get_purchases, get_purchase_items,
+            get_store_purchases, get_purchase_detail,
+            get_unified_dashboard, get_online_orders
         )
         _pg_import_ok = True
         print(f"[DB] Engine: PostgreSQL (imported)")

@@ -379,20 +379,14 @@ except Exception as e:
 
 # ========== Register Store Blueprint ==========
 _store_bp_ok = False
-print("=== STORE BP: About to register, _db_init_ok =", _db_init_ok)
 if _db_init_ok:
     try:
-        print("=== STORE BP: Importing routes.store...")
         from routes.store import store_bp
-        print("=== STORE BP: Import successful, now registering...")
         app.register_blueprint(store_bp, url_prefix="/api/v1/store")
         _store_bp_ok = True
         logger.info("[Store POS] /api/v1/store blueprint registered")
-        print("=== STORE BP: Registration complete")
     except Exception as e:
         import traceback as _tb
-        print(f"=== STORE BP FAILED: {e}")
-        _tb.print_exc()
         logger.error(f"[Store POS] Store blueprint FAILED: {e}\n{_tb.format_exc()}")
 
 # ========== Register Admin Blueprint ==========
