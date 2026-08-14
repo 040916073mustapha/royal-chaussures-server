@@ -213,7 +213,11 @@ def pos_record_purchase():
         data["recorded_by"] = "pos"
         
         result = create_purchase_with_items(data)
-        return jsonify({"purchase": result["purchase"], "items": result["items"]})
+        if "error" in result:
+            return jsonify({"error": result["error"]}), 500
+        # Return purchase detail with items
+        purchase = get_purchase_detail(result["id"])
+        return jsonify({"purchase": purchase, "items": purchase.get("items", [])})
     except Exception as e:
         import traceback
         print(f"[POS Purchase] Error: {e}\n{traceback.format_exc()}")
