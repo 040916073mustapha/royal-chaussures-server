@@ -22,17 +22,28 @@ _DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite").strip().lower()
 # ============================================================
 # PostgreSQL Engine
 # ============================================================
+_pg_import_ok = False
 if _DB_ENGINE == "postgres":
-    from database.psql import (
-        get_db as _pg_get_db,
-        close_db as _pg_close_db,
-        dict_from_row, dicts_from_rows,
-        init_db as _pg_init_db,
-        _ensure_default_store as _pg_default_store,
-        get_store, get_store_by_slug, get_stores, create_store, update_store,
-        get_current_store_id
-    )
+    try:
+        from database.psql import (
+            get_db as _pg_get_db,
+            close_db as _pg_close_db,
+            dict_from_row, dicts_from_rows,
+            init_db as _pg_init_db,
+            _ensure_default_store as _pg_default_store,
+            get_store, get_store_by_slug, get_stores, create_store, update_store,
+            get_current_store_id
+        )
+        _pg_import_ok = True
+        print(f"[DB] Engine: PostgreSQL (imported)")
+    except ImportError as _pg_import_err:
+        print(f"[DB] ⚠️ PostgreSQL import failed: {_pg_import_err}")
+        print(f"[DB] ⚠️ Falling back to SQLite...")
+        _DB_ENGINE_ORIG = _DB_ENGINE
+        _DB_ENGINE = "sqlite"
+        os.environ["DB_ENGINE"] = "sqlite"
 
+if _pg_import_ok:
     def get_db():
         return _pg_get_db()
 
@@ -47,12 +58,10 @@ if _DB_ENGINE == "postgres":
     def _ensure_default_store():
         return _pg_default_store()
 
-    print(f"[DB] Engine: PostgreSQL")
-
 # ============================================================
 # SQLite Engine (الافتراضي)
 # ============================================================
-else:
+if not _pg_import_ok:
     import sqlite3
 
     DB_PATH = os.environ.get("STORE_DB_PATH",

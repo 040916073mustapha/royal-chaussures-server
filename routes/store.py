@@ -228,7 +228,9 @@ def pos_list_purchases():
 def pos_products():
     """Fetch products with inventory and pricing for Liste des articles page"""
     try:
+        logger = __import__('logging').getLogger('royal-server')
         db = _pos_db()
+        logger.info(f"[POS] getPosProducts: db type={type(db).__name__}, _resolve_store_id={_resolve_store_id()}")
         rows = db.execute("""
             SELECT 
                 p.id, p.sku, p.name, p.barcode, p.category, p.color, p.size,

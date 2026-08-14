@@ -350,7 +350,7 @@ try:
     _test_con.close()
     logger.info("[Store POS] DB integrity check passed")
 except Exception as _db_err:
-    logger.warning(f"[Store POS] DB corrupted ({_db_err}), rebuilding...")
+    logger.warning(f"[Store POS] DB corrupted ({_db_err}), attempting rebuild...")
     try:
         _test_con.close()
     except:
@@ -367,14 +367,15 @@ except Exception as _db_err:
 # ==============================================================
 # ========== Initialize Store POS Database ==========
 _db_init_ok = False
+import traceback as _tb
 try:
     from database.db import init_db as init_store_db
     init_store_db()
     _db_init_ok = True
     logger.info("[Store POS] Database initialized successfully")
 except Exception as e:
-    import traceback as _tb
-    logger.error(f"[Store POS] Database init FAILED: {e}\n{_tb.format_exc()}")
+    logger.error(f"[Store POS] Database init FAILED: {e}")
+    logger.error(f"[Store POS] Full traceback:\n{_tb.format_exc()}")
 
 # ========== Register Store Blueprint ==========
 _store_bp_ok = False
