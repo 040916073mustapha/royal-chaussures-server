@@ -1086,7 +1086,17 @@ def index():
 
 @app.route('/health')
 def health():
-    return json_utf8({"status": "healthy", "timestamp": datetime.utcnow().isoformat()})
+    import os as _os
+    db_engine = _os.environ.get("DB_ENGINE", "not-set")
+    db_url_set = bool(_os.environ.get("DATABASE_URL", ""))
+    return json_utf8({
+        "status": "healthy",
+        "db_engine": db_engine,
+        "db_url_configured": db_url_set,
+        "db_ok": globals().get("_db_init_ok", False),
+        "store_ok": globals().get("_store_bp_ok", False),
+        "timestamp": datetime.utcnow().isoformat()
+    })
 
 
 # ============================================================
