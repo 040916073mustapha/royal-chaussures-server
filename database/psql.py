@@ -436,12 +436,16 @@ def create_product(data):
     db = get_db()
     cur = db._conn.cursor()
     cur.execute(
-        "INSERT INTO products (store_id, name, sku, barcode, category, price, cost, unit, image_url, description, is_active) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        "INSERT INTO products (store_id, name, sku, barcode, category, color, size, "
+        "cost_price, store_price, online_price, supplier, image_url, description, is_active) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         [data.get("store_id", 1), data["name"], data.get("sku", ""),
          data.get("barcode", ""), data.get("category", ""),
-         float(data.get("price", 0)), float(data.get("cost", 0)),
-         data.get("unit", "piece"), data.get("image_url", ""),
+         data.get("color", ""), data.get("size", ""),
+         float(data.get("cost_price", 0)),
+         float(data.get("store_price", 0)),
+         float(data.get("online_price", 0)),
+         data.get("supplier", ""), data.get("image_url", ""),
          data.get("description", ""), data.get("is_active", True)]
     )
     product_id = cur.fetchone()[0]
@@ -452,7 +456,9 @@ def create_product(data):
 
 def update_product(product_id, data):
     db = get_db()
-    allowed = ["name","sku","barcode","category","price","cost","unit","image_url","description","is_active"]
+    allowed = ["name","sku","barcode","category","color","size","supplier",
+               "cost_price","store_price","online_price",
+               "image_url","description","is_active"]
     updates = []
     params = []
     for field in allowed:
