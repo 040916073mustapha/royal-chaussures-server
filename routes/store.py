@@ -215,7 +215,8 @@ def pos_record_purchase():
             "quantite": "quantity",
             "prix_achat": "unit_price",
             "prix_vente": "sale_price",
-            "famille": "family",
+            "famille": "category",
+            "stock_alert": "low_stock_threshold",
         }
         normalized_items = []
         for item in data.get("items", []):
@@ -232,12 +233,13 @@ def pos_record_purchase():
             if "product_id" not in normalized or not normalized.get("product_id"):
                 store_id = _resolve_store_id()
                 try:
+                    purchase_qty = int(normalized.get("quantity", 1))
                     new_product = create_product({
                         "store_id": store_id,
                         "name": normalized.get("product_name", "Article sans nom"),
                         "sku": normalized.get("barcode", ""),
                         "barcode": normalized.get("barcode", ""),
-                        "category": normalized.get("family", ""),
+                        "category": normalized.get("category", ""),
                         "color": "",
                         "size": "",
                         "cost_price": float(normalized.get("unit_price", 0)),
@@ -247,9 +249,26 @@ def pos_record_purchase():
                         "is_active": True
                     })
                     if new_product and "id" in new_product:
-                        normalized["product_id"] = new_product["id"]
+                        new_pid = new_product["id"]
+                        normalized["product_id"] = new_pid
+                        # Update inventory with the purchased quantity
+                        try:
+                            update_inventory(new_pid, {
+                                "store_quantity": purchase_qty,
+                                "low_stock_threshold": int(normalized.get("low_stock_threshold", 5))
+                            })
+                        except Exception as inv_err:
+                            print(f"[POS Purchase] Inventory update error: {inv_err}")
                     elif new_product and isinstance(new_product, dict) and new_product.get("id"):
-                        normalized["product_id"] = new_product["id"]
+                        new_pid = new_product["id"]
+                        normalized["product_id"] = new_pid
+                        try:
+                            update_inventory(new_pid, {
+                                "store_quantity": purchase_qty,
+                                "low_stock_threshold": int(normalized.get("low_stock_threshold", 5))
+                            })
+                        except Exception as inv_err:
+                            print(f"[POS Purchase] Inventory update error: {inv_err}")
                 except Exception as pe:
                     print(f"[POS Purchase] Auto-create product error: {pe}")
                     normalized["product_id"] = None
