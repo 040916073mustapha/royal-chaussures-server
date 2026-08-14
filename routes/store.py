@@ -283,11 +283,8 @@ def pos_record_purchase():
 def pos_list_purchases():
     """List purchases from POS without auth requirement"""
     try:
-        db = _pos_db()
-        query = "SELECT * FROM store_purchases WHERE store_id = ? ORDER BY purchase_date DESC LIMIT ? OFFSET ?"
-        params = [_resolve_store_id(), 100, 0]
-        rows = db.execute(query, params).fetchall()
-        purchases = [dict(r) for r in rows]
+        store_id = _resolve_store_id()
+        purchases = get_store_purchases(store_id=store_id, page=1, per_page=100)
         return jsonify({"success": True, "purchases": purchases})
     except Exception as e:
         import traceback
@@ -408,19 +405,9 @@ def pos_record_sale():
 def pos_list_sales():
     """List sales from POS without auth requirement"""
     try:
-        db = _pos_db()
-        rows = db.execute("""
-            SELECT
-                ss.id, ss.receipt_number, ss.sale_date, ss.total, ss.discount as remise,
-                ss.total as amount_paid, '' as status, ss.payment_method,
-                ss.customer_name, ss.cashier as seller_name, ss.cashier as recorded_by,
-                ss.sale_date as created_at, ss.unit_price as cost_price
-            FROM store_sales ss
-            WHERE ss.store_id = ?
-            ORDER BY ss.sale_date DESC
-            LIMIT 100 OFFSET 0
-        """, [_resolve_store_id()]).fetchall()
-        sales = [dict(r) for r in rows]
+        store_id = _resolve_store_id()
+        # Use the DB-agnostic function from database.db
+        sales = get_store_sales(store_id=store_id, page=1, per_page=100)
         return jsonify({"success": True, "sales": sales})
     except Exception as e:
         import traceback
