@@ -228,8 +228,31 @@ def pos_record_purchase():
                 up = float(normalized.get("unit_price", 0))
                 qty = int(normalized.get("quantity", 1))
                 normalized["total_price"] = up * qty
-            if "product_id" not in normalized:
-                normalized["product_id"] = None
+            # Auto-create product if new (no product_id)
+            if "product_id" not in normalized or not normalized.get("product_id"):
+                store_id = _resolve_store_id()
+                try:
+                    new_product = create_product({
+                        "store_id": store_id,
+                        "name": normalized.get("product_name", "Article sans nom"),
+                        "sku": normalized.get("barcode", ""),
+                        "barcode": normalized.get("barcode", ""),
+                        "category": normalized.get("family", ""),
+                        "color": "",
+                        "size": "",
+                        "cost_price": float(normalized.get("unit_price", 0)),
+                        "store_price": float(normalized.get("sale_price", 0)),
+                        "online_price": 0,
+                        "supplier": data.get("supplier", "divers"),
+                        "is_active": True
+                    })
+                    if new_product and "id" in new_product:
+                        normalized["product_id"] = new_product["id"]
+                    elif new_product and isinstance(new_product, dict) and new_product.get("id"):
+                        normalized["product_id"] = new_product["id"]
+                except Exception as pe:
+                    print(f"[POS Purchase] Auto-create product error: {pe}")
+                    normalized["product_id"] = None
             normalized_items.append(normalized)
         
         data["items"] = normalized_items
