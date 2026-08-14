@@ -209,8 +209,35 @@ def pos_record_purchase():
         if "items" not in data or not data["items"]:
             return jsonify({"error": "Au moins un article est requis"}), 400
         
+        # Normalize field names from Frontend (French) to Backend (English)
+        field_map = {
+            "designation": "product_name",
+            "quantite": "quantity",
+            "prix_achat": "unit_price",
+            "prix_vente": "sale_price",
+            "famille": "family",
+        }
+        normalized_items = []
+        for item in data.get("items", []):
+            normalized = {}
+            for k, v in item.items():
+                new_k = field_map.get(k, k)
+                normalized[new_k] = v
+            # Calculate total_price from unit_price * quantity if not provided
+            if "total_price" not in normalized or not normalized.get("total_price"):
+                up = float(normalized.get("unit_price", 0))
+                qty = int(normalized.get("quantity", 1))
+                normalized["total_price"] = up * qty
+            if "product_id" not in normalized:
+                normalized["product_id"] = None
+            normalized_items.append(normalized)
+        
+        data["items"] = normalized_items
         data["store_id"] = _resolve_store_id()
         data["recorded_by"] = "pos"
+        # Use designation as supplier_name if not provided
+        if not data.get("supplier_name"):
+            data["supplier_name"] = data.get("supplier", "divers")
         
         result = create_purchase_with_items(data)
         if "error" in result:
