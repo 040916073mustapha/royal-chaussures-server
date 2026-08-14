@@ -100,8 +100,10 @@ CREATE TABLE IF NOT EXISTS store_sales (
     product_id INTEGER NOT NULL REFERENCES products(id),
     quantity INTEGER NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) DEFAULT 0,
     total DECIMAL(10,2) NOT NULL,
     discount DECIMAL(10,2) DEFAULT 0,
+    tax DECIMAL(10,2) DEFAULT 0,
     payment_method VARCHAR(50) DEFAULT 'cash',
     notes TEXT DEFAULT '',
     cashier VARCHAR(255) NOT NULL,
@@ -231,6 +233,10 @@ CREATE TABLE IF NOT EXISTS sync_log (
 -- ============================================================
 -- 🔹 مشتريات المحل (تموين المخزون)
 -- ============================================================
+-- Migrate existing store_sales: add missing columns
+ALTER TABLE store_sales ADD COLUMN IF NOT EXISTS subtotal DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE store_sales ADD COLUMN IF NOT EXISTS tax DECIMAL(10,2) DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS store_purchases (
     id SERIAL PRIMARY KEY,
     store_id INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id) ON DELETE CASCADE,
