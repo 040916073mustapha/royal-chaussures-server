@@ -35,11 +35,11 @@ def get_pool():
         # Neon recommends SSL
         _pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=2,
-            maxconn=10,
+            maxconn=25,
             dsn=db_url,
             sslmode="require"
         )
-        print(f"[PG] Connection pool created (min=2, max=10)")
+        print(f"[PG] Connection pool created (min=2, max=25)")
     return _pool
 
 

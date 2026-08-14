@@ -31,15 +31,31 @@ from database.db import get_db, dict_from_row, get_current_store_id
 
 
 def _pos_db():
-    """اتصال آمن لقاعدة الرويال ستور - متوافق مع SQLite و PostgreSQL"""
+    """اتصال آمن لقاعدة الرويال ستور - متوافق مع SQLite و PostgreSQL
+    يُخزّن في g لمنع تسريب الـ pool connections
+    """
+    if hasattr(g, '_pos_db_conn') and g._pos_db_conn is not None:
+        return g._pos_db_conn
     db = get_db()
     # SQLite Row Factory (آمن: فقط إذا كان sqlite3 connection)
     import sqlite3 as _sqlite3
     if isinstance(db, _sqlite3.Connection):
         db.row_factory = _sqlite3.Row
+    g._pos_db_conn = db
     return db
 
 store_bp = Blueprint("store", __name__, template_folder="../templates", static_folder="../static")
+
+
+@store_bp.teardown_request
+def _close_db_on_teardown(exception=None):
+    """يُغلق اتصال قاعدة البيانات تلقائياً بعد كل طلب (لمنع استنزاف pool)"""
+    if hasattr(g, '_pos_db_conn'):
+        try:
+            g._pos_db_conn.close()
+        except:
+            pass
+        g._pos_db_conn = None
 
 
 def _resolve_store_id():
@@ -227,6 +243,7 @@ def pos_list_purchases():
 @store_bp.route('/pos/products')
 def pos_products():
     """Fetch products with inventory and pricing for Liste des articles page"""
+    db = None
     try:
         logger = __import__('logging').getLogger('royal-server')
         db = _pos_db()
@@ -242,7 +259,7 @@ def pos_products():
                 COALESCE(i.low_stock_threshold, 5) as low_stock_threshold
             FROM products p
             LEFT JOIN inventory i ON i.product_id = p.id
-            WHERE p.is_active = 1
+            WHERE p.is_active IS TRUE
             ORDER BY p.name ASC
         """).fetchall()
         products = []
@@ -286,7 +303,7 @@ def pos_product_by_barcode(barcode):
                 COALESCE(i.low_stock_threshold, 5) as low_stock_threshold
             FROM products p
             LEFT JOIN inventory i ON i.product_id = p.id
-            WHERE p.barcode = ? AND p.is_active = 1
+            WHERE p.barcode = ? AND p.is_active IS TRUE
             LIMIT 1
         """, [barcode]).fetchone()
         if row:
@@ -371,7 +388,7 @@ def login():
     
     db = get_db()
     user = dict_from_row(db.execute(
-        "SELECT * FROM users WHERE username = ? AND is_active = 1",
+        "SELECT * FROM users WHERE username = ? AND is_active IS TRUE",
         [username]
     ).fetchone())
     

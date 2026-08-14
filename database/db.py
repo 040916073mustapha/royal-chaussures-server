@@ -173,7 +173,7 @@ if not _pg_import_ok:
         db = get_db()
         query = "SELECT * FROM stores"
         if active_only:
-            query += " WHERE is_active = 1"
+            query += " WHERE is_active IS TRUE"
         query += " ORDER BY name ASC"
         return dicts_from_rows(db.execute(query).fetchall())
 
