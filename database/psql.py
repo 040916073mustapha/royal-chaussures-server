@@ -741,7 +741,7 @@ def get_purchases(store_id=None, page=1, per_page=50):
     cur = db._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     params = []
     conditions = []
-    query = "SELECT * FROM store_purchases"
+    query = "SELECT * FROM purchases"
     if store_id:
         conditions.append("store_id = %s")
         params.append(store_id)
