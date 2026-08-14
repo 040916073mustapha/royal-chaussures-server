@@ -659,7 +659,7 @@ def create_expense(data):
     db = get_db()
     cur = db._conn.cursor()
     cur.execute(
-        "INSERT INTO expenses (store_id, description, amount, category, paid_by, notes) "
+        "INSERT INTO store_expenses (store_id, description, amount, category, paid_by, notes) "
         "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
         [data.get("store_id", 1), data["description"], float(data["amount"]),
          data.get("category", "general"), data.get("paid_by", "caisse"), data.get("notes", "")]
@@ -675,7 +675,7 @@ def get_expenses(store_id=None, page=1, per_page=50):
     cur = db._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     params = []
     conditions = []
-    query = "SELECT * FROM expenses"
+    query = "SELECT * FROM store_expenses"
     if store_id:
         conditions.append("store_id = %s")
         params.append(store_id)
@@ -731,7 +731,7 @@ def get_purchases(store_id=None, page=1, per_page=50):
     cur = db._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     params = []
     conditions = []
-    query = "SELECT * FROM purchases"
+    query = "SELECT * FROM store_purchases"
     if store_id:
         conditions.append("store_id = %s")
         params.append(store_id)

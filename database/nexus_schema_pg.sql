@@ -155,6 +155,66 @@ CREATE TABLE IF NOT EXISTS online_orders (
 );
 
 -- ============================================================
+-- 🔹 عناصر المبيعات (التفاصيل — للتوافق مع الكود الحالي)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sale_items (
+    id SERIAL PRIMARY KEY,
+    sale_id INTEGER NOT NULL REFERENCES store_sales(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id),
+    product_name VARCHAR(255) DEFAULT '',
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- 🔹 المشتريات (للتوافق مع الكود الحالي)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS purchases (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id) ON DELETE CASCADE,
+    supplier_name VARCHAR(255) DEFAULT '',
+    supplier_phone VARCHAR(50) DEFAULT '',
+    reference VARCHAR(255) DEFAULT '',
+    subtotal DECIMAL(12,2) DEFAULT 0,
+    discount DECIMAL(12,2) DEFAULT 0,
+    tax DECIMAL(12,2) DEFAULT 0,
+    total DECIMAL(12,2) DEFAULT 0,
+    notes TEXT DEFAULT '',
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- 🔹 عناصر المشتريات (للتوافق مع الكود الحالي)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS purchase_items (
+    id SERIAL PRIMARY KEY,
+    purchase_id INTEGER NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id),
+    product_name VARCHAR(255) DEFAULT '',
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- 🔹 المصاريف (للتوافق مع الكود الحالي)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS expenses (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL DEFAULT 1 REFERENCES stores(id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    category VARCHAR(100) DEFAULT 'general',
+    paid_by VARCHAR(255) DEFAULT 'caisse',
+    notes TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
 -- 🔹 التزامن (سجل العمليات)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS sync_log (
@@ -253,6 +313,10 @@ CREATE INDEX IF NOT EXISTS idx_store_sales_date ON store_sales(sale_date);
 CREATE INDEX IF NOT EXISTS idx_store_expenses_store ON store_expenses(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_purchases_store ON store_purchases(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_purchase_items_purchase ON store_purchase_items(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_store ON purchases(store_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase ON purchase_items(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_store ON expenses(store_id);
 CREATE INDEX IF NOT EXISTS idx_online_orders_store ON online_orders(store_id);
 CREATE INDEX IF NOT EXISTS idx_online_orders_status ON online_orders(status);
 CREATE INDEX IF NOT EXISTS idx_sync_log_store ON sync_log(store_id);
