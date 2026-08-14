@@ -426,10 +426,20 @@ if not _pg_import_ok:
     def create_purchase_with_items(data):
         db = get_db()
         try:
-            cursor = db.execute('INSERT INTO purchases (store_id, supplier_name, supplier_phone, reference, subtotal, discount, tax, total, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [data.get('store_id', 1), data.get('supplier_name', ''), data.get('supplier_phone', ''), data.get('reference', ''), float(data.get('subtotal', 0)), float(data.get('discount', 0)), float(data.get('tax', 0)), float(data.get('total', 0)), data.get('notes', ''), data.get('status', 'pending')])
+            # Calculate total from items if not provided
+            items = data.get('items', [])
+            calculated_total = sum(
+                float(item.get('unit_price', 0)) * int(item.get('quantity', 1))
+                for item in items
+            )
+            total = float(data.get('total', 0)) or calculated_total
+            subtotal = float(data.get('subtotal', 0)) or total
+            
+            cursor = db.execute('INSERT INTO purchases (store_id, supplier_name, supplier_phone, reference, subtotal, discount, tax, total, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [data.get('store_id', 1), data.get('supplier_name', ''), data.get('supplier_phone', ''), data.get('reference', ''), subtotal, float(data.get('discount', 0)), float(data.get('tax', 0)), total, data.get('notes', ''), data.get('status', 'pending')])
             purchase_id = cursor.lastrowid
-            for item in data.get('items', []):
-                db.execute('INSERT INTO purchase_items (purchase_id, product_id, product_name, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?)', [purchase_id, item.get('product_id'), item.get('product_name', ''), int(item.get('quantity', 1)), float(item.get('unit_price', 0)), float(item.get('total_price', 0))])
+            for item in items:
+                item_total = float(item.get('unit_price', 0)) * int(item.get('quantity', 1))
+                db.execute('INSERT INTO purchase_items (purchase_id, product_id, product_name, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?)', [purchase_id, item.get('product_id'), item.get('product_name', ''), int(item.get('quantity', 1)), float(item.get('unit_price', 0)), item_total])
             db.commit()
             return {'id': purchase_id}
         except Exception as e:

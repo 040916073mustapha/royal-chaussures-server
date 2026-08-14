@@ -699,28 +699,38 @@ def get_expenses(store_id=None, page=1, per_page=50):
 def create_purchase_with_items(data):
     db = get_db()
     try:
+        # Calculate total from items if not provided
+        items = data.get("items", [])
+        calculated_total = sum(
+            float(item.get("unit_price", 0)) * int(item.get("quantity", 1))
+            for item in items
+        )
+        total = float(data.get("total", 0)) or calculated_total
+        subtotal = float(data.get("subtotal", 0)) or total
+        
         cur = db._conn.cursor()
         cur.execute(
             "INSERT INTO purchases (store_id, supplier_name, supplier_phone, reference, subtotal, discount, tax, total, notes, status) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
             [data.get("store_id", 1), data.get("supplier_name", ""),
              data.get("supplier_phone", ""), data.get("reference", ""),
-             float(data.get("subtotal", 0)), float(data.get("discount", 0)),
-             float(data.get("tax", 0)), float(data.get("total", 0)),
+             subtotal, float(data.get("discount", 0)),
+             float(data.get("tax", 0)), total,
              data.get("notes", ""), data.get("status", "pending")]
         )
         purchase_id = cur.fetchone()[0]
-        for item in data.get("items", []):
+        for item in items:
+            item_total = float(item.get("unit_price", 0)) * int(item.get("quantity", 1))
             cur.execute(
                 "INSERT INTO purchase_items (purchase_id, product_id, product_name, quantity, unit_price, total_price) "
                 "VALUES (%s, %s, %s, %s, %s, %s)",
                 [purchase_id, item.get("product_id"), item.get("product_name", ""),
                  int(item.get("quantity", 1)), float(item.get("unit_price", 0)),
-                 float(item.get("total_price", 0))]
+                 item_total]
             )
         db.commit()
         cur.close()
-        return {"id": purchase_id}
+        return {"id": purchase_id, "total": total}
     except Exception as e:
         db.rollback()
         return {"error": str(e)}

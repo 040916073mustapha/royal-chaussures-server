@@ -217,7 +217,12 @@ def pos_record_purchase():
             return jsonify({"error": result["error"]}), 500
         # Return purchase detail with items
         purchase = get_purchase_detail(result["id"])
-        return jsonify({"purchase": purchase, "items": purchase.get("items", [])})
+        if purchase:
+            # Ensure total is set (calculate from items if needed)
+            items_total = sum(float(i.get("total_price", 0)) or float(i.get("unit_price", 0)) * int(i.get("quantity", 1)) for i in purchase.get("items", []))
+            purchase["total"] = purchase.get("total") or items_total
+            purchase["total_amount"] = purchase["total"]
+        return jsonify({"purchase": purchase, "items": purchase.get("items", []), "total_amount": purchase.get("total", 0) if purchase else 0})
     except Exception as e:
         import traceback
         print(f"[POS Purchase] Error: {e}\n{traceback.format_exc()}")
