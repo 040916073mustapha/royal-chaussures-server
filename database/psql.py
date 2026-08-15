@@ -580,30 +580,61 @@ def get_low_stock_items(threshold=10, store_id=None):
 def create_sale(data):
     db = get_db()
     try:
-        cur = db._conn.cursor()
-        cur.execute(
-            "INSERT INTO store_sales (store_id, customer_name, customer_phone, cashier, subtotal, discount, tax, total, payment_method, notes) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-            [data.get("store_id", 1), data.get("customer_name", ""),
-             data.get("customer_phone", ""), data.get("cashier", "caisse"),
-             float(data.get("subtotal", 0)), float(data.get("discount", 0)),
-             float(data.get("tax", 0)), float(data.get("total", 0)),
-             data.get("payment_method", "cash"), data.get("notes", "")]
-        )
-        sale_id = cur.fetchone()[0]
-        for item in data.get("items", []):
-            cur.execute(
-                "INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                [sale_id, item.get("product_id"), item.get("product_name", ""),
-                 int(item.get("quantity", 1)), float(item.get("unit_price", 0)),
-                 float(item.get("total_price", 0))]
+        items = data.get("items", [])
+        if not items:
+            items = [{
+                "product_id": data.get("product_id"),
+                "product_name": data.get("product_name", ""),
+                "quantity": int(data.get("quantity", 1)),
+                "unit_price": float(data.get("unit_price", 0)),
+                "total_price": float(data.get("total", 0)) or float(data.get("unit_price", 0)) * int(data.get("quantity", 1))
+            }]
+        
+        if not data.get("total"):
+            items_total = sum(
+                float(item.get("total_price", 0)) or float(item.get("unit_price", 0)) * int(item.get("quantity", 1))
+                for item in items
             )
-            deduct_store_inventory(item["product_id"], int(item.get("quantity", 1)))
+            data["total"] = items_total - float(data.get("discount", 0))
+        
+        cur = db._conn.cursor()
+        first_id = None
+        for item in items:
+            pid = item.get("product_id")
+            if not pid:
+                pid = 1
+            else:
+                pid = int(pid)
+            cur.execute(
+                "INSERT INTO store_sales (store_id, product_id, quantity, unit_price, total, discount, payment_method, notes, cashier, customer_name, customer_phone) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                [
+                    data.get("store_id", 1),
+                    pid,
+                    int(item.get("quantity", 1)),
+                    float(item.get("unit_price", 0)),
+                    float(item.get("total_price", 0)) or float(item.get("unit_price", 0)) * int(item.get("quantity", 1)),
+                    float(data.get("discount", 0)),
+                    data.get("payment_method", "cash"),
+                    data.get("notes", ""),
+                    data.get("cashier", "caisse"),
+                    data.get("customer_name", ""),
+                    data.get("customer_phone", "")
+                ]
+            )
+            sid = cur.fetchone()[0]
+            if first_id is None:
+                first_id = sid
+            try:
+                deduct_store_inventory(pid, int(item.get("quantity", 1)))
+            except Exception as inv_err:
+                print(f"[create_sale PSQL] deduct_store_inventory error: {inv_err}")
         db.commit()
         cur.close()
-        return {"id": sale_id}
+        return {"id": first_id, "receipt_number": first_id}
     except Exception as e:
+        import traceback
+        print(f"[create_sale PSQL ERROR] {e}\n{traceback.format_exc()}")
         db.rollback()
         return {"error": str(e)}
 

@@ -381,16 +381,25 @@ if not _pg_import_ok:
                 data['total'] = items_total - float(data.get('discount', 0))
             
             # تعطيل foreign keys مؤقتاً للمرونة
-            db.execute('PRAGMA foreign_keys=OFF')
+            is_sqlite = 'sqlite' in str(type(db))
+            if is_sqlite:
+                db.execute('PRAGMA foreign_keys=OFF')
             
-            # تخزين كل منتج كصف منفصل في store_sales (Schema القديم)
+            # تخزين كل منتج كصف منفصل في store_sales
+            # PostgreSQL: product_id قد لا يشير لمنتج موجود -> نستخدم 1 إذا null
             first_id = None
             for item in items:
+                pid = item.get('product_id')
+                if not pid:
+                    pid = 1  # fallback آمن
+                else:
+                    pid = int(pid)
                 cursor = db.execute(
+                    'INSERT INTO store_sales (store_id, product_id, quantity, unit_price, total, discount, payment_method, notes, cashier, customer_name, customer_phone) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)' if not is_sqlite else
                     'INSERT INTO store_sales (store_id, product_id, quantity, unit_price, total, discount, payment_method, notes, cashier, customer_name, customer_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     [
                         data.get('store_id', 1),
-                        item.get('product_id') or 0,
+                        pid,
                         int(item.get('quantity', 1)),
                         float(item.get('unit_price', 0)),
                         float(item.get('total_price', 0)) or float(item.get('unit_price', 0)) * int(item.get('quantity', 1)),
@@ -403,17 +412,22 @@ if not _pg_import_ok:
                     ]
                 )
                 if first_id is None:
-                    first_id = cursor.lastrowid
+                    first_id = cursor.lastrowid if is_sqlite else cursor.fetchone()[0] if hasattr(cursor, 'fetchone') and cursor.description else None
                 try:
-                    deduct_store_inventory(item['product_id'], int(item.get('quantity', 1)))
+                    deduct_store_inventory(pid, int(item.get('quantity', 1)))
                 except:
                     pass
             db.commit()
-            db.execute('PRAGMA foreign_keys=ON')
+            if is_sqlite:
+                db.execute('PRAGMA foreign_keys=ON')
             return {'id': first_id, 'receipt_number': first_id}
         except Exception as e:
-            db.execute('PRAGMA foreign_keys=ON')
-            db.rollback()
+            import traceback
+            print(f"[create_sale ERROR] {e}\n{traceback.format_exc()}")
+            try:
+                db.rollback()
+            except:
+                pass
             return {'error': str(e)}
 
     def get_store_sales(store_id=None, page=1, per_page=50, **filters):
