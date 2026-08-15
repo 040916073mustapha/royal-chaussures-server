@@ -391,7 +391,126 @@ def pos_product_by_barcode(barcode):
     except Exception as e:
         import traceback
         print(f'[POS Product Barcode] Error: {e}\n{traceback.format_exc()}')
+
+
+# ============================================================
+# 🏗️ POS Products CRUD API (Ajouter, Modifier, Supprimer)
+# ============================================================
+
+@store_bp.route('/pos/products', methods=['POST'])
+def pos_create_product():
+    """Create a new product from POS"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
+        if not data.get("name"):
+            return jsonify({"error": "Le nom du produit est requis"}), 400
         
+        from database.db import create_product
+        product_data = {
+            "store_id": data.get("store_id", _resolve_store_id()),
+            "name": data["name"],
+            "sku": data.get("sku", data.get("barcode", "")),
+            "barcode": data.get("barcode", ""),
+            "category": data.get("category", ""),
+            "cost_price": float(data.get("cost_price", 0)),
+            "store_price": float(data.get("store_price", 0)),
+            "online_price": float(data.get("online_price", 0)),
+            "supplier": data.get("supplier", "divers"),
+            "description": data.get("description", ""),
+            "image_url": data.get("image_url", ""),
+            "is_active": True
+        }
+        product = create_product(product_data)
+        
+        # Update inventory if store_quantity provided
+        store_qty = data.get("store_quantity")
+        if store_qty is not None and product and "id" in product:
+            try:
+                from database.db import update_inventory
+                update_inventory(product["id"], store_qty=int(store_qty))
+            except Exception as inv_err:
+                print(f"[POS Create] Inventory error: {inv_err}")
+        
+        return jsonify({"product": product, "success": True}), 201
+    except Exception as e:
+        import traceback
+        print(f"[POS Create Product] Error: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
+@store_bp.route('/pos/products/<int:product_id>', methods=['PUT'])
+def pos_update_product(product_id):
+    """Update a product from POS"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Request body required"}), 400
+        
+        from database.db import update_product, update_inventory
+        
+        # Build update payload with allowed fields
+        update_fields = {}
+        field_map = {
+            "name": "name",
+            "barcode": "barcode",
+            "category": "category",
+            "cost_price": "cost_price",
+            "store_price": "store_price",
+            "online_price": "online_price",
+            "supplier": "supplier",
+            "description": "description",
+            "image_url": "image_url",
+            "is_active": "is_active",
+            "color": "color",
+            "size": "size",
+            "sku": "sku"
+        }
+        for js_key, db_key in field_map.items():
+            if js_key in data:
+                update_fields[db_key] = data[js_key]
+        
+        if not update_fields:
+            return jsonify({"error": "Aucun champ a mettre a jour"}), 400
+        
+        product = update_product(product_id, update_fields)
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        
+        # Update inventory if provided
+        low_threshold = data.get("low_stock_threshold")
+        if low_threshold is not None:
+            try:
+                from database.db import get_inventory
+                inv = get_inventory(product_id)
+                if inv:
+                    update_inventory(product_id, low_stock_threshold=int(low_threshold))
+            except Exception:
+                pass
+        
+        return jsonify({"product": product, "success": True})
+    except Exception as e:
+        import traceback
+        print(f"[POS Update Product] Error: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
+@store_bp.route('/pos/products/<int:product_id>', methods=['DELETE'])
+def pos_delete_product(product_id):
+    """Soft-delete a product from POS"""
+    try:
+        from database.db import update_product
+        product = update_product(product_id, {"is_active": False})
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        return jsonify({"success": True, "message": "Produit supprime"})
+    except Exception as e:
+        import traceback
+        print(f"[POS Delete Product] Error: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
 # ============================================================
 # 💰 POS Sales API (Nouvelle vente) — no auth required
 # ============================================================

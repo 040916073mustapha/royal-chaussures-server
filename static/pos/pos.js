@@ -1,6 +1,7 @@
 /** Royal POS — JS Engine */
 var STATE={token:null,user:null,cart:[],purchaseCart:[],products:[],allProducts:[],categories:new Set(),selectedPayment:'cash',lastSale:null,isOffline:false,pendingSales:JSON.parse(localStorage.getItem('pos_pending')||'[]'),_lastBarcodeTime:0,_barcodeBuffer:''};
-var API=(()=>{const b='/api/v1/store';return{headers:()=>({'Content-Type':'application/json','Authorization':'Bearer '+(STATE.token||'')}),async login(u,p){const r=await fetch(b+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});return r.json()},async getProducts(){const r=await fetch(b+'/products',{headers:this.headers()});return r.json()},async searchProducts(q){const r=await fetch(b+'/products/search?q='+encodeURIComponent(q)+'&limit=50',{headers:this.headers()});return r.json()},async getByBarcode(code){const r=await fetch('/api/v1/store/pos/products/barcode/'+encodeURIComponent(code),{headers:{'Content-Type':'application/json'}});return r.json()},async recordSale(d){if(STATE.isOffline)return this._saveOffline(d);const r=await fetch('/api/v1/store/pos/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const res=await r.json();if(!r.ok&&res.error&&(res.error.includes('timeout')||r.status>=500))return this._saveOffline(d);if(!r.ok&&res.error)throw new Error(res.error);return res},async _saveOffline(d){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');p.push({...d,_offlineId:Date.now(),_createdAt:new Date().toISOString()});localStorage.setItem('pos_pending',JSON.stringify(p));return{sale:{receipt_number:'OFFLINE-'+Date.now(),total:d.total||0},_offline:true}},async getPosProducts(){const r=await fetch('/api/v1/store/pos/products?_='+Date.now(),{headers:{'Content-Type':'application/json'}});return r.json()},async recordPurchase(d){const r=await fetch('/api/v1/store/pos/purchases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});return r.json()},async getPosPurchases(){const r=await fetch('/api/v1/store/pos/purchases',{headers:{'Content-Type':'application/json'}});return r.json()},async syncPending(){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');if(!p.length)return;const s=[];for(const x of p){try{const r=await fetch(b+'/sales',{method:'POST',headers:this.headers(),body:JSON.stringify(x)});if(!r.ok)s.push(x)}catch{s.push(x)}}localStorage.setItem('pos_pending',JSON.stringify(s))}}})();
+var API=(()=>{const b='/api/v1/store';return{headers:()=>({'Content-Type':'application/json','Authorization':'Bearer '+(STATE.token||'')}),async login(u,p){const r=await fetch(b+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});return r.json()},async getProducts(){const r=await fetch(b+'/products',{headers:this.headers()});return r.json()},async searchProducts(q){const r=await fetch(b+'/products/search?q='+encodeURIComponent(q)+'&limit=50',{headers:this.headers()});return r.json()},async getByBarcode(code){const r=await fetch('/api/v1/store/pos/products/barcode/'+encodeURIComponent(code),{headers:{'Content-Type':'application/json'}});return r.json()},async recordSale(d){if(STATE.isOffline)return this._saveOffline(d);const r=await fetch('/api/v1/store/pos/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const res=await r.json();if(!r.ok&&res.error&&(res.error.includes('timeout')||r.status>=500))return this._saveOffline(d);if(!r.ok&&res.error)throw new Error(res.error);return res},async _saveOffline(d){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');p.push({...d,_offlineId:Date.now(),_createdAt:new Date().toISOString()});localStorage.setItem('pos_pending',JSON.stringify(p));return{sale:{receipt_number:'OFFLINE-'+Date.now(),total:d.total||0},_offline:true}},async getPosProducts(){const r=await fetch('/api/v1/store/pos/products?_='+Date.now(),{headers:{'Content-Type':'application/json'}});return r.json()},async recordPurchase(d){const r=await fetch('/api/v1/store/pos/purchases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});return r.json()},async getPosPurchases(){const r=await fetch('/api/v1/store/pos/purchases',{headers:{'Content-Type':'application/json'}});return r.json()},async syncPending(){const p=JSON.parse(localStorage.getItem('pos_pending')||'[]');if(!p.length)return;const s=[];for(const x of p){try{const r=await fetch(b+'/sales',{method:'POST',headers:this.headers(),body:JSON.stringify(x)});if(!r.ok)s.push(x)}catch{s.push(x)}}localStorage.setItem('pos_pending',JSON.stringify(s))}},
+async getDemoData(){const r=await fetch('/api/v1/store/products/demo-data',{headers:{'Content-Type':'application/json'}});return r.json()}})();
 
 function startClock(){function u(){const n=new Date();const e=document.getElementById('digital-clock');if(e)e.textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0')}u();setInterval(u,1000)}
 
@@ -71,16 +72,196 @@ document.getElementById('payment-modal')?.addEventListener('click',function(e){i
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal('payment-modal');if(e.key==='F1'){e.preventDefault();completeSale()};if(e.key==='F2'){e.preventDefault();document.getElementById('sale-barcode')?.focus()}});
 
 var ARTICLES_DATA=[];
-// Validation handled via onclick in index.html; no duplicate listener needed
 var ARTICLES_SELECTED=null;
 
+// ============================================================
+// ARTICLE MODAL — Unified for Add & Edit
+// ============================================================
+var _articleModalMode='add';
+var _articleEditId=null;
+
+function openArticleModal(mode,productId){
+    _articleModalMode=mode||'add';
+    _articleEditId=productId||null;
+    var titleEl=document.getElementById('article-modal-title');
+    if(titleEl){
+        titleEl.textContent=mode==='edit'?'Modifier article':'Ajouter article';
+    }
+    document.getElementById('art-barcode').value='';
+    document.getElementById('art-designation').value='';
+    document.getElementById('art-famille').value='';
+    document.getElementById('art-qty').value='1';
+    document.getElementById('art-remise').value='0';
+    document.getElementById('art-stock-alert').value='5';
+    document.getElementById('art-prix-achat').value='';
+    document.getElementById('art-prix-vente').value='';
+    document.getElementById('art-marge-pct').textContent='0%';
+    document.getElementById('art-marge-mt').textContent='0 DA';
+    
+    // If edit mode, populate from existing product
+    if(mode==='edit'&&productId){
+        var p=ARTICLES_DATA.find(function(x){return x.id===productId});
+        if(p){
+            document.getElementById('art-barcode').value=p.barcode||'';
+            document.getElementById('art-designation').value=p.name||'';
+            document.getElementById('art-famille').value=p.category||'';
+            document.getElementById('art-qty').value=p.store_quantity||0;
+            document.getElementById('art-stock-alert').value=p.low_stock_threshold||5;
+            document.getElementById('art-prix-achat').value=p.cost_price||'';
+            document.getElementById('art-prix-vente').value=p.store_price||'';
+            calcMarge();
+        }
+    }
+    
+    var addSbtns=document.getElementById('secondary-barcodes');
+    if(addSbtns)addSbtns.innerHTML='<div class="sb-row"><input type="text" class="input-lg" placeholder="Code barre supplementaire..."><button class="btn-add-sb" onclick="addSecondaryBarcode()" title="Ajouter"><i class="fas fa-plus"></i></button></div>';
+    var pp=document.getElementById('art-photo-placeholder');
+    if(pp)pp.innerHTML='<i class="fas fa-camera"></i><span>Photo produit</span><span class="photo-hint">Cliquez pour ajouter</span>';
+    document.getElementById('article-modal').classList.add('active');
+    setTimeout(function(){var el=document.getElementById('art-designation');if(el)el.focus()},200);
+}
+
+async function validateArticle(){
+    try{
+        var designation=document.getElementById('art-designation').value.trim();
+        var qty=parseInt(document.getElementById('art-qty').value)||1;
+        var prixAchat=parseFloat(document.getElementById('art-prix-achat').value)||0;
+        var prixVente=parseFloat(document.getElementById('art-prix-vente').value)||0;
+        var barcode=document.getElementById('art-barcode').value.trim();
+        var famille=document.getElementById('art-famille')?.value||'';
+        var remise=parseFloat(document.getElementById('art-remise')?.value)||0;
+        var stockAlert=parseInt(document.getElementById('art-stock-alert')?.value)||5;
+        
+        if(!designation){showToast('Veuillez entrer la designation','error');document.getElementById('art-designation').focus();return}
+        if(prixAchat<=0){showToast('Veuillez entrer le prix achat','error');document.getElementById('art-prix-achat').focus();return}
+        if(prixVente<=0){showToast('Veuillez entrer le prix vente','error');document.getElementById('art-prix-vente').focus();return}
+        
+        if(_articleModalMode==='add'){
+            // Save to sale cart instead — this is for purchase mode
+            if(!STATE.purchaseCart)STATE.purchaseCart=[];
+            STATE.purchaseCart.push({designation:designation,quantite:qty,prix_achat:prixAchat,prix_vente:prixVente,barcode:barcode,famille:famille,remise:remise,stock_alert:stockAlert});
+            closeModal('article-modal');
+            updatePurchaseUI();
+            showToast(designation+' ajoute(e) a l\'achat');
+        }else{
+            // Edit mode — call backend to update product
+            if(!_articleEditId){showToast('Erreur: aucun produit selectionne','error');return}
+            var resp=await fetch('/api/v1/store/pos/products/'+_articleEditId,{
+                method:'PUT',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({
+                    name:designation,
+                    barcode:barcode,
+                    category:famille,
+                    cost_price:prixAchat,
+                    store_price:prixVente,
+                    low_stock_threshold:stockAlert
+                })
+            });
+            var result=await resp.json();
+            if(result.product||result.success){
+                showToast('Article modifie avec succes','success');
+                closeModal('article-modal');
+                renderProductsTable();
+            }else{
+                showToast('Erreur: '+(result.error||'Erreur inconnue'),'error');
+            }
+        }
+    }catch(e){
+        console.error('[validateArticle ERROR]',e);
+        showToast('Erreur: '+e.message,'error');
+    }
+}
+
+async function editSelectedArticle(){
+    if(!ARTICLES_SELECTED){showToast('Selectionnez un article','error');return}
+    openArticleModal('edit',ARTICLES_SELECTED);
+}
+
+async function deleteSelectedArticle(){
+    if(!ARTICLES_SELECTED){showToast('Selectionnez un article','error');return}
+    var p=ARTICLES_DATA.find(function(x){return x.id===ARTICLES_SELECTED});
+    var name=p?p.name:'#'+ARTICLES_SELECTED;
+    if(!confirm('Supprimer definitivement \"'+name+'\" ?'))return;
+    try{
+        var resp=await fetch('/api/v1/store/pos/products/'+ARTICLES_SELECTED,{method:'DELETE',headers:{'Content-Type':'application/json'}});
+        var result=await resp.json();
+        if(resp.ok){
+            showToast(name+' supprime avec succes','success');
+            ARTICLES_SELECTED=null;
+            renderProductsTable();
+        }else{
+            showToast('Erreur: '+(result.error||'Erreur'),'error');
+        }
+    }catch(e){
+        showToast('Erreur: '+e.message,'error');
+    }
+}
+
+async function importArticles(){
+    // Create hidden file input for CSV
+    var input=document.createElement('input');
+    input.type='file';
+    input.accept='.csv';
+    input.onchange=async function(e){
+        var file=e.target.files[0];
+        if(!file)return;
+        var reader=new FileReader();
+        reader.onload=async function(ev){
+            var text=ev.target.result;
+            var lines=text.split('\n').filter(function(l){return l.trim()});
+            if(lines.length<2){showToast('Fichier CSV vide ou invalide','error');return}
+            // Parse header
+            var headers=lines[0].split(',').map(function(h){return h.trim().toLowerCase()});
+            var nameIdx=headers.indexOf('designation');
+            if(nameIdx===-1)nameIdx=headers.indexOf('name');
+            var barcodeIdx=headers.indexOf('code')||headers.indexOf('barcode');
+            var qtyIdx=headers.indexOf('qte')||headers.indexOf('quantite')||headers.indexOf('quantity');
+            var paIdx=headers.indexOf('prix achat')||headers.indexOf('prix_achat')||headers.indexOf('cost_price');
+            var pvIdx=headers.indexOf('prix vente')||headers.indexOf('prix_vente')||headers.indexOf('store_price');
+            var catIdx=headers.indexOf('famille')||headers.indexOf('category');
+            
+            if(nameIdx===-1){showToast('Colonne \"designation\" introuvable','error');return}
+            
+            var imported=0;
+            for(var i=1;i<lines.length;i++){
+                var cols=lines[i].split(',');
+                if(cols.length<2)continue;
+                var payload={
+                    name:cols[nameIdx]?cols[nameIdx].trim():('Article '+(i+1)),
+                    barcode:(barcodeIdx>=0&&cols[barcodeIdx])?cols[barcodeIdx].trim():'',
+                    category:(catIdx>=0&&cols[catIdx])?cols[catIdx].trim():'',
+                    cost_price:parseFloat(cols[paIdx])||0,
+                    store_price:parseFloat(cols[pvIdx])||0,
+                    store_quantity:parseInt(cols[qtyIdx])||0,
+                    store_id:1
+                };
+                try{
+                    var resp=await fetch('/api/v1/store/pos/products',{
+                        method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify(payload)
+                    });
+                    if(resp.ok)imported++;
+                }catch(e){}
+            }
+            showToast(imported+' article(s) importes avec succes','success');
+            renderProductsTable();
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+
 async function renderProductsTable(){
-    const t=document.getElementById('articles-table-body');
+    var t=document.getElementById('articles-table-body');
     if(!t)return;
     try{
-        const res=await API.getPosProducts();
+        var res=await API.getPosProducts();
         ARTICLES_DATA=res.products||[];
-        document.getElementById('article-total-badge').textContent=res.total_articles||0;
+        var badge=document.getElementById('article-total-badge');
+        if(badge)badge.textContent=res.total_articles||0;
     }catch(e){
         ARTICLES_DATA=[];
         showToast('Erreur chargement articles','error');
@@ -89,13 +270,15 @@ async function renderProductsTable(){
 }
 
 function renderArticleTableRows(filteredData){
-    const t=document.getElementById('articles-table-body');
+    var t=document.getElementById('articles-table-body');
     if(!t)return;
-    const data=filteredData||ARTICLES_DATA;
+    var data=filteredData||ARTICLES_DATA;
     if(!data.length){
         t.innerHTML='<tr><td colspan="11"><div class="no-items"><i class="fas fa-box-open"></i>Aucun article trouve</div></td></tr>';
-        document.getElementById('article-sum-qty').textContent='0';
-        document.getElementById('article-sum-total').textContent='0';
+        var sumQty=document.getElementById('article-sum-qty');
+        if(sumQty)sumQty.textContent='0';
+        var sumTotal=document.getElementById('article-sum-total');
+        if(sumTotal)sumTotal.textContent='0';
         return;
     }
     let totalQty=0;
@@ -177,17 +360,6 @@ function openArticleModal(){
     showToast('Ajout article - en developpement','error');
 }
 
-function editSelectedArticle(){
-    if(!ARTICLES_SELECTED){showToast('Selectionnez un article','error');return}
-    showToast('Modification article #'+ARTICLES_SELECTED+' - en developpement','error');
-}
-
-function deleteSelectedArticle(){
-    if(!ARTICLES_SELECTED){showToast('Selectionnez un article','error');return}
-    if(!confirm('Supprimer cet article ?'))return;
-    showToast('Suppression - en developpement','error');
-}
-
 function exportArticles(){
     if(!ARTICLES_DATA.length){showToast('Aucun article a exporter','error');return}
     var csv='Pos,Code,Designation,Qte,Photo,Famille,Prix achat,Prix vente,Px Revendeur,Stock alerte,Remise\n';
@@ -233,7 +405,7 @@ function removePurchaseItem(idx){STATE.purchaseCart.splice(idx,1);updatePurchase
 
 function updatePurchaseSummary(){let total=0;let qty=0;let last=STATE.purchaseCart[STATE.purchaseCart.length-1];STATE.purchaseCart.forEach(i=>{total+=i.prix_achat*i.quantite;qty+=i.quantite});const td=document.getElementById('purchase-total-display');if(td)td.textContent=total.toLocaleString()+' DA';const s=document.getElementById('purchase-summary-total');if(s)s.textContent=total.toLocaleString()+' DA';const ic=document.getElementById('purchase-item-count');if(ic)ic.textContent=STATE.purchaseCart.length;const tq=document.getElementById('purchase-total-qty');if(tq)tq.textContent=qty;const st=document.getElementById('purchase-status-msg');if(st){if(last){st.innerHTML='<i class="fas fa-check-circle"></i> Article: '+last.designation+' quantite: '+last.quantite+' total: '+total.toLocaleString()+' DA'}else{st.innerHTML='<i class="fas fa-info-circle"></i> Pret a saisir'}}}
 
-function openArticleModal(){document.getElementById('art-barcode').value='';document.getElementById('art-designation').value='';document.getElementById('art-famille').value='';document.getElementById('art-qty').value='1';document.getElementById('art-remise').value='0';document.getElementById('art-stock-alert').value='5';document.getElementById('art-prix-achat').value='';document.getElementById('art-prix-vente').value='';document.getElementById('art-marge-pct').textContent='0%';document.getElementById('art-marge-mt').textContent='0 DA';document.getElementById('secondary-barcodes').innerHTML='<div class="sb-row"><input type="text" class="input-lg" placeholder="Code barre supplementaire..."><button class="btn-add-sb" onclick="addSecondaryBarcode()" title="Ajouter"><i class="fas fa-plus"></i></button></div>';const pp=document.getElementById('art-photo-placeholder');if(pp)pp.innerHTML='<i class="fas fa-camera"></i><span>Photo produit</span><span class="photo-hint">Cliquez pour ajouter</span>';document.getElementById('article-modal').classList.add('active');setTimeout(()=>document.getElementById('art-designation')?.focus(),200)}
+
 
 function generateBarcode(){const btn=document.querySelector('.btn-gen');const inp=document.getElementById('art-barcode');btn.disabled=true;btn.innerHTML='<span class=\"spinner\"></span>';try{const ts=Date.now().toString().slice(-6);const rn=Math.floor(Math.random()*90000+10000);const code='2'+ts+rn;inp.value=code;showToast('Code barre genere: '+code,'success')}catch(e){inp.value='BAR'+Date.now().toString().slice(-6);showToast('Code barre: '+inp.value)}finally{btn.disabled=false;btn.innerHTML='<i class=\"fas fa-qrcode\"></i> Generer'}}
 
