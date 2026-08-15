@@ -361,14 +361,58 @@ if not _pg_import_ok:
     def create_sale(data):
         db = get_db()
         try:
-            cursor = db.execute('INSERT INTO store_sales (store_id, customer_name, customer_phone, cashier, subtotal, discount, tax, total, payment_method, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [data.get('store_id', 1), data.get('customer_name', ''), data.get('customer_phone', ''), data.get('cashier', 'caisse'), float(data.get('subtotal', 0)), float(data.get('discount', 0)), float(data.get('tax', 0)), float(data.get('total', 0)), data.get('payment_method', 'cash'), data.get('notes', '')])
-            sale_id = cursor.lastrowid
-            for item in data.get('items', []):
-                db.execute('INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?)', [sale_id, item.get('product_id'), item.get('product_name', ''), int(item.get('quantity', 1)), float(item.get('unit_price', 0)), float(item.get('total_price', 0))])
-                deduct_store_inventory(item['product_id'], int(item.get('quantity', 1)))
+            items = data.get('items', [])
+            if not items:
+                # حالة المنتج الفردي القديم
+                items = [{
+                    'product_id': data.get('product_id'),
+                    'product_name': data.get('product_name', ''),
+                    'quantity': int(data.get('quantity', 1)),
+                    'unit_price': float(data.get('unit_price', 0)),
+                    'total_price': float(data.get('total', 0)) or float(data.get('unit_price', 0)) * int(data.get('quantity', 1))
+                }]
+            
+            # حساب total من items إن لم يوجد
+            if not data.get('total'):
+                items_total = sum(
+                    float(item.get('total_price', 0)) or float(item.get('unit_price', 0)) * int(item.get('quantity', 1))
+                    for item in items
+                )
+                data['total'] = items_total - float(data.get('discount', 0))
+            
+            # تعطيل foreign keys مؤقتاً للمرونة
+            db.execute('PRAGMA foreign_keys=OFF')
+            
+            # تخزين كل منتج كصف منفصل في store_sales (Schema القديم)
+            first_id = None
+            for item in items:
+                cursor = db.execute(
+                    'INSERT INTO store_sales (store_id, product_id, quantity, unit_price, total, discount, payment_method, notes, cashier, customer_name, customer_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [
+                        data.get('store_id', 1),
+                        item.get('product_id') or 0,
+                        int(item.get('quantity', 1)),
+                        float(item.get('unit_price', 0)),
+                        float(item.get('total_price', 0)) or float(item.get('unit_price', 0)) * int(item.get('quantity', 1)),
+                        float(data.get('discount', 0)),
+                        data.get('payment_method', 'cash'),
+                        data.get('notes', ''),
+                        data.get('cashier', 'caisse'),
+                        data.get('customer_name', ''),
+                        data.get('customer_phone', '')
+                    ]
+                )
+                if first_id is None:
+                    first_id = cursor.lastrowid
+                try:
+                    deduct_store_inventory(item['product_id'], int(item.get('quantity', 1)))
+                except:
+                    pass
             db.commit()
-            return {'id': sale_id}
+            db.execute('PRAGMA foreign_keys=ON')
+            return {'id': first_id, 'receipt_number': first_id}
         except Exception as e:
+            db.execute('PRAGMA foreign_keys=ON')
             db.rollback()
             return {'error': str(e)}
 

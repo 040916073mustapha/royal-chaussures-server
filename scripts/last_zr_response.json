@@ -1,0 +1,242 @@
+{
+  "items": [
+    {
+      "id": "6dd2ad93-e603-4942-b929-ac05ec2106bf",
+      "customer": {
+        "customerId": "dd814b38-7d21-4bbb-a1aa-b735fe1c1ac5",
+        "name": "fatima mostefaoui",
+        "phone": {
+          "number1": "+213699175925"
+        }
+      },
+      "supplier": {
+        "supplierName": "ROYAL CHAUSSURES ",
+        "supplierCityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "supplierHubId": "d17c6a44-c53c-4c2e-a489-219b1212aecd",
+        "supplierHubCityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "supplierHubName": "Tri Tlemcen 13 مركز فرز تلمسان",
+        "phone": {
+          "number1": "+213659832426"
+        },
+        "supportPhone": {
+          "number1": "+213659832426"
+        }
+      },
+      "deliveryAddress": {
+        "street": null,
+        "city": "Tlemcen",
+        "cityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "district": "Sabra",
+        "districtTerritoryId": "5175315a-6f30-46df-a40f-45deeaa3a6b4",
+        "cityTerritoryCode": 13,
+        "postalCode": "13000",
+        "country": "Algeria"
+      },
+      "createdAt": "2026-06-10T21:16:42.6636125",
+      "amount": 3000.0,
+      "returnPrice": 200.0,
+      "deliveryPrice": 500.0,
+      "trackingNumber": "13-ALHP1M8P2U-ZR",
+      "paymentMethod": "cash",
+      "deliveryType": "home",
+      "state": {
+        "id": "5f0c2807-6565-4dd3-8fe2-23b00b6cc8bd",
+        "name": "recouvert",
+        "description": "Recouvert",
+        "isBlocking": false,
+        "isLocked": false,
+        "visibleFor": 7,
+        "editableBy": 2,
+        "color": "00796b"
+      },
+      "lastStateHistoryId": "c5f5bd19-6e74-442a-8d73-09023edd85ee",
+      "tenantId": "d2217f31-20f1-43c6-abd4-c420788a63ed",
+      "lastLocationHubId": "d17c6a44-c53c-4c2e-a489-219b1212aecd",
+      "lastStateUpdateAt": "2026-06-30T13:24:57.0385023",
+      "lastStateHistoryAt": "2026-06-30T13:24:57.0385045",
+      "description": "--",
+      "productsDescription": "Pochette Soirée  :  - 1",
+      "productsStockType": "none",
+      "isReturn": false,
+      "canBeReturned": false,
+      "deliveredAt": "2026-06-11T14:31:25.4347294",
+      "type": "standard",
+      "isExchanged": false,
+      "externalId": "",
+      "firstConfirmationAt": "2026-06-11T11:21:12.7013553",
+      "hubDeliveryId": "d17c6a44-c53c-4c2e-a489-219b1212aecd",
+      "swap": {
+        "count": 0,
+        "sameCityCount": 0,
+        "differentCityCount": 0,
+        "swappedAt": null,
+        "sameCityPrice": 50.0,
+        "differentCityPrice": 100.0,
+        "isEligibleForSwap": false
+      },
+      "modificationCount": 0
+    },
+    {
+      "id": "79dc73d0-4be5-4ac1-9b46-0cba4a87e20c",
+      "customer": {
+        "customerId": "a0a2b35e-646d-44df-8826-8eab40b274bb",
+        "name": "نورية حسين",
+        "phone": {
+          "number1": "+213696832428"
+        }
+      },
+      "supplier": {
+        "supplierName": "ROYAL CHAUSSURES ",
+        "supplierCityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "supplierHubId": "d17c6a44-c53c-4c2e-a489-219b1212aecd",
+        "supplierHubCityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "supplierHubName": "Tri Tlemcen 13 مركز فرز تلمسان",
+        "phone": {
+          "number1": "+213659832426"
+        },
+        "supportPhone": {
+          "number1": "+213659832426"
+        }
+      },
+      "deliveryAddress": {
+        "street": null,
+        "city": "Tlemcen",
+        "cityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "district": "Souahlia",
+        "districtTerritoryId": "0bf6176f-5cf1-461a-908b-cb6393b919a2",
+        "cityTerritoryCode": 13,
+        "postalCode": "13000",
+        "country": "Algeria"
+      },
+      "createdAt": "2026-06-22T11:11:25.1096759",
+      "amount": 5150.0,
+      "returnPrice": 200.0,
+      "deliveryPrice": 500.0,
+      "trackingNumber": "13-MBRWI7D8NY-ZR",
+      "paymentMethod": "cash",
+      "deliveryType": "home",
+      "state": {
+        "id": "5f0c2807-6565-4dd3-8fe2-23b00b6cc8bd",
+        "name": "recouvert",
+        "description": "Recouvert",
+        "isBlocking": false,
+        "isLocked": false,
+        "visibleFor": 7,
+        "editableBy": 2,
+        "color": "00796b"
+      },
+      "lastStateHistoryId": "8dda92ff-c486-4679-aad3-54ff8aafea63",
+      "tenantId": "d2217f31-20f1-43c6-abd4-c420788a63ed",
+      "lastLocationHubId": "d17c6a44-c53c-4c2e-a489-219b1212aecd",
+      "lastStateUpdateAt": "2026-06-30T13:24:57.0384934",
+      "lastStateHistoryAt": "2026-06-30T13:24:57.038498",
+      "description": "--",
+      "productsDescription": "chaussures :  - 5",
+      "productsStockType": "none",
+      "isReturn": false,
+      "canBeReturned": false,
+      "deliveredAt": "2026-06-25T19:00:57.6545071",
+      "type": "standard",
+      "isExchanged": false,
+      "externalId": "",
+      "firstConfirmationAt": "2026-06-22T13:22:05.1268079",
+      "hubDeliveryId": "d17c6a44-c53c-4c2e-a489-219b1212aecd",
+      "swap": {
+        "count": 0,
+        "sameCityCount": 0,
+        "differentCityCount": 0,
+        "swappedAt": null,
+        "sameCityPrice": 50.0,
+        "differentCityPrice": 100.0,
+        "isEligibleForSwap": false
+      },
+      "modificationCount": 0
+    },
+    {
+      "id": "de581287-6827-4d6f-97f9-4b0db2d8ff3f",
+      "customer": {
+        "customerId": "45597ce5-2361-409d-b4fc-01ed7f78f77d",
+        "name": "مسعودة حملاوي",
+        "phone": {
+          "number1": "+213657561367"
+        }
+      },
+      "supplier": {
+        "supplierName": "ROYAL CHAUSSURES ",
+        "supplierCityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "supplierHubId": "d17c6a44-c53c-4c2e-a489-219b1212aecd",
+        "supplierHubCityTerritoryId": "53c9e062-9c4e-4c77-8b71-55eabf887f83",
+        "supplierHubName": "Tri Tlemcen 13 مركز فرز تلمسان",
+        "phone": {
+          "number1": "+213659832426"
+        },
+        "supportPhone": {
+          "number1": "+213659832426"
+        }
+      },
+      "deliveryAddress": {
+        "street": "ZERIBET EL OUED",
+        "city": "Biskra",
+        "cityTerritoryId": "796e70df-1102-44da-9582-2da66ead2ba6",
+        "district": "Zeribet El Oued",
+        "districtTerritoryId": "f676bc07-7656-4479-858c-e38b29db3f41",
+        "cityTerritoryCode": 7,
+        "postalCode": "07000",
+        "country": "Algeria"
+      },
+      "createdAt": "2026-06-24T18:07:26.6438478",
+      "amount": 3450.0,
+      "returnPrice": 200.0,
+      "deliveryPrice": 950.0,
+      "trackingNumber": "07-OIB7SZEKMN-ZR",
+      "paymentMethod": "cash",
+      "deliveryType": "home",
+      "weight": {
+        "weight": 0.8,
+        "dimensionalWeight": 10.0,
+        "effectiveWeight": 3
+      },
+      "state": {
+        "id": "5f0c2807-6565-4dd3-8fe2-23b00b6cc8bd",
+        "name": "recouvert",
+        "description": "Recouvert",
+        "isBlocking": false,
+        "isLocked": false,
+        "visibleFor": 7,
+        "editableBy": 2,
+        "color": "00796b"
+      },
+      "lastStateHistoryId": "28111a56-db4c-4f42-8f94-36f824f1e566",
+      "tenantId": "d2217f31-20f1-43c6-abd4-c420788a63ed",
+      "lastLocationHubId": "9c795633-dfe2-4f46-af02-c5a79fefb55d",
+      "lastStateUpdateAt": "2026-06-30T13:24:57.0384992",
+      "lastStateHistoryAt": "2026-06-30T13:24:57.0385017",
+      "description": "chaussure",
+      "productsDescription": "Escarpin Royal 01 : RC-ESC01-MAR-37 - 1",
+      "productsStockType": "local",
+      "isReturn": false,
+      "canBeReturned": false,
+      "deliveredAt": "2026-06-26T19:44:29.9924593",
+      "type": "standard",
+      "isExchanged": false,
+      "firstConfirmationAt": "2026-06-25T15:35:32.7287854",
+      "hubDeliveryId": "9c795633-dfe2-4f46-af02-c5a79fefb55d",
+      "swap": {
+        "count": 0,
+        "sameCityCount": 0,
+        "differentCityCount": 0,
+        "swappedAt": null,
+        "sameCityPrice": 50.0,
+        "differentCityPrice": 100.0,
+        "isEligibleForSwap": false
+      },
+      "modificationCount": 0
+    }
+  ],
+  "pageNumber": 1,
+  "pageSize": 10,
+  "totalCount": 3,
+  "totalPages": 1,
+  "hasPrevious": false,
+  "hasNext": false
+}

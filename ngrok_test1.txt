@@ -1,0 +1,1 @@
+{"endpoints":{"GET /api/agents/status":"Agent Status API","GET /dashboard":"JARVIS CONSTELLATION Dashboard","GET /health":"Health check","POST /webhook/shopify/order-created":"Receive Shopify order creation webhook"},"service":"Royal Chaussures - ZR Express Webhook"}

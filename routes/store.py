@@ -403,17 +403,52 @@ def pos_record_sale():
         data = request.get_json()
         if not data:
             return jsonify({"error": "Request body required"}), 400
-        if "product_id" not in data or "quantity" not in data:
-            return jsonify({"error": "product_id and quantity required"}), 400
-
-        from database.db import create_sale
-        # Add required fields for create_sale
-        data["store_id"] = data.get("store_id", 1)
-        data["cashier"] = data.get("cashier", "caisse")
-        result = create_sale(data)
-        if "error" in result:
-            return jsonify(result), 400
-        return jsonify({"sale": result})
+        
+        # دعم كلتا الحالتين: items[] (بيعة كاملة) أو منتج فردي
+        if "items" in data and data["items"]:
+            # Payload الجديد مع items[]
+            from database.db import create_sale
+            data["store_id"] = data.get("store_id", 1)
+            data["cashier"] = data.get("cashier", "caisse")
+            # حساب subtotal/total إن لم يوجد
+            if not data.get("subtotal") and not data.get("total"):
+                items_total = sum(float(i.get("total_price", 0)) or float(i.get("unit_price", 0)) * int(i.get("quantity", 1)) for i in data["items"])
+                data["subtotal"] = items_total
+                data["total"] = items_total - float(data.get("discount", 0))
+            result = create_sale(data)
+            if "error" in result:
+                return jsonify(result), 400
+            return jsonify({"sale": result})
+        else:
+            # Payload القديم (منتج فردي) - نحوله لـ items[]
+            if "product_id" not in data or "quantity" not in data:
+                return jsonify({"error": "product_id and quantity required"}), 400
+            from database.db import create_sale
+            qty = int(data.get("quantity", 1))
+            unit_price = float(data.get("unit_price", 0))
+            payload = {
+                "store_id": data.get("store_id", 1),
+                "cashier": data.get("cashier", "caisse"),
+                "customer_name": data.get("customer_name", ""),
+                "customer_phone": data.get("customer_phone", ""),
+                "payment_method": data.get("payment_method", "cash"),
+                "notes": data.get("notes", ""),
+                "subtotal": unit_price * qty,
+                "discount": 0,
+                "tax": 0,
+                "total": unit_price * qty,
+                "items": [{
+                    "product_id": data["product_id"],
+                    "product_name": data.get("product_name", ""),
+                    "quantity": qty,
+                    "unit_price": unit_price,
+                    "total_price": unit_price * qty
+                }]
+            }
+            result = create_sale(payload)
+            if "error" in result:
+                return jsonify(result), 400
+            return jsonify({"sale": result})
     except Exception as e:
         import traceback
         print(f"[POS Sale] Error: {e}\n{traceback.format_exc()}")
