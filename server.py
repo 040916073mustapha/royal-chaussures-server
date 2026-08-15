@@ -419,6 +419,16 @@ if _db_init_ok:
         import traceback as _tb
         logger.error(f"[Store POS] Subscription blueprint FAILED: {e}\n{_tb.format_exc()}")
 
+# ========== Register POS Blueprint ==========
+if _db_init_ok:
+    try:
+        from pos.routes import _pos_bp
+        app.register_blueprint(_pos_bp)
+        logger.info("[POS] Blueprint registered at /pos/")
+    except Exception as e:
+        import traceback as _tb
+        logger.error(f"[POS] Blueprint FAILED: {e}\n{_tb.format_exc()}")
+
 # ========== Teardown Handler ==========
 if _db_init_ok:
     try:
