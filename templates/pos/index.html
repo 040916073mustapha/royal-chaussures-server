@@ -1109,7 +1109,7 @@
                                 <button class="pl-toolbar-btn" onclick="switchView('purchase')"><i class="fas fa-plus-circle"></i> Nouveau</button>
                                 <button class="pl-toolbar-btn" id="pl-btn-edit" disabled><i class="fas fa-edit"></i> Modifier</button>
                                 <button class="pl-toolbar-btn" id="pl-btn-print" disabled onclick="reprintPurchase()"><i class="fas fa-print"></i> Imprimer</button>
-                                <button class="pl-toolbar-btn" id="pl-btn-delete" disabled><i class="fas fa-trash-alt"></i> Supprimer</button>
+                                <button class="pl-toolbar-btn" onclick="deleteSelectedPurchases()" id="pl-btn-bulk-delete"><i class="fas fa-trash-alt"></i> Supprimer (0)</button>
                                 <button class="pl-toolbar-btn" id="pl-btn-import" disabled><i class="fas fa-upload"></i> Importer</button>
                                 <button class="pl-toolbar-btn" onclick="exportPurchaseList()"><i class="fas fa-download"></i> Exporter</button>
                                 <button class="pl-toolbar-btn" onclick="resetPurchaseFilter()"><i class="fas fa-times"></i> Annuler</button>
@@ -1118,8 +1118,9 @@
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>#</th>
-                                            <th>État</th>
+                                            <th style="width:36px;text-align:center"><input type="checkbox" onclick="toggleSelectAllPurchases()" title="Selectionner tout"></th>
+                                            <th style="width:36px">#</th>
+                                            <th style="width:80px">État</th>
                                             <th>Code</th>
                                             <th>Fournisseur</th>
                                             <th>Date achat</th>
@@ -1133,7 +1134,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="purchase-list-table-body">
-                                        <tr><td colspan="12"><div class="no-items"><i class="fas fa-file-invoice"></i>Aucun achat enregistré</div></td></tr>
+                                        <tr><td colspan="13"><div class="no-items"><i class="fas fa-file-invoice"></i>Aucun achat enregistré</div></td></tr>
                                     </tbody>
                                 </table>
                             </div>

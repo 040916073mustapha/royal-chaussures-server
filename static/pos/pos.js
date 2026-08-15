@@ -438,11 +438,75 @@ function addSecondaryBarcode(){const container=document.getElementById('secondar
 
 async function loadPurchaseList(){try{const r=await fetch('/api/v1/store/pos/purchases?_='+Date.now(),{headers:{'Content-Type':'application/json'}});const data=await r.json();renderPurchaseTable(data.purchases||[])}catch(e){showToast('Erreur chargement: '+e.message,'error')}}
 
-function renderPurchaseTable(purchases){const t=document.getElementById('purchase-list-table-body');if(!t)return;const c=document.getElementById('pl-total-count');if(c)c.textContent=purchases.length;if(!purchases.length){t.innerHTML='<tr><td colspan="12"><div class="no-items"><i class="fas fa-file-invoice"></i>Aucun achat trouve</div></td></tr>';updatePurchaseListSummary({total:0,paid:0,tva:0,ht:0});return}let sumTotal=0,sumPaid=0,sumTva=0;t.innerHTML=purchases.map((p,i)=>{const mt=p.total||p.montant_total||0;const mv=p.paid||p.montant_verse||0;const mr=p.balance||p.montant_reste||0;const tva=p.tva||p.montant_tva||0;const ht=p.ht||p.total_ht||0;const na=p.item_count||p.nombre_article||0;sumTotal+=mt;sumPaid+=mv;sumTva+=tva;const dt=p.date_achat||p.created_at||'';const dtr=dt?dt.split(' ')[0]||dt:'---';return '<tr onclick="selectPurchaseRow('+i+')" id="pl-row-'+i+'" style="cursor:pointer">'+'<td>'+(i+1)+'</td>'+'<td><i class="fas fa-check-circle" style="color:#27ae60"></i></td>'+'<td style="font-weight:600">'+(p.id||'---')+'</td>'+'<td>'+(p.supplier||'---')+'</td>'+'<td>'+dtr+'</td>'+'<td style="text-align:center">'+na+'</td>'+'<td style="font-weight:700">'+mt.toLocaleString()+'</td>'+'<td>'+mv.toLocaleString()+'</td>'+'<td>'+(mr||0).toLocaleString()+'</td>'+'<td>'+(p.tva_pct||0)+'%</td>'+'<td>'+tva.toLocaleString()+'</td>'+'<td>'+ht.toLocaleString()+'</td>'+'</tr>'}).join('');updatePurchaseListSummary({total:sumTotal,paid:sumPaid,tva:sumTva,ht:sumTotal});STATE._purchaseListData=purchases}
+function renderPurchaseTable(purchases){const t=document.getElementById('purchase-list-table-body');if(!t)return;const c=document.getElementById('pl-total-count');if(c)c.textContent=purchases.length;if(!purchases.length){t.innerHTML='<tr><td colspan="13"><div class="no-items"><i class="fas fa-file-invoice"></i>Aucun achat trouve</div></td></tr>';updatePurchaseListSummary({total:0,paid:0,tva:0,ht:0});return}let sumTotal=0,sumPaid=0,sumTva=0;t.innerHTML=purchases.map((p,i)=>{const mt=p.total||p.montant_total||0;const mv=p.paid||p.montant_verse||0;const mr=p.balance||p.montant_reste||0;const tva=p.tva||p.montant_tva||0;const ht=p.ht||p.total_ht||0;const na=p.item_count||p.nombre_article||0;sumTotal+=mt;sumPaid+=mv;sumTva+=tva;const dt=p.date_achat||p.created_at||'';const dtr=dt?dt.split(' ')[0]||dt:'---';var checked=_selectedPurchaseCheckboxes[p.id]?'checked':'';return '<tr onclick="selectPurchaseRow('+i+')" id="pl-row-'+i+'" style="cursor:pointer">'+'<td style="text-align:center;width:36px"><input type="checkbox" class="pl-cb" id="pl-cb-'+i+'" '+checked+' onclick="event.stopPropagation();togglePurchaseCheckbox('+(p.id||i)+','+i+')"></td>'+'<td>'+(i+1)+'</td>'+'<td><i class="fas fa-check-circle" style="color:#27ae60"></i></td>'+'<td style="font-weight:600">'+(p.id||'---')+'</td>'+'<td>'+(p.supplier||'---')+'</td>'+'<td>'+dtr+'</td>'+'<td style="text-align:center">'+na+'</td>'+'<td style="font-weight:700">'+mt.toLocaleString()+'</td>'+'<td>'+mv.toLocaleString()+'</td>'+'<td>'+(mr||0).toLocaleString()+'</td>'+'<td>'+(p.tva_pct||0)+'%</td>'+'<td>'+tva.toLocaleString()+'</td>'+'<td>'+ht.toLocaleString()+'</td>'+'</tr>'}).join('');updatePurchaseListSummary({total:sumTotal,paid:sumPaid,tva:sumTva,ht:sumTotal});STATE._purchaseListData=purchases}
 
 function updatePurchaseListSummary(data){const t=document.getElementById('pl-sum-total');if(t)t.textContent=(data.total||0).toLocaleString()+' DA';const p=document.getElementById('pl-sum-paid');if(p)p.textContent=(data.paid||0).toLocaleString()+' DA';const b=document.getElementById('pl-sum-balance');if(b)b.textContent=Math.max(0,(data.total||0)-(data.paid||0)).toLocaleString()+' DA';const tv=document.getElementById('pl-sum-tva');if(tv)tv.textContent=(data.tva||0).toLocaleString()+' DA';const h=document.getElementById('pl-sum-ht');if(h)h.textContent=(data.ht||0).toLocaleString()+' DA'}
 
 function selectPurchaseRow(idx){const rows=document.querySelectorAll('#purchase-list-table-body tr');rows.forEach(r=>r.classList.remove('selected'));const row=document.getElementById('pl-row-'+idx);if(row)row.classList.add('selected');STATE._selectedPurchaseIndex=idx;document.getElementById('pl-btn-edit').disabled=false;document.getElementById('pl-btn-print').disabled=false;document.getElementById('pl-btn-delete').disabled=false}
+
+var _selectedPurchaseCheckboxes={};
+var _selectAllPurchases=false;
+
+function toggleSelectAllPurchases(){
+    _selectAllPurchases=!_selectAllPurchases;
+    var checkboxes=document.querySelectorAll('#purchase-list-table-body input.pl-cb');
+    checkboxes.forEach(function(cb){cb.checked=_selectAllPurchases});
+    if(_selectAllPurchases){
+        STATE._purchaseListData.forEach(function(p,i){_selectedPurchaseCheckboxes[p.id||i]=true});
+    }else{
+        _selectedPurchaseCheckboxes={};
+    }
+    updatePurchaseDeleteButton();
+}
+
+function togglePurchaseCheckbox(id,idx){
+    var cb=document.getElementById('pl-cb-'+idx);
+    if(cb.checked){
+        _selectedPurchaseCheckboxes[id]=true;
+    }else{
+        delete _selectedPurchaseCheckboxes[id];
+    }
+    updatePurchaseDeleteButton();
+}
+
+function updatePurchaseDeleteButton(){
+    var count=Object.keys(_selectedPurchaseCheckboxes).length;
+    var btn=document.getElementById('pl-btn-bulk-delete');
+    if(btn)btn.textContent='Supprimer ('+count+')';
+}
+
+async function deleteSelectedPurchases(){
+    var ids=Object.keys(_selectedPurchaseCheckboxes);
+    if(!ids.length){showToast('Selectionnez au moins un achat','error');return}
+    if(!confirm('Supprimer definitivement '+ids.length+' achat(s) ?'))return;
+    var deleted=0;
+    for(var i=0;i<ids.length;i++){
+        try{
+            var resp=await fetch('/api/v1/store/pos/purchases/'+ids[i],{method:'DELETE',headers:{'Content-Type':'application/json'}});
+            if(resp.ok)deleted++;
+        }catch(e){}
+    }
+    showToast(deleted+' achat(s) supprime(s) avec succes','success');
+    _selectedPurchaseCheckboxes={};
+    loadPurchaseList();
+}
+
+async function deletePurchase(purchaseId,event){
+    if(event)event.stopPropagation();
+    if(!confirm('Supprimer definitivement cet achat ?'))return;
+    try{
+        var resp=await fetch('/api/v1/store/pos/purchases/'+(purchaseId||''),{method:'DELETE',headers:{'Content-Type':'application/json'}});
+        var data=await resp.json();
+        if(resp.ok){
+            showToast('Achat supprime avec succes','success');
+            loadPurchaseList();
+        }else{
+            showToast('Erreur: '+(data.error||'Erreur'),'error');
+        }
+    }catch(e){
+        showToast('Erreur: '+e.message,'error');
+    }
+}
 
 function resetPurchaseFilter(){document.getElementById('pl-filter-date-from').value='';document.getElementById('pl-filter-date-to').value='';document.getElementById('pl-filter-code').value='';document.getElementById('pl-filter-article').value='';document.getElementById('pl-filter-nom').value='';document.getElementById('pl-filter-fournisseur').value='';document.getElementById('pl-filter-cancelled').checked=false;document.getElementById('pl-quick-search').value='';loadPurchaseList()}
 

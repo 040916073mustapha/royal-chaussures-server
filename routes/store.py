@@ -311,6 +311,38 @@ def pos_list_purchases():
         return jsonify({"success": False, "purchases": [], "error": str(e)}), 500
 
 
+@store_bp.route('/pos/purchases/<int:purchase_id>', methods=['DELETE'])
+def pos_delete_purchase(purchase_id):
+    """Delete a purchase from POS"""
+    try:
+        from database.db import get_db, dict_from_row
+        db = get_db()
+        # Check if purchase exists
+        is_sqlite = 'sqlite' in str(type(db))
+        if is_sqlite:
+            row = db.execute('SELECT id FROM purchases WHERE id = ?', [purchase_id]).fetchone()
+        else:
+            cur = db._conn.cursor()
+            cur.execute('SELECT id FROM purchases WHERE id = %s', [purchase_id])
+            row = cur.fetchone()
+            cur.close()
+        if not row:
+            return jsonify({"error": "Achat introuvable"}), 404
+        # Soft delete: set status to cancelled
+        if is_sqlite:
+            db.execute('UPDATE purchases SET status = ? WHERE id = ?', ['annule', purchase_id])
+        else:
+            cur = db._conn.cursor()
+            cur.execute('UPDATE purchases SET status = %s WHERE id = %s', ['annule', purchase_id])
+            cur.close()
+        db.commit()
+        return jsonify({"success": True, "message": "Achat annule"})
+    except Exception as e:
+        import traceback
+        print(f"[POS Delete Purchase] Error: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
 # ============================================================
 # 🏷️ POS Products API (Liste des articles) — no auth required
 # ============================================================
