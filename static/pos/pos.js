@@ -368,10 +368,6 @@ function clearFilterArticles(){
     renderArticleTableRows(ARTICLES_DATA);
 }
 
-function openArticleModal(){
-    showToast('Ajout article - en developpement','error');
-}
-
 function exportArticles(){
     if(!ARTICLES_DATA.length){showToast('Aucun article a exporter','error');return}
     var csv='Pos,Code,Designation,Qte,Photo,Famille,Prix achat,Prix vente,Px Revendeur,Stock alerte,Remise\n';
