@@ -226,3 +226,33 @@ CREATE INDEX IF NOT EXISTS idx_sync_log_store ON sync_log(store_id);
 CREATE INDEX IF NOT EXISTS idx_barcode_print_store ON barcode_print_log(store_id);
 CREATE INDEX IF NOT EXISTS idx_saas_messages_store ON saas_messages(store_id);
 CREATE INDEX IF NOT EXISTS idx_saas_messages_platform ON saas_messages(platform);
+
+-- 🔹 AI Prompts لكل متجر (System Prompt مخصص)
+CREATE TABLE IF NOT EXISTS store_prompts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id INTEGER NOT NULL REFERENCES stores(id),
+    prompt_type TEXT NOT NULL DEFAULT 'customer_support',  -- customer_support, shipping_tracking, sales_agent, inventory_agent
+    prompt_text TEXT NOT NULL DEFAULT '',
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(store_id, prompt_type)
+);
+
+-- 🔹 إعدادات وكلاء AI لكل متجر
+CREATE TABLE IF NOT EXISTS store_agent_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id INTEGER NOT NULL REFERENCES stores(id),
+    agent_type TEXT NOT NULL,
+    agent_name TEXT DEFAULT '',
+    agent_emoji TEXT DEFAULT '🤖',
+    is_enabled INTEGER DEFAULT 1,
+    model TEXT DEFAULT '',
+    settings JSON DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(store_id, agent_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_prompts_store ON store_prompts(store_id);
+CREATE INDEX IF NOT EXISTS idx_store_agent_config_store ON store_agent_config(store_id);

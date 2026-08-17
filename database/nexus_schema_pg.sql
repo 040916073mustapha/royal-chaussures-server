@@ -293,6 +293,40 @@ CREATE TABLE IF NOT EXISTS saas_messages (
 );
 
 -- ============================================================
+-- 🔹 Store AI Prompts — لكل متجر System Prompt مخصص
+-- ============================================================
+CREATE TABLE IF NOT EXISTS store_prompts (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    prompt_type VARCHAR(50) NOT NULL DEFAULT 'customer_support',
+    prompt_text TEXT NOT NULL DEFAULT '',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(store_id, prompt_type)
+);
+
+-- ============================================================
+-- 🔹 Store Agent Config — تكوين وكلاء الذكاء الاصطناعي لكل متجر
+-- ============================================================
+CREATE TABLE IF NOT EXISTS store_agent_config (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    agent_type VARCHAR(50) NOT NULL,
+    agent_name VARCHAR(255) DEFAULT '',
+    agent_emoji VARCHAR(10) DEFAULT '🤖',
+    is_enabled BOOLEAN DEFAULT TRUE,
+    model VARCHAR(100) DEFAULT '',
+    settings JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(store_id, agent_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_prompts_store ON store_prompts(store_id);
+CREATE INDEX IF NOT EXISTS idx_store_agent_config_store ON store_agent_config(store_id);
+
+-- ============================================================
 -- 🔹 جلسات الـ API (اختياري)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS api_sessions (

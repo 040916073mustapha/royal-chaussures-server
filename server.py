@@ -308,20 +308,23 @@ def check_product_inventory(product_query, size=None, color=None):
 
 # --- Conversation Memory (Thread Storage) ---
 # Stores last N messages per sender_id for continuity
+# 🆕 Multi-Tenant: CONVERSATION_MEMORY[store_id][sender_id] = [...]
 CONVERSATION_MEMORY = {}
 MAX_HISTORY = 10  # keep last 10 exchanges per user
 
 
-def get_conversation(sender_id):
-    """Get or create conversation history for a sender."""
-    if sender_id not in CONVERSATION_MEMORY:
-        CONVERSATION_MEMORY[sender_id] = []
-    return CONVERSATION_MEMORY[sender_id]
+def get_conversation(sender_id, store_id=1):
+    """Get or create conversation history for a sender (isolated per store)."""
+    if store_id not in CONVERSATION_MEMORY:
+        CONVERSATION_MEMORY[store_id] = {}
+    if sender_id not in CONVERSATION_MEMORY[store_id]:
+        CONVERSATION_MEMORY[store_id][sender_id] = []
+    return CONVERSATION_MEMORY[store_id][sender_id]
 
 
-def add_to_conversation(sender_id, role, text):
-    """Add a message to conversation history."""
-    conv = get_conversation(sender_id)
+def add_to_conversation(sender_id, role, text, store_id=1):
+    """Add a message to conversation history (isolated per store)."""
+    conv = get_conversation(sender_id, store_id)
     conv.append({"role": role, "content": text})
     # Keep only last MAX_HISTORY*2 messages (user + assistant pairs)
     if len(conv) > MAX_HISTORY * 2:
@@ -585,27 +588,43 @@ def get_fb_page_token():
 # ????????? AI Reply ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 
-def generate_ai_reply(user_message, sender_id, image_url=''):
+def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
+    """
+    توليد رد AI باستخدام System Prompt خاص بالمتجر
+    store_id: 1 = Royal Chaussures (default)
+    """
     if not AI_API_KEY:
         logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
-    # Read system prompt from file (prompt.txt), fallback to env var, then to hardcoded default
-    _prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt.txt")
+    
+    # 🆕 Multi-Tenant: قراءة System Prompt من قاعدة البيانات حسب store_id
     system_prompt = ""
     try:
-        with open(_prompt_path, "r", encoding="utf-8") as f:
-            system_prompt = f.read().strip()
-        logger.info(f"[PROMPT] Loaded system prompt from {_prompt_path} ({len(system_prompt)} chars)")
-    except FileNotFoundError:
-        system_prompt = os.getenv("AI_SYSTEM_PROMPT", "")
-        if system_prompt:
-            logger.info("[PROMPT] Loaded system prompt from env var AI_SYSTEM_PROMPT")
-        else:
-            system_prompt = (
-                "[1. ROYAL IDENTITY]\n"
-                "I represent Royal Chaussures...\n"
-            )
-            logger.info("[PROMPT] Using hardcoded default system prompt")
+        from database.db import get_store_prompt
+        db_prompt = get_store_prompt(store_id, "customer_support")
+        if db_prompt:
+            system_prompt = db_prompt
+            logger.info(f"[PROMPT] Loaded store prompt for store_id={store_id} ({len(system_prompt)} chars)")
+    except Exception as prompt_err:
+        logger.warning(f"[PROMPT] DB prompt failed, falling back to file: {_safe_str(prompt_err)}")
+    
+    # Fallback: ملف prompt.txt إذا ماكانش prompt في DB
+    if not system_prompt:
+        _prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt.txt")
+        try:
+            with open(_prompt_path, "r", encoding="utf-8") as f:
+                system_prompt = f.read().strip()
+            logger.info(f"[PROMPT] Loaded system prompt from {_prompt_path} ({len(system_prompt)} chars)")
+        except FileNotFoundError:
+            system_prompt = os.getenv("AI_SYSTEM_PROMPT", "")
+            if system_prompt:
+                logger.info("[PROMPT] Loaded system prompt from env var AI_SYSTEM_PROMPT")
+            else:
+                system_prompt = (
+                    "[1. ROYAL IDENTITY]\n"
+                    "I represent Royal Chaussures...\n"
+                )
+                logger.info("[PROMPT] Using hardcoded default system prompt")
 
     # Pre-call Shopify inventory — always fetch live data for full context
     shopify_context = ""
@@ -629,8 +648,8 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
     except Exception as inv_err:
         logger.warning(f"Inventory fetch failed (non-critical), continuing: {_safe_str(inv_err)}")
 
-    # Build messages with conversation history
-    history = get_conversation(sender_id)
+    # Build messages with conversation history (isolated per store_id)
+    history = get_conversation(sender_id, store_id)
     messages = [{"role": "system", "content": system_prompt + shopify_context}]
     for msg in history[-8:]:
         messages.append(msg)
@@ -674,8 +693,8 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
         if resp.status_code == 200:
             reply = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
             if reply:
-                add_to_conversation(sender_id, "user", user_message)
-                add_to_conversation(sender_id, "assistant", reply)
+                add_to_conversation(sender_id, "user", user_message, store_id)
+                add_to_conversation(sender_id, "assistant", reply, store_id)
                 return reply
             logger.warning("Empty AI reply content")
         else:
@@ -691,13 +710,13 @@ def generate_ai_reply(user_message, sender_id, image_url=''):
 
 # ????????? Facebook Messenger Reply ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
-def save_message_db(platform, sender_id, message, reply):
+def save_message_db(platform, sender_id, message, reply, store_id=1):
     """Save a message and its reply to the database for dashboard display"""
     try:
         conn = _open_orders_db()
         c = conn.cursor()
-        c.execute("INSERT INTO messages (platform, sender_id, message, reply) VALUES (?,?,?,?)",
-                  (platform, sender_id, str(message)[:1000], str(reply)[:1000]))
+        c.execute("INSERT INTO messages (store_id, platform, sender_id, message, reply) VALUES (?,?,?,?,?)",
+                  (store_id, platform, sender_id, str(message)[:1000], str(reply)[:1000]))
         conn.commit()
         conn.close()
         logger.info(f"[DB] Saved {platform} msg from {sender_id[:20] if sender_id else 'unknown'}: {str(message)[:40]}...")
@@ -1140,6 +1159,53 @@ def dashboard_settings():
 @app.route('/')
 def index():
     return json_utf8({"service": "Royal Chaussures Server", "status": "running", "version": "2.0"})
+
+
+# ============================================================
+# 🧠 AI Prompts Management API (Multi-Tenant)
+# ============================================================
+
+@app.route('/api/store/prompts', methods=['GET'])
+def api_get_prompts():
+    """قراءة جميع الـ Prompts للمتجر"""
+    try:
+        from database.db import get_all_store_prompts
+        store_id = request.args.get('store_id', 1, type=int)
+        prompts = get_all_store_prompts(store_id)
+        return json_utf8({"store_id": store_id, "prompts": prompts})
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/api/store/prompts', methods=['POST'])
+def api_set_prompt():
+    """تحديث System Prompt لمتجر"""
+    try:
+        from database.db import set_store_prompt
+        data = request.get_json()
+        if not data:
+            return json_utf8({"error": "Request body required"}, 400)
+        store_id = data.get('store_id', 1)
+        prompt_type = data.get('prompt_type', 'customer_support')
+        prompt_text = data.get('prompt_text', '')
+        if not prompt_text:
+            return json_utf8({"error": "prompt_text required"}, 400)
+        set_store_prompt(store_id, prompt_type, prompt_text)
+        return json_utf8({"success": True, "store_id": store_id, "prompt_type": prompt_type})
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/api/store/prompt/default', methods=['GET'])
+def api_get_default_prompt():
+    """استعراض محتوى prompt.txt (الـ fallback) مع إمكانية نسخه لمتجر جديد"""
+    _prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt.txt")
+    try:
+        with open(_prompt_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return json_utf8({"file": "prompt.txt", "content": content, "length": len(content)})
+    except FileNotFoundError:
+        return json_utf8({"error": "prompt.txt not found"}, 404)
 
 
 @app.route('/health')

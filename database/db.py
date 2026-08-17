@@ -42,7 +42,8 @@ if _DB_ENGINE == "postgres":
             create_expense, get_expenses,
             create_purchase_with_items, get_purchases, get_purchase_items,
             get_store_purchases, get_purchase_detail,
-            get_unified_dashboard, get_online_orders
+            get_unified_dashboard, get_online_orders,
+            get_store_prompt, set_store_prompt, get_all_store_prompts
         )
         _pg_import_ok = True
         print(f"[DB] Engine: PostgreSQL (imported)")
@@ -726,3 +727,160 @@ if not _pg_import_ok:
             print("[DB] Default store manager user created (store_id=1)")
 
         db.commit()
+
+
+# ============================================================
+# 🧠 Store AI Prompts — System Prompt لكل متجر
+# ============================================================
+
+# دوال SQLite
+if not _pg_import_ok:
+    STORE_PROMPT_DEFAULTS = {
+        "customer_support": (
+            "[1. STORE IDENTITY]\n"
+            "You are the official AI Customer Support Agent for the store. "
+            "Be welcoming, helpful, and professional. "
+            "Keep responses concise (2-4 sentences). "
+            "Never explain system steps to the customer.\n"
+        ),
+        "shipping_tracking": (
+            "[1. SHIPPING AGENT]\n"
+            "You track shipments and delivery status. "
+            "Provide accurate tracking information. "
+        ),
+        "sales_agent": (
+            "[1. SALES AGENT]\n"
+            "You help customers find products and complete purchases. "
+            "Recommend products based on preferences. "
+        ),
+        "inventory_agent": (
+            "[1. INVENTORY AGENT]\n"
+            "You manage stock and inventory queries. "
+            "Check availability and update stock levels. "
+        )
+    }
+
+    def get_store_prompt(store_id, prompt_type="customer_support"):
+        """قراءة الـ System Prompt لمتجر معين"""
+        db = get_db()
+        try:
+            row = dict_from_row(db.execute(
+                "SELECT * FROM store_prompts WHERE store_id = ? AND prompt_type = ? AND is_active = 1",
+                [store_id, prompt_type]
+            ).fetchone())
+            if row and row.get("prompt_text"):
+                return row["prompt_text"]
+        except Exception:
+            pass
+        return STORE_PROMPT_DEFAULTS.get(prompt_type, STORE_PROMPT_DEFAULTS["customer_support"])
+
+    def set_store_prompt(store_id, prompt_type, prompt_text):
+        """حفظ أو تحديث الـ System Prompt لمتجر"""
+        db = get_db()
+        existing = dict_from_row(db.execute(
+            "SELECT id FROM store_prompts WHERE store_id = ? AND prompt_type = ?",
+            [store_id, prompt_type]
+        ).fetchone())
+        if existing:
+            db.execute(
+                "UPDATE store_prompts SET prompt_text = ?, updated_at = CURRENT_TIMESTAMP WHERE store_id = ? AND prompt_type = ?",
+                [prompt_text, store_id, prompt_type]
+            )
+        else:
+            db.execute(
+                "INSERT INTO store_prompts (store_id, prompt_type, prompt_text) VALUES (?, ?, ?)",
+                [store_id, prompt_type, prompt_text]
+            )
+        db.commit()
+        return True
+
+    def get_all_store_prompts(store_id):
+        """قراءة جميع الـ Prompts لمتجر"""
+        db = get_db()
+        rows = dicts_from_rows(db.execute(
+            "SELECT * FROM store_prompts WHERE store_id = ?",
+            [store_id]
+        ).fetchall())
+        result = {}
+        for row in rows:
+            result[row["prompt_type"]] = row["prompt_text"]
+        for pt, default in STORE_PROMPT_DEFAULTS.items():
+            if pt not in result:
+                result[pt] = default
+        return result
+
+# دوال PostgreSQL
+if _pg_import_ok:
+    STORE_PROMPT_DEFAULTS = {
+        "customer_support": (
+            "[1. STORE IDENTITY]\n"
+            "You are the official AI Customer Support Agent for the store. "
+            "Be welcoming, helpful, and professional. "
+            "Keep responses concise (2-4 sentences). "
+            "Never explain system steps to the customer.\n"
+        ),
+        "shipping_tracking": (
+            "[1. SHIPPING AGENT]\n"
+            "You track shipments and delivery status. "
+            "Provide accurate tracking information. "
+        ),
+        "sales_agent": (
+            "[1. SALES AGENT]\n"
+            "You help customers find products and complete purchases. "
+            "Recommend products based on preferences. "
+        ),
+        "inventory_agent": (
+            "[1. INVENTORY AGENT]\n"
+            "You manage stock and inventory queries. "
+            "Check availability and update stock levels. "
+        )
+    }
+
+    def get_store_prompt(store_id, prompt_type="customer_support"):
+        """قراءة الـ System Prompt لمتجر معين - PostgreSQL"""
+        db = get_db()
+        try:
+            row = dict_from_row(db.execute(
+                "SELECT * FROM store_prompts WHERE store_id = %s AND prompt_type = %s AND is_active = TRUE",
+                [store_id, prompt_type]
+            ).fetchone())
+            if row and row.get("prompt_text"):
+                return row["prompt_text"]
+        except Exception:
+            pass
+        return STORE_PROMPT_DEFAULTS.get(prompt_type, STORE_PROMPT_DEFAULTS["customer_support"])
+
+    def set_store_prompt(store_id, prompt_type, prompt_text):
+        """حفظ أو تحديث الـ System Prompt لمتجر - PostgreSQL"""
+        db = get_db()
+        existing = dict_from_row(db.execute(
+            "SELECT id FROM store_prompts WHERE store_id = %s AND prompt_type = %s",
+            [store_id, prompt_type]
+        ).fetchone())
+        if existing:
+            db.execute(
+                "UPDATE store_prompts SET prompt_text = %s, updated_at = NOW() WHERE store_id = %s AND prompt_type = %s",
+                [prompt_text, store_id, prompt_type]
+            )
+        else:
+            db.execute(
+                "INSERT INTO store_prompts (store_id, prompt_type, prompt_text) VALUES (%s, %s, %s)",
+                [store_id, prompt_type, prompt_text]
+            )
+        db.commit()
+        return True
+
+    def get_all_store_prompts(store_id):
+        """قراءة جميع الـ Prompts لمتجر - PostgreSQL"""
+        db = get_db()
+        rows = dicts_from_rows(db.execute(
+            "SELECT * FROM store_prompts WHERE store_id = %s",
+            [store_id]
+        ).fetchall())
+        result = {}
+        for row in rows:
+            result[row["prompt_type"]] = row["prompt_text"]
+        for pt, default in STORE_PROMPT_DEFAULTS.items():
+            if pt not in result:
+                result[pt] = default
+        return result
