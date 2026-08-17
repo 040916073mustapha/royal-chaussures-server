@@ -40,9 +40,27 @@ desktop.ini
 .idea/
 *.sublime-*
 
+# --- Database WAL/SHM ---
+*.db-shm
+*.db-wal
+
+# --- Sub-agent workspace ---
+customer_support/
+royal-agent-tool/
+skills/
+
+# --- Temp originals ---
+temp_orig/
+
 # --- Logs ---
 *.log
 logs/
 
 # --- Node ---
 node_modules/
+
+# --- Memory notes ---
+memory/
+
+# --- OpenClaw state ---
+openclaw-workspace-state.json
