@@ -942,3 +942,84 @@ def get_all_store_prompts(store_id):
         return result
     finally:
         db.close()
+
+
+# ============================================================
+# 🔗 Store Webhook Registry (Multi-Tenant Routing)
+# ============================================================
+
+def register_webhook(store_id, platform, platform_account_id, platform_phone_id=None):
+    """تسجيل معرف منصة تواصل لمتجر معين"""
+    db = get_db()
+    try:
+        existing = dict_from_row(db.execute(
+            "SELECT id FROM store_webhooks WHERE store_id = %s AND platform = %s",
+            [store_id, platform]
+        ).fetchone())
+        if existing:
+            db.execute(
+                "UPDATE store_webhooks SET platform_account_id = %s, platform_phone_id = %s, "
+                "updated_at = NOW() WHERE store_id = %s AND platform = %s",
+                [platform_account_id, platform_phone_id or None, store_id, platform]
+            )
+        else:
+            db.execute(
+                "INSERT INTO store_webhooks (store_id, platform, platform_account_id, platform_phone_id) "
+                "VALUES (%s, %s, %s, %s)",
+                [store_id, platform, platform_account_id, platform_phone_id or None]
+            )
+        db.commit()
+        return True
+    except Exception as e:
+        print(f"[WEBHOOK DB] register error: {e}")
+        return False
+    finally:
+        db.close()
+
+
+def get_store_id_by_platform(platform, platform_account_id):
+    """إيجاد store_id من معرف المنصة (FB Page ID → store_id)"""
+    db = get_db()
+    try:
+        row = dict_from_row(db.execute(
+            "SELECT store_id FROM store_webhooks WHERE platform = %s AND platform_account_id = %s AND is_active = TRUE",
+            [platform, platform_account_id]
+        ).fetchone())
+        if row:
+            return row["store_id"]
+    except Exception:
+        pass
+    return 1  # Default to Royal Chaussures
+    finally:
+        db.close()
+
+
+def get_store_id_by_whatsapp_phone(phone_number_id):
+    """إيجاد store_id من WhatsApp Phone Number ID"""
+    db = get_db()
+    try:
+        row = dict_from_row(db.execute(
+            "SELECT store_id FROM store_webhooks WHERE platform = 'whatsapp' AND "
+            "(platform_account_id = %s OR platform_phone_id = %s) AND is_active = TRUE",
+            [phone_number_id, phone_number_id]
+        ).fetchone())
+        if row:
+            return row["store_id"]
+    except Exception:
+        pass
+    return 1
+    finally:
+        db.close()
+
+
+def get_all_registered_webhooks():
+    """جلب جميع تسجيلات الـ webhooks"""
+    db = get_db()
+    try:
+        rows = dicts_from_rows(db.execute(
+            "SELECT w.*, s.name as store_name FROM store_webhooks w "
+            "JOIN stores s ON w.store_id = s.id ORDER BY w.store_id, w.platform"
+        ).fetchall())
+        return rows
+    finally:
+        db.close()

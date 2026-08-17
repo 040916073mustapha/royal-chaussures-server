@@ -327,6 +327,24 @@ CREATE INDEX IF NOT EXISTS idx_store_prompts_store ON store_prompts(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_agent_config_store ON store_agent_config(store_id);
 
 -- ============================================================
+-- 🔹 Store Webhook Registry — ربط منصات التواصل بالمخازن
+-- ============================================================
+CREATE TABLE IF NOT EXISTS store_webhooks (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    platform VARCHAR(50) NOT NULL,  -- messenger, whatsapp, instagram
+    platform_account_id VARCHAR(255) NOT NULL DEFAULT '',  -- Facebook Page ID, WhatsApp Phone Number, Instagram ID
+    platform_phone_id VARCHAR(255) DEFAULT '',  -- WhatsApp Phone Number ID (specific)
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(store_id, platform)
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_webhooks_account ON store_webhooks(platform_account_id);
+CREATE INDEX IF NOT EXISTS idx_store_webhooks_platform ON store_webhooks(platform);
+
+-- ============================================================
 -- 🔹 جلسات الـ API (اختياري)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS api_sessions (

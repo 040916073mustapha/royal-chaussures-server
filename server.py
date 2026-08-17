@@ -726,13 +726,13 @@ def save_message_db(platform, sender_id, message, reply, store_id=1):
         logger.error(f"[DB ERROR] save_message_db FAILED: {_safe_str(e)}")
         logger.error(f"[DB ERROR] Traceback:\n{tb}")
 
-def send_fb_reply(sender_id, user_message, image_url=''):
+def send_fb_reply(sender_id, user_message, image_url='', store_id=1):
     try:
-        reply_text = generate_ai_reply(user_message, sender_id, image_url)
+        reply_text = generate_ai_reply(user_message, sender_id, image_url, store_id)
         page_token = get_fb_page_token()
         if not page_token:
             logger.warning("No page token, skipping FB reply")
-            save_message_db("messenger", sender_id, user_message or "[Image]", "[No page token]")
+            save_message_db("messenger", sender_id, user_message or "[Image]", "[No page token]", store_id)
             return
         url = f"https://graph.facebook.com/v18.0/me/messages?access_token={page_token}"
         payload = {"recipient": {"id": sender_id}, "message": {"text": reply_text}}
@@ -744,7 +744,7 @@ def send_fb_reply(sender_id, user_message, image_url=''):
             logger.warning(f"FB send failed ({resp.status_code}): {resp.text[:300]}")
         # Always save to DB regardless of send success
         logger.info(f"[DB] Attempting to save FB msg from {sender_id[:20]}...")
-        save_message_db("messenger", sender_id, user_message or "[Image]", reply_text)
+        save_message_db("messenger", sender_id, user_message or "[Image]", reply_text, store_id)
         logger.info(f"[DB] Successfully saved FB msg from {sender_id[:20]}")
     except Exception as e:
         import traceback
@@ -755,9 +755,9 @@ def send_fb_reply(sender_id, user_message, image_url=''):
 
 # ????????? Instagram Reply ????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
-def send_ig_reply(sender_id, user_message, image_url=''):
+def send_ig_reply(sender_id, user_message, image_url='', store_id=1):
     try:
-        reply_text = generate_ai_reply(user_message, sender_id, image_url)
+        reply_text = generate_ai_reply(user_message, sender_id, image_url, store_id)
 
         # Priority: Page Token (has MESSAGING permission)
         page_token = get_fb_page_token()
@@ -770,7 +770,7 @@ def send_ig_reply(sender_id, user_message, image_url=''):
 
         if not ig_token:
             logger.warning("No token available for Instagram reply")
-            save_message_db("instagram", sender_id, user_message or "[Image]", "[No token]")
+            save_message_db("instagram", sender_id, user_message or "[Image]", "[No token]", store_id)
             return
 
         # Instagram DMs use /me/messages with a Page Token
@@ -787,7 +787,7 @@ def send_ig_reply(sender_id, user_message, image_url=''):
                 logger.info("Instagram reply needs 'Instagram Graph API' product.")
                 logger.info("Fix: Add Instagram Graph API in Meta Developer App.")
         logger.info(f"[DB] Attempting to save IG msg from {sender_id[:20]}...")
-        save_message_db("instagram", sender_id, user_message or "[Image]", reply_text)
+        save_message_db("instagram", sender_id, user_message or "[Image]", reply_text, store_id)
         logger.info(f"[DB] Successfully saved IG msg from {sender_id[:20]}")
     except Exception as e:
         import traceback
@@ -796,12 +796,12 @@ def send_ig_reply(sender_id, user_message, image_url=''):
         logger.error(f"send_ig_reply traceback:\n{tb}")
 # ????????? WhatsApp Reply ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
-def send_whatsapp_reply(to_number, user_message, image_url=''):
+def send_whatsapp_reply(to_number, user_message, image_url='', store_id=1):
     try:
-        reply_text = generate_ai_reply(user_message, to_number, image_url)
+        reply_text = generate_ai_reply(user_message, to_number, image_url, store_id)
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
             logger.warning("WhatsApp credentials not set")
-            save_message_db("whatsapp", to_number, user_message or "[Image]", "[WA not configured]")
+            save_message_db("whatsapp", to_number, user_message or "[Image]", "[WA not configured]", store_id)
             return
         url = f"https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
         headers = {"Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}", "Content-Type": "application/json"}
@@ -817,7 +817,7 @@ def send_whatsapp_reply(to_number, user_message, image_url=''):
         else:
             logger.warning(f"WA send failed ({resp.status_code}): {resp.text[:200]}")
         logger.info(f"[DB] Attempting to save WA msg from {str(to_number)[:20]}...")
-        save_message_db("whatsapp", to_number, user_message or "[Image]", reply_text)
+        save_message_db("whatsapp", to_number, user_message or "[Image]", reply_text, store_id)
         logger.info(f"[DB] Successfully saved WA msg from {str(to_number)[:20]}")
     except Exception as e:
         import traceback
@@ -849,8 +849,21 @@ def process_messaging_entries(entries, platform, send_func):
                             break
             image_url = image_url or ''
             if sid and (text or image_url):
-                logger.info(f"{platform} msg from {sid}: text='{text[:60] if text else '(none)'}' image_url={image_url[:60] if image_url else '(none)'}")
-                threading.Thread(target=send_func, args=(sid, text, image_url), daemon=True).start()
+                # 🆕 Multi-Tenant: إيجاد store_id من المحادثة (FB Page ID)
+                store_id = 1
+                try:
+                    from database.db import get_store_id_by_platform
+                    # نمرر صفحة FB ID — سنأخذها من أول entry في webhook
+                    entry_page_id = entry.get('id', '')
+                    if entry_page_id:
+                        sid_from_registry = get_store_id_by_platform('messenger' if platform == 'FB' else 'instagram', str(entry_page_id))
+                        if sid_from_registry:
+                            store_id = sid_from_registry
+                            logger.info(f"[WEBHOOK] Routed {platform} msg to store_id={store_id} (page={entry_page_id})")
+                except Exception as wh_err:
+                    logger.warning(f"[WEBHOOK] Store lookup failed: {_safe_str(wh_err)}")
+                logger.info(f"{platform} msg from {sid}: text='{text[:60] if text else '(none)'}' image_url={image_url[:60] if image_url else '(none)'} store_id={store_id}")
+                threading.Thread(target=send_func, args=(sid, text, image_url, store_id), daemon=True).start()
 
 
 # ????????? Process WhatsApp webhook payload ??????????????????????????????????????????????????????????????????????????????????????????
@@ -869,8 +882,22 @@ def process_whatsapp_entries(entries):
                 if image_url:
                     logger.info(f"WA msg with image from {sender}: id={image_url[:60]}")
                 if sender and (text or image_url):
-                    logger.info(f"WA msg from {sender}: text='{text[:60] if text else '(none)'}' image={image_url[:50] if image_url else '(none)'}")
-                    threading.Thread(target=send_whatsapp_reply, args=(sender, text, image_url), daemon=True).start()
+                    # 🆕 Multi-Tenant: إيجاد store_id من WhatsApp Phone Number ID
+                    store_id = 1
+                    try:
+                        from database.db import get_store_id_by_whatsapp_phone
+                        # نحاول نجيب الـ metadata_phone_number_id من الـ webhook payload
+                        metadata = change.get('value', {}).get('metadata', {})
+                        phone_id = metadata.get('phone_number_id', '')
+                        if phone_id:
+                            sid_from_registry = get_store_id_by_whatsapp_phone(str(phone_id))
+                            if sid_from_registry:
+                                store_id = sid_from_registry
+                                logger.info(f"[WEBHOOK] Routed WA msg to store_id={store_id}")
+                    except Exception as wh_err:
+                        logger.warning(f"[WEBHOOK] WA store lookup failed: {_safe_str(wh_err)}")
+                    logger.info(f"WA msg from {sender}: text='{text[:60] if text else '(none)'}' image={image_url[:50] if image_url else '(none)'} store_id={store_id}")
+                    threading.Thread(target=send_whatsapp_reply, args=(sender, text, image_url, store_id), daemon=True).start()
 
 
 # ????????? App Secret (for X-Hub-Signature-256 verification) ??????????????????????????????
@@ -1206,6 +1233,56 @@ def api_get_default_prompt():
         return json_utf8({"file": "prompt.txt", "content": content, "length": len(content)})
     except FileNotFoundError:
         return json_utf8({"error": "prompt.txt not found"}, 404)
+
+
+# ============================================================
+# 🔗 Store Webhook Registry API (Multi-Tenant Routing)
+# ============================================================
+
+@app.route('/api/webhooks/register', methods=['POST'])
+def api_register_webhook():
+    """تسجيل platform لمتجر معين لربط Webhooks بـ store_id"""
+    try:
+        from database.db import register_webhook
+        data = request.get_json()
+        if not data:
+            return json_utf8({"error": "Request body required"}, 400)
+        store_id = data.get('store_id', 1)
+        platform = data.get('platform', '')  # messenger, whatsapp, instagram
+        account_id = data.get('platform_account_id', '')
+        phone_id = data.get('platform_phone_id', None)
+        if not platform or not account_id:
+            return json_utf8({"error": "platform and platform_account_id required"}, 400)
+        ok = register_webhook(store_id, platform, account_id, phone_id)
+        return json_utf8({"success": ok, "store_id": store_id, "platform": platform})
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/api/webhooks/lookup', methods=['GET'])
+def api_lookup_webhook():
+    """إيجاد store_id من platform_account_id"""
+    try:
+        from database.db import get_store_id_by_platform
+        platform = request.args.get('platform', '')
+        account_id = request.args.get('account_id', '')
+        if not platform or not account_id:
+            return json_utf8({"error": "platform and account_id required"}, 400)
+        store_id = get_store_id_by_platform(platform, account_id)
+        return json_utf8({"store_id": store_id, "platform": platform, "account_id": account_id})
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/api/webhooks/registered', methods=['GET'])
+def api_list_webhooks():
+    """عرض جميع التسجيلات"""
+    try:
+        from database.db import get_all_registered_webhooks
+        hooks = get_all_registered_webhooks()
+        return json_utf8({"webhooks": hooks})
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
 
 
 @app.route('/health')

@@ -256,3 +256,19 @@ CREATE TABLE IF NOT EXISTS store_agent_config (
 
 CREATE INDEX IF NOT EXISTS idx_store_prompts_store ON store_prompts(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_agent_config_store ON store_agent_config(store_id);
+
+-- 🔹 ربط منصات التواصل بالمخازن (Store Webhook Registry)
+CREATE TABLE IF NOT EXISTS store_webhooks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id INTEGER NOT NULL REFERENCES stores(id),
+    platform TEXT NOT NULL,
+    platform_account_id TEXT NOT NULL DEFAULT '',
+    platform_phone_id TEXT DEFAULT '',
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(store_id, platform)
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_webhooks_account ON store_webhooks(platform_account_id);
+CREATE INDEX IF NOT EXISTS idx_store_webhooks_platform ON store_webhooks(platform);
