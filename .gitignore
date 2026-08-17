@@ -19,6 +19,22 @@ USER.md
 *.sqlite
 *.sqlite3
 
+# 🚫 FORBIDDEN ZONE: لا يحفظ أي ملف جديد في جذر المشروع!
+# أي ملف جديد يجب أن يكون ضمن:
+# - tests/
+# - scripts/
+# - temp_orig/  (للتخزين المؤقت فقط)
+# المخالفات سيتم رفضها تلقائياً في pre-push
+# ====================================
+
+# ⛔ منع حفظ ملفات في الجذر:
+# - أي ملف Python جديد خارج المجلدات المسموحة
+# - أي ملف نصي أو JSON داعم
+# - أي ملف اختبار أو تشخيص
+
+# السماح فقط بالملفات الأساسية في الجذر:
+# server.py, app.py, Procfile, requirements.txt, prompt.txt, .env, .gitignore
+
 # --- Temp / Unwanted ---
 _fix_*.py
 _patch_*.py

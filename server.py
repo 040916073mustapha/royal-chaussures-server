@@ -78,16 +78,62 @@ def _open_orders_db():
 
 
 def init_db():
+    """
+    تهيئة قاعدة البيانات المحلية (royal_orders.db)
+    مع دعم Multi-Tenancy: store_id في كل الجداول
+    """
     conn = _open_orders_db()
     c = conn.cursor()
     c.execute("PRAGMA journal_mode=WAL")
-    c.execute("CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, shopify_order_id TEXT UNIQUE, customer_name TEXT, customer_phone TEXT, wilaya TEXT, municipality TEXT, product TEXT, variant TEXT, quantity INTEGER DEFAULT 1, total_price REAL DEFAULT 0, status TEXT DEFAULT 'Nouveau', delivery_method TEXT DEFAULT 'Home', delivery_fee REAL DEFAULT 0, source TEXT DEFAULT 'Shopify', notes TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))")
-    c.execute("CREATE TABLE IF NOT EXISTS clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, phone TEXT UNIQUE, wilaya TEXT, municipality TEXT, total_orders INTEGER DEFAULT 1, total_spent REAL DEFAULT 0, last_order_at TEXT, created_at TEXT DEFAULT (datetime('now')))")
-    c.execute("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, platform TEXT, sender_id TEXT, message TEXT, reply TEXT, created_at TEXT DEFAULT (datetime('now')))")
+    c.execute("""CREATE TABLE IF NOT EXISTS orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        store_id INTEGER DEFAULT 1,
+        shopify_order_id TEXT,
+        customer_name TEXT, customer_phone TEXT,
+        wilaya TEXT, municipality TEXT,
+        product TEXT, variant TEXT,
+        quantity INTEGER DEFAULT 1,
+        total_price REAL DEFAULT 0,
+        status TEXT DEFAULT 'Nouveau',
+        delivery_method TEXT DEFAULT 'Home',
+        delivery_fee REAL DEFAULT 0,
+        source TEXT DEFAULT 'Shopify',
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(store_id, shopify_order_id)
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS clients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        store_id INTEGER DEFAULT 1,
+        name TEXT, phone TEXT,
+        wilaya TEXT, municipality TEXT,
+        total_orders INTEGER DEFAULT 1,
+        total_spent REAL DEFAULT 0,
+        last_order_at TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(store_id, phone)
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        store_id INTEGER DEFAULT 1,
+        platform TEXT, sender_id TEXT,
+        message TEXT, reply TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    )""")
+    # ترقية الجداول القديمة — إضافة store_id إذا كان مفقوداً
     try:
-        c.execute("SELECT shopify_order_id FROM orders LIMIT 1")
+        c.execute("SELECT store_id FROM orders LIMIT 1")
     except:
-        c.execute("ALTER TABLE orders ADD COLUMN shopify_order_id TEXT")
+        c.execute("ALTER TABLE orders ADD COLUMN store_id INTEGER DEFAULT 1")
+    try:
+        c.execute("SELECT store_id FROM clients LIMIT 1")
+    except:
+        c.execute("ALTER TABLE clients ADD COLUMN store_id INTEGER DEFAULT 1")
+    try:
+        c.execute("SELECT store_id FROM messages LIMIT 1")
+    except:
+        c.execute("ALTER TABLE messages ADD COLUMN store_id INTEGER DEFAULT 1")
     conn.commit()
     conn.close()
 
@@ -116,13 +162,15 @@ def upsert_order_from_shopify(od):
             variant = items[0].get("variant_title", "") if items else ""
             conn = _open_orders_db()
             c = conn.cursor()
-            c.execute("INSERT INTO orders (shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (oid, name, phone, wilaya, city, product, variant, total))
+            # store_id=1 لـ Royal Chaussures — سيدعم Multi-Store لاحقاً عبر header
+            store_id = 1
+            c.execute("INSERT INTO orders (store_id, shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(store_id, shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (store_id, oid, name, phone, wilaya, city, product, variant, total))
             if phone:
-                c.execute("SELECT id FROM clients WHERE phone=?", (phone,))
+                c.execute("SELECT id FROM clients WHERE store_id=? AND phone=?", (store_id, phone))
                 if c.fetchone():
-                    c.execute("UPDATE clients SET total_orders=total_orders+1, total_spent=total_spent+?, last_order_at=datetime('now') WHERE phone=?", (total, phone))
+                    c.execute("UPDATE clients SET total_orders=total_orders+1, total_spent=total_spent+?, last_order_at=datetime('now') WHERE store_id=? AND phone=?", (total, store_id, phone))
                 else:
-                    c.execute("INSERT INTO clients (name, phone, wilaya, municipality, total_orders, total_spent, last_order_at) VALUES (?,?,?,?,1,?,datetime('now'))", (name, phone, wilaya, city, total))
+                    c.execute("INSERT INTO clients (store_id, name, phone, wilaya, municipality, total_orders, total_spent, last_order_at) VALUES (?,?,?,?,?,1,?,datetime('now'))", (store_id, name, phone, wilaya, city, total))
             conn.commit()
             conn.close()
             return  # Success, exit retry loop

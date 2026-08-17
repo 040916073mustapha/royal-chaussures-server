@@ -1,6 +1,31 @@
 # 🧠 Long-Term Memory — Royal Chaussures System
 
-> آخر تحديث: 13 أغسطس 2026
+> آخر تحديث: 17 أغسطس 2026
+
+## 🏆 CODEBASE AUDIT — Step 1 & 2 (17 August 2026)
+
+### ✅ Step 1: Root Directory Cleanup
+- تم نقل 150+ ملف زائد من الجذر إلى `tests/`, `scripts/archive/`, `temp_orig/`
+- الجذر الآن يحتوي فقط: `server.py`, `requirements.txt`, `prompt.txt`, `.gitignore`, `.env`, `.env.example`, `README.md`, `Procfile`
+- `.gitignore` محدث مع تجاهل `temp_orig/`, `memory/`, `skills/`, `customer_support/`, `royal-agent-tool/`, `*.db-shm`, `*.db-wal`
+
+### ✅ Step 2: PostgreSQL Activation + Multi-Tenancy
+- قاعدة البيانات الافتراضية تغيرت من **SQLite** إلى **PostgreSQL**
+  - `DB_ENGINE=postgres` هو الافتراضي الآن في `database/db.py`
+  - `DB_ENGINE=sqlite` فقط للتطوير المحلي
+- `server.py` → `init_db()` محدثة مع **store_id** في جداول `orders`, `clients`, `messages`
+  - UNIQUE(store_id, shopify_order_id) بدل UNIQUE(shopify_order_id)
+- `upsert_order_from_shopify()` → تدعم **store_id** مع استعلامات multi-tenant
+- Pre-push hook جاهز: يمنع حفظ ملفات جديدة في الجذر
+- `.env.example` محدث مع `DATABASE_URL`
+
+### 🔧 أمر pre-push:
+```bash
+git config core.hooksPath .githooks
+```
+
+### 🚫 قاعدة الجذر:
+لا يُسمح بحفظ أي ملف جديد في جذر المشروع (server.py + app.py + Procfile + requirements.txt + prompt.txt + .env + .gitignore فقط)
 
 ## 🏆 GOLDEN RELEASE v3 — RC Agent v2.0 (Dark Neon Cyberpunk Complete)
 

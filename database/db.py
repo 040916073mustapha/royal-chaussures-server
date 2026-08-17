@@ -6,8 +6,8 @@ Nexus POS — Unified Multi-Tenant Database Module
 
 Royal Chaussures هو المتجر الأول (store_id=1)
 
-DB_ENGINE=sqlite     (الوضع الحالي — royal_store.db)
-DB_ENGINE=postgres   (Neon PostgreSQL — يتطلب DATABASE_URL)
+DB_ENGINE=postgres  (🔵 PRODUCTION — Neon PostgreSQL — يتطلب DATABASE_URL)
+DB_ENGINE=sqlite    (🟡 LOCAL DEV فقط — royal_store.db)
 """
 
 import os
@@ -16,7 +16,9 @@ import threading
 from datetime import datetime
 
 # اختيار محرك قاعدة البيانات
-_DB_ENGINE = os.environ.get("DB_ENGINE", "sqlite").strip().lower()
+# 🔵 PRODUCTION: PostgreSQL (Neon) — الافتراضي
+# 🟡 LOCAL DEV:   قم بضبط DB_ENGINE=sqlite
+_DB_ENGINE = os.environ.get("DB_ENGINE", "postgres").strip().lower()
 
 
 # ============================================================

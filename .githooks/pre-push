@@ -1,0 +1,39 @@
+#!/bin/sh
+# 🚫 Royal Chaussures — Pre-Push Hook
+# =========================================
+# يمنع حفظ أي ملف Python/JSON/TXT جديد في جذر المشروع
+# إلا إذا كان من القائمة المسموحة
+
+ALLOWED_ROOT=^(
+server\.py|
+app\.py|
+Procfile|
+requirements\.txt|
+prompt\.txt|
+\.env|
+\.env\.example|
+\.gitignore|
+README\.md
+)$
+
+# فحص الملفات الجديدة في commit
+NEW_ROOT_FILES=$(git diff --cached --name-only --diff-filter=A | grep -v '/' | grep -v -E "$ALLOWED_ROOT" || true)
+
+if [ -n "$NEW_ROOT_FILES" ]; then
+    echo ""
+    echo "⛔ ERROR: Cannot push — New files detected in project root!"
+    echo "============================================================"
+    echo "$NEW_ROOT_FILES" | while read f; do
+        echo "   🚫 $f"
+    done
+    echo "============================================================"
+    echo "📁 All new files MUST be placed in:"
+    echo "   - tests/       → for test files"
+    echo "   - scripts/     → for utility scripts"
+    echo "   - temp_orig/   → for archived backups only"
+    echo ""
+    echo "To allow a specific file, add it to ALLOWED_ROOT in .githooks/pre-push"
+    exit 1
+fi
+
+exit 0
