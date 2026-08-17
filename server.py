@@ -1285,6 +1285,126 @@ def api_list_webhooks():
         return json_utf8({"error": _safe_str(e)}, 500)
 
 
+# ============================================================
+# 👑 Tenant Onboarding — تسجيل تاجر جديد كامل
+# ============================================================
+
+@app.route('/api/tenant/onboard', methods=['POST'])
+def api_tenant_onboard():
+    """
+    تسجيل تاجر جديد كامل مع:
+    - إنشاء المتجر (store)
+    - إنشاء مدير الحساب (user)
+    - توفير AI Prompts افتراضية
+    - تسجيل Agent Configs
+    - تسجيل Webhooks (اختياري)
+    
+    JSON Body:
+    {
+        "store_name": "متجر الأزياء",
+        "email": "store@example.com",
+        "phone": "+213xxxxxxxx",
+        "username": "admin123",
+        "password": "securepass",
+        "webhooks": {
+            "messenger": "FB_PAGE_ID",
+            "whatsapp": "WA_PHONE_NUMBER_ID",
+            "instagram": "IG_ID"
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return json_utf8({"error": "Request body required"}, 400)
+
+        store_name = data.get("store_name", "").strip()
+        email = data.get("email", "").strip()
+        phone = data.get("phone", "").strip()
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
+        webhooks = data.get("webhooks", {})
+
+        if not store_name or not username or not password:
+            return json_utf8({"error": "store_name, username, password are required"}, 400)
+
+        # 1. توليد slug وحيد من اسم المتجر
+        import re, time
+        slug = store_name.lower().replace(" ", "-")
+        slug = re.sub(r"[^a-z0-9-]", "", slug)
+        if not slug:
+            slug = f"store-{int(time.time())}"
+
+        from database.db import get_store_by_slug
+        existing = get_store_by_slug(slug)
+        if existing:
+            slug = f"{slug}-{int(time.time())}"
+
+        # 2. إنشاء store + مستخدم مدير
+        store_id = 2  # Default (1 = Royal Chaussures)
+        from database.db import create_store
+        store_row = create_store({"name": store_name, "slug": slug, "email": email, "phone": phone})
+        if store_row and isinstance(store_row, dict):
+            store_id = store_row.get("id", 2)
+        
+        # إنشاء مستخدم admin
+        from database.db import get_db
+        import hashlib
+        hashed = hashlib.sha256(password.encode()).hexdigest()
+        _sec_db = get_db()
+        _pg_mode = (os.environ.get("DB_ENGINE", "postgres") == "postgres")
+        _ph = "%s" if _pg_mode else "?"
+        try:
+            _sec_db.execute(f"INSERT INTO users (store_id, username, password_hash, role) VALUES ({_ph}, {_ph}, {_ph}, 'store_manager')", [store_id, username, hashed])
+            _sec_db.commit()
+        except Exception as ue:
+            logger.info(f"[ONBOARDING] User note: {_safe_str(ue)}")
+        finally:
+            try:
+                _sec_db.close()
+            except:
+                pass
+
+        # 3. AI Prompts افتراضية لكل متجر
+        from database.db import set_store_prompt
+        set_store_prompt(store_id, "customer_support",
+            f"[1. STORE IDENTITY]\nYou are the AI Customer Support Agent for {store_name}. "
+            f"Be welcoming, helpful, and professional.\nKeep responses concise (2-4 sentences).")
+        set_store_prompt(store_id, "sales_agent",
+            f"[SALES AGENT]\nYou help customers find products at {store_name}. Recommend based on preferences.")
+        set_store_prompt(store_id, "shipping_tracking",
+            f"[SHIPPING AGENT]\nYou track shipments for {store_name} orders.")
+        set_store_prompt(store_id, "inventory_agent",
+            f"[INVENTORY AGENT]\nYou manage stock queries for {store_name}.")
+
+        # 4. Webhooks إن وجدت (اختياري)
+        from database.db import register_webhook
+        for platform, account_id in webhooks.items():
+            if account_id:
+                wa_phone = None
+                if platform == "whatsapp" and isinstance(account_id, list):
+                    wa_phone = account_id[1] if len(account_id) > 1 else None
+                    account_id = account_id[0]
+                register_webhook(store_id, platform, str(account_id), wa_phone)
+
+        logger.info(f"[ONBOARDING] New tenant created: store_id={store_id}, name={store_name}, slug={slug}")
+
+        return json_utf8({
+            "success": True,
+            "store_id": store_id,
+            "store_name": store_name,
+            "slug": slug,
+            "username": username,
+            "message": f"متجر {store_name} جاهز! تم تفعيل 4 وكلاء AI واستقبال الطلبات."
+        })
+
+    except Exception as e:
+        logger.error(f"[ONBOARDING] Failed: {_safe_str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
 @app.route('/health')
 def health():
     import os as _os

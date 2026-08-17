@@ -989,9 +989,9 @@ def get_store_id_by_platform(platform, platform_account_id):
             return row["store_id"]
     except Exception:
         pass
-    return 1  # Default to Royal Chaussures
     finally:
         db.close()
+    return 1  # Default to Royal Chaussures
 
 
 def get_store_id_by_whatsapp_phone(phone_number_id):
