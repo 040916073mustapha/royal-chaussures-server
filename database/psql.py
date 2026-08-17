@@ -1007,9 +1007,9 @@ def get_store_id_by_whatsapp_phone(phone_number_id):
             return row["store_id"]
     except Exception:
         pass
-    return 1
     finally:
         db.close()
+    return 1
 
 
 def get_all_registered_webhooks():

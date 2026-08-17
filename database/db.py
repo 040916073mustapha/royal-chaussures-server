@@ -987,9 +987,9 @@ if _pg_import_ok:
                 return row["store_id"]
         except:
             pass
-        return 1
         finally:
             db.close()
+        return 1
 
     def get_store_id_by_whatsapp_phone(phone_number_id):
         db = get_db()
@@ -999,9 +999,9 @@ if _pg_import_ok:
                 return row["store_id"]
         except:
             pass
-        return 1
         finally:
             db.close()
+        return 1
 
     def get_all_registered_webhooks():
         db = get_db()
