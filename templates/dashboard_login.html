@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - RC Agents</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { width: 100%; max-width: 420px; }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 {
+            font-size: 28px; font-weight: 900;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo p { color: rgba(255,255,255,0.6); font-size: 14px; margin-top: 8px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; color: rgba(255,255,255,0.85);
+            font-size: 14px; font-weight: 500; margin-bottom: 6px;
+        }
+        .form-group input {
+            width: 100%; padding: 14px 16px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px; color: #fff; font-size: 15px;
+            font-family: 'Tajawal', sans-serif;
+            outline: none; transition: all 0.3s;
+        }
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.2);
+            background: rgba(255,255,255,0.1);
+        }
+        .form-group input::placeholder { color: rgba(255,255,255,0.3); }
+        .btn-submit {
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none; border-radius: 12px;
+            color: #fff; font-size: 16px; font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(102,126,234,0.5);
+        }
+        .error-box, .success-box {
+            padding: 14px; border-radius: 12px; margin-bottom: 20px;
+            font-size: 14px; display: none;
+        }
+        .error-box {
+            background: rgba(239,68,68,0.15);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #fca5a5;
+        }
+        .success-box {
+            background: rgba(16,185,129,0.15);
+            border: 1px solid rgba(16,185,129,0.3);
+            color: #6ee7b7;
+        }
+        .error-box.show, .success-box.show { display: block; }
+        .footer { text-align: center; margin-top: 20px; color: rgba(255,255,255,0.3); font-size: 12px; }
+        .footer a { color: #667eea; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">
+                <h1>🔐 RC Agents</h1>
+                <p>تسجيل الدخول إلى لوحة التحكم</p>
+            </div>
+            <div class="error-box" id="errorBox"></div>
+            <form id="loginForm" onsubmit="return handleLogin(event)">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" id="username" placeholder="admin" required>
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" id="password" placeholder="********" required>
+                </div>
+                <button type="submit" class="btn-submit" id="loginBtn">🚀 تسجيل الدخول</button>
+            </form>
+            <div class="footer">
+                <a href="/onboard">🆕 إنشاء متجر جديد</a> &middot;
+                <a href="/dashboard">🏪 Royal Chaussures</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const errorBox = document.getElementById('errorBox');
+            errorBox.classList.remove('show');
+            btn.textContent = '⏳ جاري تسجيل الدخول...';
+            btn.disabled = true;
+
+            fetch('/api/tenant/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value.trim(),
+                    password: document.getElementById('password').value
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.textContent = '🚀 تسجيل الدخول';
+                btn.disabled = false;
+                if (data.success) {
+                    // Save session + redirect
+                    sessionStorage.setItem('store_id', data.store_id);
+                    sessionStorage.setItem('store_name', data.store_name);
+                    sessionStorage.setItem('session_token', data.session_token);
+                    sessionStorage.setItem('role', data.role);
+                    window.location.href = '/dashboard/' + data.store_id;
+                } else {
+                    errorBox.textContent = data.error || 'بيانات الدخول غير صحيحة';
+                    errorBox.classList.add('show');
+                }
+            })
+            .catch(err => {
+                btn.textContent = '🚀 تسجيل الدخول';
+                btn.disabled = false;
+                errorBox.textContent = 'خطأ في الاتصال: ' + err.message;
+                errorBox.classList.add('show');
+            });
+            return false;
+        }
+    </script>
+</body>
+</html>

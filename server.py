@@ -517,7 +517,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request
@@ -1132,24 +1132,62 @@ def api_shipments():
 
 # --- Dashboard Pages ---
 
+def _get_store_context(store_id=None):
+    """استخراج بيانات المتجر من store_id (من URL أو من session)"""
+    if store_id is None:
+        store_id = request.args.get("store_id", 1, type=int)
+    try:
+        from database.db import get_store
+        store = get_store(int(store_id))
+        if store:
+            return store
+    except Exception:
+        pass
+    return {"id": 1, "name": "متجر غير معروف", "slug": "unknown"}
+
+
+# Redirect root dashboard to store 1 (Royal Chaussures) for backwards compat
 @app.route('/dashboard')
 def dashboard():
-    return render_template("dashboard.html", active="dashboard")
+    store_id = request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="dashboard", store_id=store_id)
+
+@app.route('/dashboard/<int:store_id>')
+def dashboard_store(store_id):
+    return render_template("dashboard.html", active="dashboard", store_id=store_id)
+
+@app.route('/dashboard/<int:store_id>/orders')
+def dashboard_store_orders(store_id):
+    return render_template("orders.html", active="orders", store_id=store_id)
+
+@app.route('/dashboard/<int:store_id>/products')
+def dashboard_store_products(store_id):
+    return render_template("products.html", active="products", store_id=store_id)
+
+@app.route('/dashboard/<int:store_id>/clients')
+def dashboard_store_clients(store_id):
+    return render_template("clients.html", active="clients", store_id=store_id)
+
+@app.route('/dashboard/<int:store_id>/settings')
+def dashboard_store_settings(store_id):
 
 @app.route('/dashboard/orders')
-def dashboard_orders():
-    return render_template("orders.html", active="orders")
+def dashboard_orders_old():
+    store_id = request.args.get("store_id", 1, type=int)
+    return render_template("orders.html", active="orders", store_id=store_id)
 
 @app.route('/dashboard/products')
-def dashboard_products():
-    return render_template("products.html", active="products")
+def dashboard_products_old():
+    store_id = request.args.get("store_id", 1, type=int)
+    return render_template("products.html", active="products", store_id=store_id)
 
 @app.route('/dashboard/clients')
-def dashboard_clients():
-    return render_template("clients.html", active="clients")
+def dashboard_clients_old():
+    store_id = request.args.get("store_id", 1, type=int)
+    return render_template("clients.html", active="clients", store_id=store_id)
 
 @app.route('/dashboard/settings')
-def dashboard_settings():
+def dashboard_settings_old():
     settings_data = {
         "zr_express": {
             "status": "متصل",
@@ -1329,11 +1367,11 @@ def api_tenant_onboard():
             return json_utf8({"error": "store_name, username, password are required"}, 400)
 
         # 1. توليد slug وحيد من اسم المتجر
-        import re, time
+        import re, time, secrets, string as _str_mod
         slug = store_name.lower().replace(" ", "-")
         slug = re.sub(r"[^a-z0-9-]", "", slug)
-        if not slug:
-            slug = f"store-{int(time.time())}"
+        if not slug or slug.strip("-") == "":
+            slug = "store-" + "".join(secrets.choice(_str_mod.ascii_lowercase) for _ in range(8))
 
         from database.db import get_store_by_slug
         existing = get_store_by_slug(slug)
@@ -1405,6 +1443,56 @@ def api_tenant_onboard():
         return json_utf8({"error": _safe_str(e)}, 500)
 
 
+@app.route('/api/tenant/login', methods=['POST'])
+def api_tenant_login():
+    """
+    تسجيل دخول التاجر والحصول على store_id مع session token
+    JSON Body: {"username": "...", "password": "..."}
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return json_utf8({"error": "Request body required"}, 400)
+
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
+
+        if not username or not password:
+            return json_utf8({"error": "username and password are required"}, 400)
+
+        import hashlib
+        from database.db import get_db
+        db = get_db()
+        try:
+            hashed = hashlib.sha256(password.encode()).hexdigest()
+            row = db.execute(
+                "SELECT u.id, u.store_id, u.role, s.name as store_name, s.slug "
+                "FROM users u JOIN stores s ON u.store_id = s.id "
+                "WHERE u.username = %s AND u.password_hash = %s AND s.is_active = TRUE",
+                [username, hashed]
+            ).fetchone()
+            if not row:
+                return json_utf8({"error": "Invalid credentials"}, 401)
+
+            session_token = hashlib.sha256(f"{row['id']}:{row['store_id']}:{_time.time()}:{secrets.token_hex(8)}".encode()).hexdigest()
+
+            return json_utf8({
+                "success": True,
+                "store_id": row["store_id"],
+                "store_name": row["store_name"],
+                "slug": row["slug"],
+                "role": row["role"],
+                "session_token": session_token
+            })
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"[LOGIN] Failed: {_safe_str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
 @app.route('/health')
 def health():
     import os as _os
@@ -1418,6 +1506,18 @@ def health():
         "store_ok": globals().get("_store_bp_ok", False),
         "timestamp": datetime.utcnow().isoformat()
     })
+
+
+@app.route('/onboard')
+def onboard_page():
+    """صفحة تسجيل التاجر الجديد (Frontend Onboarding)"""
+    return render_template("onboard.html")
+
+
+@app.route('/dashboard/login')
+def dashboard_login_page():
+    """صفحة تسجيل الدخول للمتاجر"""
+    return render_template("dashboard_login.html")
 
 
 # ============================================================
