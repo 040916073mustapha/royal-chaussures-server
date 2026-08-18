@@ -1475,7 +1475,7 @@ def api_tenant_login():
             if not row:
                 return json_utf8({"error": "Invalid credentials"}, 401)
 
-            session_token = hashlib.sha256(f"{row['id']}:{row['store_id']}:{_time.time()}:{secrets.token_hex(8)}".encode()).hexdigest()
+            session_token = hashlib.sha256(f"{row['id']}:{row['store_id']}:{time.time()}:{secrets.token_hex(8)}".encode()).hexdigest()
 
             return json_utf8({
                 "success": True,
