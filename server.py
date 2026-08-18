@@ -518,7 +518,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request
@@ -1514,6 +1514,21 @@ def health():
 def onboard_page():
     """صفحة تسجيل التاجر الجديد (Frontend Onboarding)"""
     return render_template("onboard.html")
+
+
+@app.route('/api/sync/notion', methods=['POST'])
+def api_sync_notion():
+    """نقطة تشغيل مزامنة Notion عبر API (دون Auth للحالة)"""
+    try:
+        from services.notion_sync import sync_roadmap_to_notion
+        success = sync_roadmap_to_notion()
+        if success:
+            return json_utf8({"success": True, "message": "✅ ROADMAP → Notion synced!"})
+        else:
+            return json_utf8({"success": False, "message": "❌ Sync failed (check NOTION_TOKEN config)"}, 500)
+    except Exception as e:
+        logger.error(f"[NOTION SYNC] Failed: {_safe_str(e)}")
+        return json_utf8({"error": _safe_str(e)}, 500)
 
 
 @app.route('/dashboard/login')
