@@ -1170,6 +1170,7 @@ def dashboard_store_clients(store_id):
 
 @app.route('/dashboard/<int:store_id>/settings')
 def dashboard_store_settings(store_id):
+    return render_template("settings.html", active="settings", store_id=store_id)
 
 @app.route('/dashboard/orders')
 def dashboard_orders_old():
