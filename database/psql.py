@@ -208,6 +208,7 @@ def init_db():
         _init_tables(db)
         _seed_default_store(db)
         _seed_default_users(db)
+        _sync_sequences(db)
         db.commit()
         print("[PG] Database initialized successfully")
     finally:
@@ -273,6 +274,43 @@ def _seed_default_users(db):
 
 
 # ── Store Management ────────────────────────────────────────────
+
+def _sync_sequences(db=None):
+    """
+    مزامنة Auto-Increment Sequences بعد الـ Seed اليدوي
+    تمنع UniqueViolation عند إضافة متاجر/مستخدمين جدد
+    """
+    own_db = False
+    if db is None:
+        db = get_db()
+        own_db = True
+    try:
+        tables = [
+            ("stores", "id"),
+            ("users", "id"),
+            ("orders", "id"),
+            ("products", "id"),
+            ("clients", "id"),
+            ("messages", "id"),
+            ("store_agent_config", "id"),
+            ("store_prompts", "id"),
+            ("store_webhooks", "id"),
+        ]
+        for table, col in tables:
+            try:
+                db.execute(
+                    f"SELECT setval(pg_get_serial_sequence('{table}', '{col}'), "
+                    f"COALESCE(MAX({col}), 1)) FROM {table}"
+                )
+            except Exception as e:
+                print(f"[PG] Sync sequence warning for {table}.{col}: {e}")
+        print("[PG] All sequences synced")
+        if own_db:
+            db.commit()
+    finally:
+        if own_db:
+            db.close()
+
 
 def _ensure_default_store():
     """التأكد من وجود Royal Chaussures"""

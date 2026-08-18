@@ -168,6 +168,30 @@ def run_migration(seed=False, check_only=False):
                     except Exception as e:
                         print(f"   ℹ️  Seed: {str(e)[:80]}")
 
+        # === Sync sequences after seed ===
+        if seed:
+            print("\n🔄 Syncing PostgreSQL sequences...")
+            sync_tables = [
+                ("stores", "id"),
+                ("users", "id"),
+                ("orders", "id"),
+                ("products", "id"),
+                ("clients", "id"),
+                ("messages", "id"),
+                ("store_agent_config", "id"),
+                ("store_prompts", "id"),
+                ("store_webhooks", "id"),
+            ]
+            for table, col in sync_tables:
+                try:
+                    cur.execute(
+                        f"SELECT setval(pg_get_serial_sequence('{table}', '{col}'), "
+                        f"COALESCE(MAX({col}), 1)) FROM {table}"
+                    )
+                    print(f"   ✅ {table}.{col} synced")
+                except Exception as e:
+                    print(f"   ℹ️  {table}.{col}: {str(e)[:60]}")
+
         print("\n" + "=" * 60)
         print("✅ Migration complete!")
         print("=" * 60)
