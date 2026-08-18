@@ -57,11 +57,36 @@ def get_db():
     """
     الحصول على اتصال من الـ pool
     يعيد كائن connection + cursor في dict للاستخدام المتوافق مع SQLite
+    مع Auto-Reconnect إذا كان الاتصال مغلقاً (Neon Idle Timeout fix)
     """
     pool = get_pool()
-    conn = pool.getconn()
-    conn.autocommit = False
-    return _PGWrapper(conn, pool)
+    conn = None
+    for attempt in range(3):
+        try:
+            if conn is None:
+                conn = pool.getconn()
+            # فحص سلامة الاتصال
+            with conn.cursor() as check_cur:
+                check_cur.execute("SELECT 1")
+            conn.autocommit = False
+            return _PGWrapper(conn, pool)
+        except Exception as e:
+            err_str = str(e).lower()
+            # إذا كان الاتصال مغلقاً أو غير صالح
+            if "closed" in err_str or "connection" in err_str or "not exist" in err_str:
+                if conn:
+                    try:
+                        pool.putconn(conn)
+                    except Exception:
+                        pass
+                    conn = None
+                # إعادة محاولة بإنشاء pool جديد
+                global _pool
+                _pool = None
+                pool = get_pool()
+                continue
+            raise
+    raise RuntimeError("Failed to get database connection after 3 attempts")
 
 
 def close_db():
@@ -82,13 +107,39 @@ class _PGWrapper:
         self.row_factory = None  # متوافق مع sqlite3.Row
 
     def execute(self, sql, params=None):
-        """تنفيذ استعلام مع دعم ? parameters (تحويل لـ %s)"""
+        """تنفيذ استعلام مع دعم ? parameters (تحويل لـ %s)
+        مع Auto-Reconnect إذا كان الاتصال مغلقاً
+        """
         if params is not None and not isinstance(params, (list, tuple)):
             params = [params]
         pg_sql = self._convert_sql(sql)
+        # فحص الاتصال قبل التنفيذ (Neon Idle fix)
+        try:
+            with self._conn.cursor() as _check:
+                _check.execute("SELECT 1")
+        except Exception:
+            # الاتصال مغلق → إعادة اتصال
+            self._reconnect()
         cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(pg_sql, params or [])
         return _PGCursorResult(cur)
+
+    def _reconnect(self):
+        """إعادة الاتصال إذا كان الاتصال الحالي مغلقاً"""
+        import logging
+        _log = logging.getLogger("royal-server")
+        if self._pool:
+            try:
+                self._pool.putconn(self._conn)
+            except Exception:
+                pass
+        # الحصول على اتصال جديد
+        from .psql import get_pool
+        pool = get_pool()
+        self._conn = pool.getconn()
+        self._conn.autocommit = False
+        self._pool = pool
+        _log.info("[PG] Connection re-established (Neon Idle recovery)")
 
     def executescript(self, sql_script):
         """تنفيذ سكربت SQL متعدد العبارات"""
@@ -121,10 +172,18 @@ class _PGWrapper:
         cur.close()
 
     def commit(self):
-        self._conn.commit()
+        try:
+            self._conn.commit()
+        except Exception:
+            self._reconnect()
+            self._conn.commit()
 
     def rollback(self):
-        self._conn.rollback()
+        try:
+            self._conn.rollback()
+        except Exception:
+            self._reconnect()
+            self._conn.rollback()
 
     def close(self):
         """إرجاع الاتصال للـ pool"""
