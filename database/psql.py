@@ -68,6 +68,12 @@ def get_db():
             # فحص سلامة الاتصال
             with conn.cursor() as check_cur:
                 check_cur.execute("SELECT 1")
+            # فحص حالة الـ transaction قبل تغيير autocommit
+            # psycopg2: 0=idle, 1=active, 2=intrans, 3=inerror, 4=unknown
+            if conn.status == psycopg2.extensions.STATUS_IN_TRANSACTION:
+                conn.rollback()
+            elif conn.status == psycopg2.extensions.STATUS_PREPARED:
+                conn.rollback()
             conn.autocommit = False
             return _PGWrapper(conn, pool)
         except Exception as e:
@@ -137,6 +143,11 @@ class _PGWrapper:
         from .psql import get_pool
         pool = get_pool()
         self._conn = pool.getconn()
+        # فحص حالة الـ transaction قبل autocommit
+        if self._conn.status == psycopg2.extensions.STATUS_IN_TRANSACTION:
+            self._conn.rollback()
+        elif self._conn.status == psycopg2.extensions.STATUS_PREPARED:
+            self._conn.rollback()
         self._conn.autocommit = False
         self._pool = pool
         _log.info("[PG] Connection re-established (Neon Idle recovery)")
