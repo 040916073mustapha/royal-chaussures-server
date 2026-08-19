@@ -523,7 +523,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request
@@ -550,6 +550,13 @@ def require_auth_for_dashboard():
     _is_store_subdomain = _host.count(".") >= 2 and "." in _host.split(".", 1)[0]
     _pub_dash = re.match(r"^/dashboard(/\d+)?$", path)
     if _pub_dash or _is_store_subdomain:
+        return
+    # Allow API calls that include store_id parameter (from subdomain dashboard)
+    _has_store_id = request.args.get("store_id") is not None
+    if _has_store_id and path.startswith("/api/"):
+        return
+    # Allow any API call from a subdomain host
+    if path.startswith("/api/") and _is_store_subdomain:
         return
     # Block /dashboard/* and /api/*
     if path.startswith("/dashboard") or path.startswith("/api"):
