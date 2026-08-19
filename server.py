@@ -523,7 +523,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request
@@ -544,9 +544,12 @@ def require_auth_for_dashboard():
         if path == safe or path.startswith(safe + "/"):
             return
     # The new multi-tenant dashboard is public (no auth for subdomain paths)
-    # Check if this is a /dashboard/<store_id> path (public access)
-    _pub_dash = re.match(r"^/dashboard/\d+", path)
-    if _pub_dash:
+    # Check if this is a /dashboard/<store_id> or /dashboard path (public access)
+    # Also check if host has a subdomain (e.g., puma.rcagents.space)
+    _host = request.headers.get("Host", "")
+    _is_store_subdomain = _host.count(".") >= 2 and "." in _host.split(".", 1)[0]
+    _pub_dash = re.match(r"^/dashboard(/\d+)?$", path)
+    if _pub_dash or _is_store_subdomain:
         return
     # Block /dashboard/* and /api/*
     if path.startswith("/dashboard") or path.startswith("/api"):
@@ -1169,6 +1172,22 @@ def dashboard():
 @app.route('/dashboard/<int:store_id>')
 def dashboard_store(store_id):
     return render_template("store_dashboard.html", store_id=store_id)
+
+@app.route('/dashboard')
+def dashboard_subdomain():
+    """Public dashboard accessed via subdomain (e.g., puma.rcagents.space/dashboard)"""
+    _host = request.headers.get("Host", "")
+    _slug = _host.split(".")[0] if _host.count(".") >= 2 else ""
+    if _slug:
+        from database.db import get_store_by_slug
+        store = get_store_by_slug(_slug)
+        if store:
+            return render_template("store_dashboard.html", store_id=store["id"])
+    return render_template("dashboard.html", active="dashboard", store_id=1)
+
+@app.route('/dashboard/')
+def dashboard_subdomain_slash():
+    return dashboard_subdomain()
 
 @app.route('/dashboard/<int:store_id>/orders')
 def dashboard_store_orders(store_id):
