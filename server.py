@@ -1284,7 +1284,7 @@ def dashboard_settings_old():
 
 @app.route('/')
 def index():
-    return json_utf8({"service": "Royal Chaussures Server", "status": "running", "version": "2.0"})
+    return render_template("landing.html")
 
 
 # ============================================================
