@@ -523,7 +523,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/messages", "/api/profile", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/sitemap.xml", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/messages", "/api/profile", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request
@@ -1285,6 +1285,47 @@ def dashboard_settings_old():
 @app.route('/')
 def index():
     return render_template("landing.html")
+
+
+@app.route('/sitemap.xml')
+def sitemap():
+    """Sitemap XML for Google Search Console indexing"""
+    import xml.etree.ElementTree as ET
+    from xml.dom import minidom
+
+    root = ET.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+    
+    pages = [
+        {"loc": f"https://{PLATFORM_DOMAIN}/", "priority": "1.0", "changefreq": "weekly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/onboard", "priority": "0.9", "changefreq": "monthly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard", "priority": "0.7", "changefreq": "monthly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/orders", "priority": "0.5", "changefreq": "daily"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/products", "priority": "0.5", "changefreq": "weekly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/clients", "priority": "0.4", "changefreq": "weekly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/chat", "priority": "0.6", "changefreq": "daily"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/analytics", "priority": "0.5", "changefreq": "weekly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/settings", "priority": "0.3", "changefreq": "monthly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/shipments", "priority": "0.4", "changefreq": "daily"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/constellation", "priority": "0.3", "changefreq": "monthly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/agents", "priority": "0.5", "changefreq": "weekly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/marketing", "priority": "0.3", "changefreq": "weekly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/inventory", "priority": "0.4", "changefreq": "daily"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/auto-ship", "priority": "0.3", "changefreq": "weekly"},
+    ]
+    
+    for page in pages:
+        url = ET.SubElement(root, "url")
+        loc = ET.SubElement(url, "loc")
+        loc.text = page["loc"]
+        priority = ET.SubElement(url, "priority")
+        priority.text = page["priority"]
+        changefreq = ET.SubElement(url, "changefreq")
+        changefreq.text = page["changefreq"]
+    
+    rough_string = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+    reparsed = minidom.parseString(rough_string)
+    pretty = reparsed.toprettyxml(indent="  ", encoding="utf-8")
+    return Response(pretty, mimetype="application/xml")
 
 
 # ============================================================
