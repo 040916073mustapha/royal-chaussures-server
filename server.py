@@ -18,6 +18,11 @@ import sys
 import sqlite3
 import logging
 import hashlib
+
+# ════════════════════════════════════════════════════════════
+# RC Agents Platform - Multi-Tenant SaaS
+# ════════════════════════════════════════════════════════════
+PLATFORM_DOMAIN = os.getenv("PLATFORM_DOMAIN", "rcagents.space")
 import hmac
 import re
 import random
@@ -1043,14 +1048,15 @@ def _maybe_sync():
 
 @app.route('/api/stats')
 def api_stats():
+    store_id = request.args.get("store_id", 1, type=int)
     conn = _open_orders_db()
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM orders"); total = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM orders WHERE status='Confirme'"); confirmed = c.fetchone()[0]
-    c.execute("SELECT COALESCE(SUM(total_price),0) FROM orders"); revenue = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM orders WHERE status='Livre'"); delivered = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM orders WHERE status='Nouveau'"); pending = c.fetchone()[0]
-    c.execute("SELECT COUNT(DISTINCT customer_phone) FROM orders WHERE customer_phone!=''"); clients_count = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM orders WHERE store_id=?", [store_id]); total = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM orders WHERE store_id=? AND status='Confirme'", [store_id]); confirmed = c.fetchone()[0]
+    c.execute("SELECT COALESCE(SUM(total_price),0) FROM orders WHERE store_id=?", [store_id]); revenue = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM orders WHERE store_id=? AND status='Livre'", [store_id]); delivered = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM orders WHERE store_id=? AND status='Nouveau'", [store_id]); pending = c.fetchone()[0]
+    c.execute("SELECT COUNT(DISTINCT customer_phone) FROM orders WHERE store_id=? AND customer_phone!=''", [store_id]); clients_count = c.fetchone()[0]
     conn.close()
     return json_utf8({"total_orders": total, "confirmed": confirmed, "revenue": round(revenue, 2), "delivered": delivered, "pending": pending, "clients_count": clients_count, "delivery_rate": round((delivered/total*100) if total else 0, 1)})
 
@@ -1059,10 +1065,11 @@ def api_stats():
 def api_orders():
     sf = str(request.args.get('status', '')).strip()
     q = str(request.args.get('search', '')).strip()
+    store_id = request.args.get("store_id", 1, type=int)
     conn = _open_orders_db()
     c = conn.cursor()
-    sql = "SELECT id, shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, quantity, total_price, status, delivery_method, created_at FROM orders WHERE 1=1"
-    params = []
+    sql = "SELECT id, shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, quantity, total_price, status, delivery_method, created_at FROM orders WHERE store_id=?"
+    params = [store_id]
     if sf:
         sql += " AND status=?"; params.append(sf)
     if q:
@@ -1119,9 +1126,10 @@ def api_products():
 
 @app.route('/api/clients')
 def api_clients():
+    store_id = request.args.get("store_id", 1, type=int)
     conn = _open_orders_db()
     c = conn.cursor()
-    c.execute("SELECT id, name, phone, wilaya, municipality, total_orders, total_spent, last_order_at FROM clients ORDER BY total_orders DESC LIMIT 100")
+    c.execute("SELECT id, name, phone, wilaya, municipality, total_orders, total_spent, last_order_at FROM clients WHERE store_id=? ORDER BY total_orders DESC LIMIT 100", [store_id])
     return json_utf8({"clients": [{"id": r[0], "name": r[1], "phone": r[2], "wilaya": r[3], "municipality": r[4], "orders": r[5], "spent": r[6], "last_order": r[7] or ""} for r in c.fetchall()]})
     conn.close()
 
@@ -1155,7 +1163,7 @@ def dashboard():
 
 @app.route('/dashboard/<int:store_id>')
 def dashboard_store(store_id):
-    return render_template("dashboard.html", active="dashboard", store_id=store_id)
+    return render_template("store_dashboard.html", store_id=store_id)
 
 @app.route('/dashboard/<int:store_id>/orders')
 def dashboard_store_orders(store_id):
@@ -1314,6 +1322,18 @@ def api_lookup_webhook():
         return json_utf8({"error": _safe_str(e)}, 500)
 
 
+@app.route('/api/store/<int:store_id>')
+def api_store_info(store_id):
+    try:
+        from database.db import get_store
+        store = get_store(store_id)
+        if store:
+            return json_utf8({"id": store["id"], "name": store["name"], "slug": store["slug"]})
+        return json_utf8({"error": "Store not found"}, 404)
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
 @app.route('/api/webhooks/registered', methods=['GET'])
 def api_list_webhooks():
     """عرض جميع التسجيلات"""
@@ -1427,7 +1447,10 @@ def api_tenant_onboard():
                     account_id = account_id[0]
                 register_webhook(store_id, platform, str(account_id), wa_phone)
 
-        logger.info(f"[ONBOARDING] New tenant created: store_id={store_id}, name={store_name}, slug={slug}")
+        store_subdomain = f"{slug}.{PLATFORM_DOMAIN}" if slug != "royal-chaussures" else PLATFORM_DOMAIN
+        dashboard_url = f"https://{PLATFORM_DOMAIN}/dashboard/{store_id}"
+
+        logger.info(f"[ONBOARDING] New tenant created: store_id={store_id}, name={store_name}, slug={slug}, subdomain={store_subdomain}")
 
         return json_utf8({
             "success": True,
@@ -1435,6 +1458,8 @@ def api_tenant_onboard():
             "store_name": store_name,
             "slug": slug,
             "username": username,
+            "subdomain": store_subdomain,
+            "dashboard_url": dashboard_url,
             "message": f"متجر {store_name} جاهز! تم تفعيل 4 وكلاء AI واستقبال الطلبات."
         })
 
