@@ -523,7 +523,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/sitemap.xml", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/messages", "/api/profile", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/sitemap.xml", "/privacy", "/terms", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/messages", "/api/profile", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request
@@ -1311,6 +1311,8 @@ def sitemap():
         {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/marketing", "priority": "0.3", "changefreq": "weekly"},
         {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/inventory", "priority": "0.4", "changefreq": "daily"},
         {"loc": f"https://{PLATFORM_DOMAIN}/dashboard/auto-ship", "priority": "0.3", "changefreq": "weekly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/privacy", "priority": "0.6", "changefreq": "monthly"},
+        {"loc": f"https://{PLATFORM_DOMAIN}/terms", "priority": "0.6", "changefreq": "monthly"},
     ]
     
     for page in pages:
@@ -1326,6 +1328,16 @@ def sitemap():
     reparsed = minidom.parseString(rough_string)
     pretty = reparsed.toprettyxml(indent="  ", encoding="utf-8")
     return Response(pretty, mimetype="application/xml")
+
+
+@app.route('/privacy')
+def privacy():
+    return render_template("privacy.html")
+
+
+@app.route('/terms')
+def terms():
+    return render_template("terms.html")
 
 
 # ============================================================

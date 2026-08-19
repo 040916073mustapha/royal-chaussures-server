@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service — RC Agents</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Space Grotesk', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        neon: { purple: '#A855F7', cyan: '#06B6D4' },
+                        rc: { bg: '#0A0A0F', card: '#111118', 'card-hover': '#1A1A25', border: '#1E1E30', text: '#94A3B8', 'text-bright': '#E2E8F0' }
+                    },
+                    boxShadow: { 'neon-purple': '0 0 15px -3px rgba(168,85,247,0.3)' }
+                }
+            }
+        }
+        document.documentElement.classList.add("dark");
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.3); border-radius: 10px; }
+        .bg-grid { 
+            background-image: linear-gradient(rgba(168,85,247,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(168,85,247,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .scanline {
+            pointer-events: none; position: fixed; inset: 0; z-index: 9999;
+            opacity: 0.015;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px);
+        }
+        body { scroll-behavior: smooth; }
+        .policy-section h2 { color: #E2E8F0; font-size: 1.25rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; }
+        .policy-section h3 { color: #A855F7; font-size: 1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .policy-section p { color: #94A3B8; line-height: 1.8; margin-bottom: 1rem; }
+        .policy-section ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #94A3B8; }
+        .policy-section ul li { margin-bottom: 0.5rem; line-height: 1.6; }
+        .policy-section ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 1rem; color: #94A3B8; }
+        .policy-section ol li { margin-bottom: 0.5rem; line-height: 1.6; }
+        .policy-section strong { color: #E2E8F0; }
+    </style>
+</head>
+<body class="bg-rc-bg text-rc-text antialiased font-sans">
+    <div class="scanline"></div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 inset-x-0 z-50 bg-rc-bg/80 backdrop-blur-xl border-b border-rc-border/40">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-2.5 group">
+                    <span class="text-base font-bold tracking-wider bg-gradient-to-r from-neon-purple to-neon-cyan bg-clip-text text-transparent">RC AGENTS</span>
+                </a>
+                <div class="flex items-center gap-4">
+                    <a href="/privacy" class="text-sm text-rc-text hover:text-neon-cyan transition-colors">Privacy</a>
+                    <a href="/" class="text-sm text-rc-text hover:text-white transition-colors">← Back</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="relative min-h-screen pt-24 pb-16 bg-grid">
+        <div class="absolute top-1/4 left-1/3 w-96 h-96 bg-neon-purple/5 rounded-full blur-[120px]"></div>
+        
+        <div class="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon-purple/8 border border-neon-purple/20 text-xs font-mono text-neon-purple mb-4">
+                    LEGAL
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-white">Terms of Service</h1>
+                <p class="mt-3 text-sm text-rc-text">Last updated: August 19, 2026</p>
+            </div>
+
+            <!-- Terms Content -->
+            <div class="bg-rc-card border border-rc-border/40 rounded-2xl p-8 sm:p-10 shadow-xl policy-section">
+                <h2>1. Acceptance of Terms</h2>
+                <p>
+                    By accessing or using RC Agents ("the Platform"), operated by <strong>Chabni Reda-El-Mustapha</strong> 
+                    ("we," "our," or "us"), you agree to be bound by these Terms of Service. If you do not agree to all 
+                    terms, do not access or use the Platform.
+                </p>
+                <p>
+                    These terms apply to all merchants, store owners, and end customers who interact with the Platform 
+                    through any channel, including but not limited to the website at <strong>rcagents.space</strong>, 
+                    API integrations, Facebook Messenger, WhatsApp, Instagram, and Live Chat.
+                </p>
+
+                <h2>2. Service Description</h2>
+                <p>
+                    RC Agents is a multi-tenant SaaS platform that provides:
+                </p>
+                <ul>
+                    <li>AI-powered customer support agents across multiple messaging channels</li>
+                    <li>Multi-store management dashboard with real-time analytics</li>
+                    <li>Order management, tracking, and shipping integration</li>
+                    <li>Product catalog and inventory synchronization with Shopify</li>
+                    <li>Customer relationship management and communication history</li>
+                </ul>
+
+                <h2>3. Account Registration and Responsibilities</h2>
+                
+                <h3>3.1 Merchant Accounts</h3>
+                <p>
+                    To use the Platform as a store owner, you must complete the onboarding process and provide accurate, 
+                    current, and complete information. You are responsible for:
+                </p>
+                <ul>
+                    <li>Maintaining the confidentiality of your account credentials</li>
+                    <li>All activities that occur under your account</li>
+                    <li>Ensuring compliance with applicable laws regarding your store and products</li>
+                    <li>Obtaining necessary consents from your customers for data processing</li>
+                </ul>
+
+                <h3>3.2 Subdomain Allocation</h3>
+                <p>
+                    Upon onboarding, you will receive a subdomain on rcagents.space (e.g., yourstore.rcagents.space). 
+                    You are responsible for the content and activities conducted on your subdomain. We reserve the right 
+                    to suspend or remove subdomains that violate these terms.
+                </p>
+
+                <h2>4. Platform Rules and Acceptable Use</h2>
+                <p>You agree not to:</p>
+                <ul>
+                    <li>Use the Platform for any unlawful purpose or in violation of any applicable law</li>
+                    <li>Sell, resell, or sublicense access to the Platform without our written consent</li>
+                    <li>Interfere with or disrupt the integrity or performance of the Platform</li>
+                    <li>Attempt to gain unauthorized access to other accounts, systems, or networks</li>
+                    <li>Use the Platform to distribute spam, malware, or harmful content</li>
+                    <li>Reverse-engineer, decompile, or disassemble any part of the Platform</li>
+                    <li>Use AI responses to generate harmful, discriminatory, or misleading content</li>
+                </ul>
+
+                <h2>5. AI Agent and Automated Responses</h2>
+                <p>
+                    RC Agents uses artificial intelligence to generate automated responses to customer inquiries. 
+                    By using the Platform, you acknowledge and agree that:
+                </p>
+                <ul>
+                    <li>AI responses are generated based on available product data and training and may contain errors</li>
+                    <li>You retain the ability to intervene and manually override AI responses at any time</li>
+                    <li>You are ultimately responsible for all communications sent through your account</li>
+                    <li>We do not guarantee the accuracy, completeness, or appropriateness of AI-generated responses</li>
+                    <li>You should review and configure the AI system prompt to align with your brand voice and policies</li>
+                </ul>
+
+                <h2>6. Fees and Payments</h2>
+                
+                <h3>6.1 Subscription Plans</h3>
+                <p>
+                    The Platform is offered under different subscription plans (Starter, Growth, Enterprise). 
+                    Fees for each plan will be clearly displayed at the time of subscription. We reserve the right to 
+                    modify pricing with reasonable notice.
+                </p>
+
+                <h3>6.2 Free Tier</h3>
+                <p>
+                    The Starter plan is currently offered free of charge with limited features. We may modify or 
+                    discontinue the free tier at any time with notice.
+                </p>
+
+                <h3>6.3 Payment Terms</h3>
+                <p>
+                    Paid subscriptions are billed in advance on a monthly or annual basis. Refunds are provided 
+                    on a case-by-case basis. Non-payment may result in suspension or termination of access.
+                </p>
+
+                <h2>7. Intellectual Property</h2>
+                <p>
+                    The Platform, including its design, code, branding, and underlying technology, is owned by 
+                    Chabni Reda-El-Mustapha. You retain ownership of your store data, product information, and 
+                    customer relationships. You grant us a limited license to use your store data to provide and 
+                    improve the Platform services.
+                </p>
+
+                <h2>8. Third-Party Services and Integrations</h2>
+                <p>
+                    The Platform integrates with third-party services including:
+                </p>
+                <ul>
+                    <li><strong>Shopify:</strong> For product and order synchronization</li>
+                    <li><strong>Meta (Facebook, Instagram, WhatsApp):</strong> For messaging and customer communication</li>
+                    <li><strong>ZR Express:</strong> For shipping and delivery services</li>
+                    <li><strong>DeepInfra / AI Providers:</strong> For AI model inference</li>
+                </ul>
+                <p>
+                    Your use of these third-party services is subject to their respective terms and policies. 
+                    We are not responsible for the acts or omissions of third-party service providers.
+                </p>
+
+                <h2>9. Limitation of Liability</h2>
+                <p>
+                    To the maximum extent permitted by law, RC Agents and its operator shall not be liable for:
+                </p>
+                <ul>
+                    <li>Any indirect, incidental, special, or consequential damages</li>
+                    <li>Loss of profits, revenue, data, or business opportunity</li>
+                    <li>Damages arising from AI-generated content or automated responses</li>
+                    <li>Service interruptions due to third-party provider downtime</li>
+                    <li>Any damages exceeding the fees paid by you in the 12 months preceding the claim</li>
+                </ul>
+
+                <h2>10. Termination</h2>
+                <p>
+                    Either party may terminate the agreement at any time with written notice. Upon termination:
+                </p>
+                <ul>
+                    <li>Your access to the Platform will be revoked</li>
+                    <li>Your data will be retained for 30 days for retrieval, then permanently deleted</li>
+                    <li>Outstanding fees remain payable</li>
+                    <li>Sections 7, 9, 10, and 11 survive termination</li>
+                </ul>
+                <p>
+                    We may suspend or terminate access immediately for violation of these terms or applicable laws.
+                </p>
+
+                <h2>11. Governing Law and Disputes</h2>
+                <p>
+                    These Terms shall be governed by and construed in accordance with the laws of the People's Democratic 
+                    Republic of Algeria. Any disputes arising from these terms shall be resolved through amicable 
+                    negotiation first, and if unresolved, through the courts of Tlemcen, Algeria.
+                </p>
+
+                <h2>12. Changes to Terms</h2>
+                <p>
+                    We reserve the right to modify these Terms at any time. Material changes will be notified via 
+                    email or platform notice. Continued use of the Platform after changes constitutes acceptance of 
+                    the modified terms.
+                </p>
+
+                <h2>13. Contact Information</h2>
+                <p>
+                    For questions, concerns, or legal inquiries regarding these Terms:
+                </p>
+                <ul>
+                    <li><strong>Email:</strong> contact@rcagents.space</li>
+                    <li><strong>Operator:</strong> Chabni Reda-El-Mustapha</li>
+                    <li><strong>Location:</strong> Tlemcen, Algeria</li>
+                    <li><strong>Phone:</strong> +213 659 832 426</li>
+                </ul>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 text-center">
+                <a href="/" class="text-sm text-rc-text hover:text-neon-cyan transition-colors">← Back to Home</a>
+                <span class="mx-3 text-gray-600">·</span>
+                <a href="/privacy" class="text-sm text-rc-text hover:text-neon-cyan transition-colors">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Site Footer -->
+    <footer class="border-t border-rc-border/40 bg-rc-bg py-6">
+        <div class="max-w-4xl mx-auto px-4 text-center text-xs text-gray-600 font-mono">
+            &copy; 2026 RC Agents. Operated by Chabni Reda-El-Mustapha. All rights reserved.
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — RC Agents</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Space Grotesk', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        neon: { purple: '#A855F7', cyan: '#06B6D4' },
+                        rc: { bg: '#0A0A0F', card: '#111118', 'card-hover': '#1A1A25', border: '#1E1E30', text: '#94A3B8', 'text-bright': '#E2E8F0' }
+                    },
+                    boxShadow: { 'neon-purple': '0 0 15px -3px rgba(168,85,247,0.3)' }
+                }
+            }
+        }
+        document.documentElement.classList.add("dark");
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.3); border-radius: 10px; }
+        .bg-grid { 
+            background-image: linear-gradient(rgba(168,85,247,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(168,85,247,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .scanline {
+            pointer-events: none; position: fixed; inset: 0; z-index: 9999;
+            opacity: 0.015;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px);
+        }
+        body { scroll-behavior: smooth; }
+        .policy-section h2 { color: #E2E8F0; font-size: 1.25rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; }
+        .policy-section h3 { color: #A855F7; font-size: 1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .policy-section p { color: #94A3B8; line-height: 1.8; margin-bottom: 1rem; }
+        .policy-section ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #94A3B8; }
+        .policy-section ul li { margin-bottom: 0.5rem; line-height: 1.6; }
+        .policy-section strong { color: #E2E8F0; }
+    </style>
+</head>
+<body class="bg-rc-bg text-rc-text antialiased font-sans">
+    <div class="scanline"></div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 inset-x-0 z-50 bg-rc-bg/80 backdrop-blur-xl border-b border-rc-border/40">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-2.5 group">
+                    <span class="text-base font-bold tracking-wider bg-gradient-to-r from-neon-purple to-neon-cyan bg-clip-text text-transparent">RC AGENTS</span>
+                </a>
+                <div class="flex items-center gap-4">
+                    <a href="/terms" class="text-sm text-rc-text hover:text-neon-cyan transition-colors">Terms</a>
+                    <a href="/" class="text-sm text-rc-text hover:text-white transition-colors">← Back</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="relative min-h-screen pt-24 pb-16 bg-grid">
+        <div class="absolute top-1/4 left-1/3 w-96 h-96 bg-neon-purple/5 rounded-full blur-[120px]"></div>
+        
+        <div class="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neon-purple/8 border border-neon-purple/20 text-xs font-mono text-neon-purple mb-4">
+                    LEGAL
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-white">Privacy Policy</h1>
+                <p class="mt-3 text-sm text-rc-text">Last updated: August 19, 2026</p>
+            </div>
+
+            <!-- Policy Content -->
+            <div class="bg-rc-card border border-rc-border/40 rounded-2xl p-8 sm:p-10 shadow-xl policy-section">
+                <h2>1. Introduction</h2>
+                <p>
+                    RC Agents ("we," "our," or "us") is a multi-tenant SaaS platform operated by <strong>Chabni Reda-El-Mustapha</strong>. 
+                    This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our platform, 
+                    including our website at <strong>rcagents.space</strong> and our integrations with Meta Platforms, Inc. APIs 
+                    (Facebook Messenger, WhatsApp, and Instagram).
+                </p>
+                <p>
+                    By using RC Agents, you consent to the data practices described in this policy. If you do not agree, 
+                    please discontinue use of our platform immediately.
+                </p>
+
+                <h2>2. Information We Collect</h2>
+                
+                <h3>2.1 Store Information</h3>
+                <p>
+                    When you onboard your store on RC Agents, we collect:
+                </p>
+                <ul>
+                    <li>Store name, description, and branding assets (logo, colors)</li>
+                    <li>Shopify store URL and API credentials (tokens with scoped permissions)</li>
+                    <li>Product catalog data (names, descriptions, prices, variants, images, inventory)</li>
+                    <li>Order data (customer names, phone numbers, addresses, order items, totals, statuses)</li>
+                </ul>
+
+                <h3>2.2 Customer Communication Data</h3>
+                <p>
+                    Through our integrations with Meta APIs, we process:
+                </p>
+                <ul>
+                    <li><strong>Facebook Messenger:</strong> Messages, page-scoped user IDs, names, profile pictures, and message timestamps</li>
+                    <li><strong>WhatsApp Business:</strong> Messages, phone numbers, profile names, and message media (images, documents)</li>
+                    <li><strong>Instagram:</strong> Messages, Instagram-scoped user IDs, usernames, and message media</li>
+                </ul>
+
+                <h3>2.3 Technical Data</h3>
+                <p>
+                    We automatically collect certain technical information when you use our platform:
+                </p>
+                <ul>
+                    <li>IP address and browser/user-agent information</li>
+                    <li>Pages visited and features used within the dashboard</li>
+                    <li>Timestamps of API requests and responses</li>
+                    <li>Error logs for debugging and service improvement</li>
+                </ul>
+
+                <h2>3. How We Use Your Information</h2>
+                <p>We use the collected data for the following purposes:</p>
+                <ul>
+                    <li><strong>Providing Services:</strong> To operate the AI customer support agent, process orders, manage shipments, and deliver dashboard analytics</li>
+                    <li><strong>Communication:</strong> To enable automated and manual responses across Messenger, WhatsApp, Instagram, and Live Chat</li>
+                    <li><strong>Improvement:</strong> To analyze usage patterns and improve our AI models, platform features, and user experience</li>
+                    <li><strong>Security:</strong> To detect and prevent fraud, unauthorized access, and platform abuse</li>
+                    <li><strong>Compliance:</strong> To comply with legal obligations and Meta Platform Terms</li>
+                </ul>
+
+                <h2>4. Data Storage and Security</h2>
+                <p>
+                    All data is stored on secured servers with industry-standard encryption at rest and in transit (TLS 1.2+).
+                    We implement the following security measures:
+                </p>
+                <ul>
+                    <li>Encrypted API token storage (never stored in plain text in code)</li>
+                    <li>Database-level multi-tenancy (each store's data is isolated by store_id)</li>
+                    <li>HTTP Basic Authentication for dashboard and API access</li>
+                    <li>HMAC-SHA256 signature verification for incoming Meta webhooks</li>
+                    <li>Regular security audits and dependency updates</li>
+                </ul>
+
+                <h2>5. Data Sharing and Third Parties</h2>
+                <p>
+                    <strong>We do not sell, rent, or share your personal data with third parties for their marketing purposes.</strong>
+                    We may share data only in the following circumstances:
+                </p>
+                <ul>
+                    <li><strong>Meta Platforms, Inc.:</strong> To facilitate message delivery through Messenger, WhatsApp, and Instagram APIs in accordance with Meta's Platform Terms</li>
+                    <li><strong>Shopify Inc.:</strong> To sync product catalogs, inventory, and order data through Shopify's Admin API</li>
+                    <li><strong>ZR Express:</strong> To facilitate order delivery and tracking information across Algerian wilayas</li>
+                    <li><strong>Service Providers:</strong> With third-party hosting (Render), AI model providers (DeepInfra), and payment processors as necessary to operate the platform</li>
+                    <li><strong>Legal Requirements:</strong> When required by law, court order, or governmental regulation</li>
+                </ul>
+
+                <h2>6. Data Retention</h2>
+                <p>
+                    We retain your data for as long as your account is active or as needed to provide services. 
+                    You may request deletion of your data at any time by contacting us. 
+                    Customer communication data is retained for the purpose of conversation continuity and may be 
+                    archived after 12 months of inactivity.
+                </p>
+
+                <h2>7. Your Rights</h2>
+                <p>Depending on your jurisdiction, you may have the following rights:</p>
+                <ul>
+                    <li><strong>Access:</strong> Request a copy of the personal data we hold about you</li>
+                    <li><strong>Correction:</strong> Request correction of inaccurate or incomplete data</li>
+                    <li><strong>Deletion:</strong> Request deletion of your data (subject to legal obligations)</li>
+                    <li><strong>Portability:</strong> Request transfer of your data in a machine-readable format</li>
+                    <li><strong>Objection:</strong> Object to certain data processing activities</li>
+                </ul>
+                <p>To exercise any of these rights, contact us at <strong>contact@rcagents.space</strong>.</p>
+
+                <h2>8. Meta Platform Compliance</h2>
+                <p>
+                    RC Agents complies with Meta Platforms' <strong>Platform Terms</strong>, <strong>Developer Policies</strong>, 
+                    and <strong>Community Standards</strong>. We ensure that:
+                </p>
+                <ul>
+                    <li>User data obtained through Meta APIs is used only for the approved integration purpose</li>
+                    <li>We do not sell Meta-sourced data or use it for ad targeting without explicit consent</li>
+                    <li>We implement appropriate access controls for Meta-sourced data</li>
+                    <li>We promptly delete Meta-sourced data upon account termination or when no longer necessary</li>
+                    <li>We maintain clear Privacy and Terms pages as required by Meta App Review</li>
+                </ul>
+
+                <h2>9. Children's Privacy</h2>
+                <p>
+                    Our platform is not intended for individuals under the age of 13 (or the equivalent minimum age in their jurisdiction). 
+                    We do not knowingly collect personal data from children. If we become aware of such collection, 
+                    we will take steps to delete the information promptly.
+                </p>
+
+                <h2>10. Changes to This Policy</h2>
+                <p>
+                    We may update this Privacy Policy from time to time. We will notify you of material changes by posting 
+                    the updated policy on this page with a revised "Last updated" date. Continued use of the platform 
+                    after changes constitutes acceptance of the updated policy.
+                </p>
+
+                <h2>11. Contact Us</h2>
+                <p>
+                    If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, 
+                    please contact us:
+                </p>
+                <ul>
+                    <li><strong>Email:</strong> contact@rcagents.space</li>
+                    <li><strong>Operator:</strong> Chabni Reda-El-Mustapha</li>
+                    <li><strong>Location:</strong> Tlemcen, Algeria</li>
+                </ul>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 text-center">
+                <a href="/" class="text-sm text-rc-text hover:text-neon-cyan transition-colors">← Back to Home</a>
+                <span class="mx-3 text-gray-600">·</span>
+                <a href="/terms" class="text-sm text-rc-text hover:text-neon-cyan transition-colors">Terms of Service</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Site Footer -->
+    <footer class="border-t border-rc-border/40 bg-rc-bg py-6">
+        <div class="max-w-4xl mx-auto px-4 text-center text-xs text-gray-600 font-mono">
+            &copy; 2026 RC Agents. Operated by Chabni Reda-El-Mustapha. All rights reserved.
+        </div>
+    </footer>
+</body>
+</html>
