@@ -543,6 +543,11 @@ def require_auth_for_dashboard():
     for safe in _AUTH_SAFE_PATHS:
         if path == safe or path.startswith(safe + "/"):
             return
+    # The new multi-tenant dashboard is public (no auth for subdomain paths)
+    # Check if this is a /dashboard/<store_id> path (public access)
+    _pub_dash = re.match(r"^/dashboard/\d+", path)
+    if _pub_dash:
+        return
     # Block /dashboard/* and /api/*
     if path.startswith("/dashboard") or path.startswith("/api"):
         auth = request.authorization

@@ -340,7 +340,10 @@
                             <span class="info-value">${data.username}</span>
                         </div>
                     `;
-                    const dashboardUrl = '/dashboard/' + data.store_id;
+                    // Use subdomain if available, fallback to direct path
+                    const dashboardUrl = data.subdomain 
+                        ? 'https://' + data.subdomain + '/dashboard' 
+                        : '/dashboard/' + data.store_id;
                     document.getElementById('dashboardBtn').href = dashboardUrl;
                     successBox.classList.add('show');
                     document.getElementById('onboardForm').style.display = 'none';
