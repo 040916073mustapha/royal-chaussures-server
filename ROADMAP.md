@@ -1,8 +1,8 @@
 # 🗺️ RC Agents — خارطة الطريق الشاملة
 
-> **آخر تحديث:** 18 أغسطس 2026  
-> **الإصدار:** v2.0 (Multi-Tenant SaaS)  
-> **الحالة:** 🟢 تشغيلية على Render + Neon PostgreSQL
+> **آخر تحديث:** 19 أغسطس 2026  
+> **الإصدار:** v2.5 (Multi-Tenant SaaS + Subdomains)  
+> **الحالة:** 🟢 تشغيلية على rcagents.space + Render + Neon PostgreSQL
 
 ---
 
@@ -18,6 +18,10 @@
 | **صفحة Onboarding** (`/onboard`) | ✅ حية | — | واجهة تسجيل + Webhooks اختيارية + توجيه تلقائي |
 | **تسجيل الدخول** (`/dashboard/login`) | ✅ حية | — | API + واجهة مع Session Token |
 | **Dashboard Mult-Store** (`/dashboard/<store_id>/`) | ✅ حية | — | 5 صفحات لكل متجر على حدة |
+| **🏪 Store Dashboard الجديد** (`store_dashboard.html`) | ✅ حية | — | بيانات حقيقية + AlpineJS + Subdomain Auto-Detect |
+| **🌐 Subdomain لكل متجر** (`slug.rcagents.space`) | ✅ حية | — | ورل تلقائي بعد التسجيل |
+| **🔐 Auth Bypass للـ Subdomains** | ✅ مكتمل | — | Basic Auth معطّل للـ *.rcagents.space |
+| **📊 API Multi-Store** (`/api/stats, orders, clients, messages`) | ✅ معزّز | — | Subdomain Store_ID Auto-Detection |
 | **Multi-Tenant DB** (PostgreSQL/Neon) | ✅ جاهز | — | عزل كامل للبيانات + sequences متزامنة |
 | **AI Prompts لكل متجر** | ✅ جاهز | — | 4 وكلاء: customer_support, sales, shipping, inventory |
 | **ZR Express** | ✅ جاهز | — | 58 ولاية مع أسعار مضبوطة |
@@ -25,27 +29,30 @@
 ### 🛠️ البنية التحتية
 
 ```
-┌─────────────────────────────────────────────────┐
-│                 ROYAL SERVER                     │
-│  ┌──────────┐  ┌─────────────┐  ┌──────────┐   │
-│  │  Webhook │  │   Dashboard │  │    API   │   │
-│  │ FB/WA/IG │  │  (Multi-    │  │ Onboard/ │   │
-│  │          │  │   Store)    │  │ Login/   │   │
-│  └──────────┘  └─────────────┘  │ Settings │   │
-│                    │            └──────────┘   │
-│  ┌─────────────────┴──────────────────────┐    │
-│  │       database/db.py + psql.py         │    │
-│  │  • Auto-Reconnect (Neon Idle Fix)     │    │
-│  │  • _sync_sequences() بعد كل Seed      │    │
-│  │  • conn.status فحص قبل autocommit      │    │
-│  └────────────────┬──────────────────────┘    │
-│  ┌────────────────┴──────────────────────┐    │
-│  │  PostgreSQL (Neon) + SQLite (Dev)     │    │
-│  │  stores | users | store_prompts |     │    │
-│  │  store_agent_config|store_webhooks    │    │
-│  └───────────────────────────────────────┘    │
-└─────────────────────────────────────────────────┘
-```
+┌─────────────────────────────────────────────────────┐
+│              RC Agents SERVER                       │
+│  Host: rcagents.space | *.rcagents.space           │
+│  ┌──────────┐  ┌─────────────────┐  ┌──────────┐   │
+│  │  Webhook │  │   Dashboard     │  │    API   │   │
+│  │ FB/WA/IG │  │  Store Dashboard│  │ Onboard/ │   │
+│  │          │  │  (AlpineJS +    │  │ Login/   │   │
+│  │          │  │   Real Data)    │  │ Settings │   │
+│  └──────────┘  └─────────────────┘  └──────────┘   │
+│         │                  │                         │
+│  ┌──────┴──────────────────┴──────────────────┐     │
+│  │       database/db.py + psql.py             │     │
+│  │  • Auto-Reconnect (Neon Idle Fix)         │     │
+│  │  • _get_store_id_from_subdomain()         │     │
+│  │  • _sync_sequences() بعد كل Seed          │     │
+│  │  • conn.status فحص قبل autocommit          │     │
+│  └────────────────┬──────────────────────────┘     │
+│  ┌────────────────┴──────────────────────────┐     │
+│  │  PostgreSQL (Neon) + SQLite (Dev)         │     │
+│  │  stores | users | store_prompts |         │     │
+│  │  store_agent_config | store_webhooks      │     │
+│  └───────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────┘
+
 
 ---
 
@@ -65,17 +72,18 @@
 | Sequence Sync بعد الـ Seed | ✅ | `_sync_sequences()` لكل الجداول |
 | Random Slug للأسماء العربية | ✅ | Fallback: `store-xxxxxxxx` |
 
-### Phase 2: 🔄 Frontend & Multi-Store Dashboard Integration
+### Phase 2: ✅ Frontend & Multi-Store Dashboard Integration (مكتملة)
 
-| المهمة | الحالة | الأولوية |
+| المهمة | الحالة | التفاصيل |
 |--------|--------|----------|
-| صفحة Onboarding (`/onboard`) | ✅ مكتملة | 🔴 عالية |
-| تسجيل الدخول (`/dashboard/login`) | ✅ مكتمل | 🔴 عالية |
-| Dashboard Multi-Store (`/dashboard/<store_id>/`) | ✅ مكتمل | 🔴 عالية |
-| **عرض بيانات حقيقية لكل متجر** | ⏳ قيد العمل | 🔴 عالية |
+| صفحة Onboarding (`/onboard`) | ✅ مكتملة | تسجيل + Webhooks + توجيه Subdomain |
+| تسجيل الدخول (`/dashboard/login`) | ✅ مكتمل | API + Dashboard Login Page |
+| Dashboard Multi-Store (`/dashboard/<store_id>/`) | ✅ مكتمل | 5 صفحات لكل متجر |
+| **Store Dashboard الجديد** | ✅ مكتمل | `store_dashboard.html` مع بيانات حقيقية |
+| **Subdomain Auth Bypass** | ✅ مكتمل | `_get_store_id_from_subdomain()` في كل APIs |
+| **Safe Paths محسّنة** | ✅ مكتمل | /api/* و /dashboard/* مع store_id فحص |
 | **Store Switcher (للمدير الرئيسي)** | 🔲 مفتوح | 🟡 متوسطة |
 | حماية Dashboard بالـ Session Token | 🔲 مفتوح | 🟡 متوسطة |
-| خيار "إعادة تعيين كلمة المرور" | 🔲 مفتوح | 🟢 منخفضة |
 
 ### Phase 3: ⏳ AI Agents Configuration & Live Messaging
 
@@ -113,19 +121,22 @@
 - [x] Random Slug Fallback (`store-xxxxxxxx`) للأسماء العربية
 - [x] `_sync_sequences()` لجميع جداول PostgreSQL بعد الـ Seed
 - [x] فحص `conn.status` قبل تعيين `autocommit=False`
+- [x] Subdomain Auth Bypass (4 طرق: safe paths, store_id param, Host check, regex)
+- [x] `_get_store_id_from_subdomain()` لكل الـ APIs (stats, orders, clients, messages)
+- [x] `/api/messages` + `/api/profile` في safe paths
 
 ### 🔄 In Progress (قيد التنفيذ الآن)
 
-- [ ] عرض بيانات حقيقية لكل متجر في Dashboard (طلبات + منتجات + عملاء)
 - [ ] Store Switcher Dropdown للمدير الرئيسي (مصطفى)
+- [ ] حماية Dashboard بالـ Session Token
 
 ### ⏳ Backlog (المهام القادمة)
 
 - [ ] UI تعديل Prompts من Dashboard
 - [ ] اختبار Webhooks للمتجر الجديد
 - [ ] إحصائيات المحادثات لكل متجر
-- [ ] حماية Dashboard بإستخدام Session Token
 - [ ] صفحة هبوط للمنصة (Landing Page)
+- [ ] نظام الفوترة والاشتراكات
 
 ---
 
@@ -171,6 +182,16 @@
 | **الملف** | `database/psql.py` (دالة `get_db()` + دالة `_reconnect()`) |
 | **الـ Commits** | `4ca2e86` |
 
+### ADR-005: Subdomain Store-ID Auto-Detection
+
+| الحقل | القيمة |
+|-------|--------|
+| **التاريخ** | 19 أغسطس 2026 |
+| **المشكلة** | طلبات API من Subdomain (مثل `puma.rcagents.space/dashboard`) تعود ببيانات المتجر الرئيسي (store_id=1) بدلاً من بيانات المتجر الخاص بها |
+| **القرار** | إضافة دالة `_get_store_id_from_subdomain()` تستخرج slug من Host header وتبحث عن store_id في DB + فحص 4 طبقات للـ Auth Bypass (safe paths, store_id param, Host regex, أصحاب subdomain) |
+| **الملف** | `server.py` (دالة `require_auth_for_dashboard()` + دوال API) |
+| **الـ Commits** | `a5ca089`, `a3709ea`, `89943cf`, `1d8c139` |
+
 ---
 
 ## 🔑 5. المفاتيح السريعة (Quick Reference)
@@ -199,6 +220,9 @@ git config core.hooksPath .githooks
 | `DASHBOARD_USER` / `DASHBOARD_PASS` | Basic Auth للـ Dashboard |
 | `SHOPIFY_CATALOG_TOKEN` | Token الـ Shopify للـ Products |
 | `SHOPIFY_ORDERS_TOKEN` | Token الـ Shopify للـ Orders |
+| `PLATFORM_DOMAIN` | الدومين الرئيسي للمنصة (مثل `rcagents.space`) |
+| `NOTION_TOKEN` | Token الـ Notion لمزامنة ROADMAP |
+| `NOTION_PAGE_ID` | ID صفحة Notion للـ Roadmap |
 
 ### المسارات العامة (Public API — لا تحتاج Auth)
 
@@ -209,6 +233,13 @@ git config core.hooksPath .githooks
 | `POST /api/tenant/login` | تسجيل دخول التاجر (بدون Auth) |
 | `GET /onboard` | صفحة تسجيل التاجر |
 | `GET /dashboard/login` | صفحة تسجيل الدخول |
+| `GET /dashboard/<id>` | Dashboard المتجر (بدون Auth) |
+| `GET /dashboard` | Dashboard عبر Subdomain (بدون Auth) |
+| `GET /api/stats?store_id=` | إحصائيات المتجر (بدون Auth مع store_id) |
+| `GET /api/orders?store_id=` | طلبات المتجر (بدون Auth مع store_id) |
+| `GET /api/clients?store_id=` | عملاء المتجر (بدون Auth مع store_id) |
+| `GET /api/messages?store_id=` | رسائل المتجر (بدون Auth مع store_id) |
+| `GET /api/store/<id>` | معلومات المتجر (بدون Auth) |
 | `POST /webhook` | Webhook Facebook/Instagram |
 | `POST /whatsapp/webhook` | Webhook WhatsApp |
 
