@@ -523,7 +523,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/messages", "/api/profile", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
 
 
 @app.before_request
@@ -567,6 +567,21 @@ def require_auth_for_dashboard():
                 401,
                 {"WWW-Authenticate": 'Basic realm="Royal Chaussures Dashboard"'}
             )
+
+
+def _get_store_id_from_subdomain():
+    """
+    استخراج store_id من الـ Subdomain في Host header
+    مثال: puma.rcagents.space → يستخرج 'puma' ويبحث عن store_id في DB
+    """
+    _host = request.headers.get("Host", "")
+    if _host.count(".") >= 2:
+        _slug = _host.split(".")[0]
+        from database.db import get_store_by_slug
+        store = get_store_by_slug(_slug)
+        if store:
+            return store["id"]
+    return None
 
 
 @app.after_request
@@ -1063,7 +1078,9 @@ def _maybe_sync():
 
 @app.route('/api/stats')
 def api_stats():
-    store_id = request.args.get("store_id", 1, type=int)
+    # Auto-detect store_id from subdomain first, fallback to query param, then to 1
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
     conn = _open_orders_db()
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM orders WHERE store_id=?", [store_id]); total = c.fetchone()[0]
@@ -1080,7 +1097,9 @@ def api_stats():
 def api_orders():
     sf = str(request.args.get('status', '')).strip()
     q = str(request.args.get('search', '')).strip()
-    store_id = request.args.get("store_id", 1, type=int)
+    # Auto-detect store_id from subdomain first
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
     conn = _open_orders_db()
     c = conn.cursor()
     sql = "SELECT id, shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, quantity, total_price, status, delivery_method, created_at FROM orders WHERE store_id=?"
@@ -1141,7 +1160,8 @@ def api_products():
 
 @app.route('/api/clients')
 def api_clients():
-    store_id = request.args.get("store_id", 1, type=int)
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
     conn = _open_orders_db()
     c = conn.cursor()
     c.execute("SELECT id, name, phone, wilaya, municipality, total_orders, total_spent, last_order_at FROM clients WHERE store_id=? ORDER BY total_orders DESC LIMIT 100", [store_id])
@@ -1880,15 +1900,17 @@ def dashboard_chat():
 
 @app.route('/api/messages')
 def api_messages():
-    """Get recent messages across all platforms"""
+    """Get recent messages across all platforms (Multi-Store)"""
     try:
         limit = int(request.args.get("limit", 50))
         platform = request.args.get("platform", "")
         search = str(request.args.get("search", "")).strip()
+        _sd = _get_store_id_from_subdomain()
+        store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
         conn = _open_orders_db()
         c = conn.cursor()
-        query = "SELECT * FROM messages"
-        params = []
+        query = "SELECT * FROM messages WHERE store_id=?"
+        params = [store_id]
         conditions = []
         if platform:
             conditions.append("platform = ?")
@@ -1898,7 +1920,7 @@ def api_messages():
             s = f"%{search}%"
             params.extend([s, s, s])
         if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+            query += " AND " + " AND ".join(conditions)
         query += " ORDER BY created_at DESC LIMIT ?"
         params.append(limit)
         c.execute(query, params)
