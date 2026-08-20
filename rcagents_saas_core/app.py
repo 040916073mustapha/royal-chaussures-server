@@ -1,26 +1,29 @@
 """
 RC Agents — SaaS Core Backend (Multi-Tenant)
 Flask application entry point
+Uses relative imports only — clean, works from any context
 """
 
 import os
 import sys
 import logging
 
-# Add parent dir to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory to path (works for both run_saas.py and direct execution)
+_parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
 
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
-from rcgents_saas_core.config import Config
-from rcgents_saas_core.database.models import init_db
+from .config import Config
+from .database.models import init_db
 
 # Import API Blueprints
-from rcgents_saas_core.api.auth import auth_bp
-from rcgents_saas_core.api.stores import stores_bp
-from rcgents_saas_core.api.settings import settings_bp
-from rcgents_saas_core.api.conversations import conversations_bp
+from .api.auth import auth_bp
+from .api.stores import stores_bp
+from .api.settings import settings_bp
+from .api.conversations import conversations_bp
 
 # ─── Logging ──────────────────────────────────────────────────
 

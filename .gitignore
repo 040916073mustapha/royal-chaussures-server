@@ -38,7 +38,9 @@ USER.md
 # --- Temp / Unwanted ---
 _fix_*.py
 _patch_*.py
-_*.py
+_[a-z]*.py
+# But keep __init__.py (Python packages need it)
+!__init__.py
 temp/
 tmp/
 *.tmp

@@ -1,22 +1,27 @@
 """
 RC Agents — SaaS Core Runner (Entry Point)
-Use this file to run the SaaS Core application.
+Clean, minimal launcher — adds the workspace root to sys.path,
+then imports and runs the app.
 """
 
 import os
 import sys
 
-# Add the workspace root to Python path
-workspace_root = os.path.dirname(os.path.abspath(__file__))
-if workspace_root not in sys.path:
-    sys.path.insert(0, workspace_root)
+# Ensure the workspace root is on sys.path so relative imports work
+_workspace = os.path.dirname(os.path.abspath(__file__))
+if _workspace not in sys.path:
+    sys.path.insert(0, _workspace)
 
-from rcgents_saas_core.app import app, Config
-import logging
+# Now import the app module (it uses relative imports internally)
+from rcgents_saas_core import create_app
 
-logger = logging.getLogger("saas-core")
+app = create_app()
 
 if __name__ == "__main__":
+    import logging
+    from rcgents_saas_core.config import Config
+
+    logging.basicConfig(level=logging.INFO)
     port = int(os.getenv("PORT", Config.DASHBOARD_PORT))
-    logger.info(f"🚀 RC Agents SaaS Core starting on port {port}")
+    logging.getLogger("saas-core").info(f"🚀 RC Agents SaaS Core starting on port {port}")
     app.run(host="0.0.0.0", port=port, debug=True)
