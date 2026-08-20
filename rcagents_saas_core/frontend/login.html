@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Agents — Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
+
+        body {
+            font-family: 'Tajawal', 'Segoe UI', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Cyberpunk Gradient Background ─── */
+        .bg-cyber {
+            background: radial-gradient(ellipse at 20% 50%, #0d0221 0%, #0a0a0f 70%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .bg-cyber::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 40%, rgba(0, 255, 136, 0.03) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 60%, rgba(255, 0, 128, 0.03) 0%, transparent 50%);
+            animation: pulseGlow 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.5; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* ─── Login Card ─── */
+        .login-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(15, 15, 30, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 136, 0.15);
+            border-radius: 24px;
+            padding: 48px 40px;
+            width: 420px;
+            max-width: 90vw;
+            box-shadow: 0 0 60px rgba(0, 255, 136, 0.05), 0 0 120px rgba(255, 0, 128, 0.03);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo span {
+            color: #666;
+            font-size: 14px;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .tagline {
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        /* ─── Form ─── */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            font-family: 'Tajawal', sans-serif;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.05);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .form-group input::placeholder {
+            color: #555;
+        }
+
+        /* ─── Buttons ─── */
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            border: none;
+            border-radius: 12px;
+            color: #000;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.2);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 16px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #aaa;
+            font-size: 15px;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 12px;
+        }
+
+        .btn-secondary:hover {
+            border-color: rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+        }
+
+        /* ─── Error / Success ─── */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .alert-error {
+            background: rgba(255, 0, 80, 0.1);
+            border: 1px solid rgba(255, 0, 80, 0.2);
+            color: #ff5080;
+        }
+
+        .alert-success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+
+        /* ─── Toggle ─── */
+        .toggle-text {
+            text-align: center;
+            margin-top: 16px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .toggle-text a {
+            color: #00ff88;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .toggle-text a:hover {
+            text-decoration: underline;
+        }
+
+        /* ─── Loading ─── */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="bg-cyber" x-data="authForm()">
+        <div class="login-card">
+            <div class="logo">
+                <h1>⟁ RC AGENTS</h1>
+                <span>Multi-Tenant AI Platform</span>
+            </div>
+
+            <div class="tagline" x-show="!isRegister">
+                {{ 'سجل الدخول للوحة التحكم' }}
+            </div>
+            <div class="tagline" x-show="isRegister" x-cloak>
+                {{ 'أنشئ حساب جديد للمنصة' }}
+            </div>
+
+            <!-- Alerts -->
+            <div x-show="error" class="alert alert-error" x-text="error" x-cloak></div>
+            <div x-show="success" class="alert alert-success" x-text="success" x-cloak></div>
+
+            <!-- Login Form -->
+            <form @submit.prevent="submit()">
+                <div class="form-group" x-show="isRegister" x-cloak>
+                    <label>الاسم الكامل</label>
+                    <input type="text" x-model="name" placeholder="مصطفى أحمد" :required="isRegister">
+                </div>
+
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" x-model="email" placeholder="your@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" x-model="password" placeholder="••••••••" required minlength="6">
+                </div>
+
+                <button type="submit" class="btn-primary" :disabled="loading">
+                    <span x-show="!loading" x-text="isRegister ? 'إنشاء حساب' : 'تسجيل الدخول'"></span>
+                    <span x-show="loading"><span class="spinner"></span> جاري...</span>
+                </button>
+            </form>
+
+            <div class="toggle-text">
+                <span x-show="!isRegister">ليس لديك حساب؟</span>
+                <span x-show="isRegister" x-cloak>لديك حساب بالفعل؟</span>
+                <a @click="toggleMode()" x-text="isRegister ? 'تسجيل دخول' : 'إنشاء حساب'"></a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function authForm() {
+            return {
+                isRegister: false,
+                name: '',
+                email: '',
+                password: '',
+                loading: false,
+                error: '',
+                success: '',
+
+                toggleMode() {
+                    this.isRegister = !this.isRegister;
+                    this.error = '';
+                    this.success = '';
+                },
+
+                async submit() {
+                    this.loading = true;
+                    this.error = '';
+                    this.success = '';
+
+                    try {
+                        const endpoint = this.isRegister ? '/api/auth/register' : '/api/auth/login';
+                        const payload = {
+                            email: this.email,
+                            password: this.password,
+                        };
+                        if (this.isRegister) payload.name = this.name;
+
+                        const resp = await axios.post(endpoint, payload);
+                        const data = resp.data;
+
+                        if (data.token) {
+                            localStorage.setItem('rc_agent_token', data.token);
+                            localStorage.setItem('rc_agent_user', JSON.stringify(data.user));
+                            window.location.href = '/dashboard';
+                        }
+                    } catch (err) {
+                        if (err.response && err.response.data && err.response.data.error) {
+                            this.error = err.response.data.error;
+                        } else {
+                            this.error = 'حدث خطأ في الاتصال. حاول مرة أخرى.';
+                        }
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

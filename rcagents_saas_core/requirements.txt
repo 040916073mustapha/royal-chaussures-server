@@ -1,0 +1,26 @@
+# RC Agents — SaaS Core Dependencies
+# ===================================
+
+# Web Framework
+Flask==3.1.0
+flask-cors==5.0.1
+
+# Database
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+
+# Auth
+PyJWT==2.10.1
+bcrypt==4.2.1
+
+# HTTP Client
+requests==2.32.3
+
+# Environment
+python-dotenv==1.0.1
+
+# Production Server
+gunicorn==23.0.0
+
+# Monitoring (optional)
+# sentry-sdk==2.20.0

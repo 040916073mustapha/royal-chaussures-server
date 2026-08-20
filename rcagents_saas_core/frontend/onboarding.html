@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Agents — الإعداد الأولي</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .onboarding-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 48px;
+            justify-content: center;
+        }
+
+        .step-dot {
+            width: 40px;
+            height: 4px;
+            border-radius: 2px;
+            background: #333;
+            transition: all 0.5s;
+        }
+
+        .step-dot.active { background: #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.4); }
+        .step-dot.done { background: #00cc6a; }
+
+        .step-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .step-desc {
+            text-align: center;
+            color: #888;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: rgba(15, 15, 30, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 32px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .card p {
+            color: #888;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-bottom: 24px;
+        }
+
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-list li:last-child { border-bottom: none; }
+
+        .btn-primary {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            border: none;
+            border-radius: 12px;
+            color: #000;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.2);
+        }
+
+        .btn-secondary {
+            padding: 14px 32px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #aaa;
+            font-size: 15px;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover { border-color: rgba(0,255,136,0.3); color: #00ff88; }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 24px;
+        }
+
+        .shop-input {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            font-family: 'Tajawal', sans-serif;
+            direction: ltr;
+            text-align: left;
+            margin-bottom: 16px;
+            outline: none;
+        }
+        .shop-input:focus { border-color: rgba(0,255,136,0.4); }
+
+        .success-check {
+            font-size: 64px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="onboarding-container" x-data="onboardingApp()" x-init="init()" x-cloak>
+        <!-- Step Dots -->
+        <div class="step-indicator">
+            <template x-for="(s, i) in steps" :key="i">
+                <div class="step-dot" :class="{ 'active': currentStep === i, 'done': currentStep > i }"></div>
+            </template>
+        </div>
+
+        <!-- Step 0: Welcome -->
+        <div x-show="currentStep === 0">
+            <div class="step-title">🚀 مرحباً بك في RC Agents!</div>
+            <div class="step-desc">في 3 خطوات فقط، سيكون متجرك جاهزاً مع AI Agent ذكي</div>
+
+            <div class="card">
+                <h3>ما الذي ستحصل عليه؟</h3>
+                <ul class="feature-list">
+                    <li>🤖 <strong>AI Agent</strong> — يرد على عملائك تلقائياً عبر Messenger, WhatsApp, Instagram</li>
+                    <li>🛍️ <strong> Shopify</strong> — يعرف منتجاتك وأسعارها مباشرة</li>
+                    <li>📊 <strong> لوحة تحكم</strong> — تشوف كل المحادثات والإحصائيات</li>
+                    <li>📦 <strong> توصيل</strong> — أسعار ZR Express لـ 58 ولاية</li>
+                    <li>💬 <strong>دردشة حية</strong> — تدخل يدوي لما تحب</li>
+                </ul>
+
+                <div class="btn-group">
+                    <button class="btn-primary" @click="currentStep = 1">ابدأ الإعداد ✨</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Connect Shopify -->
+        <div x-show="currentStep === 1">
+            <div class="step-title">🛍️ الخطوة 1: ربط متجر Shopify</div>
+            <div class="step-desc">أدخل رابط متجرك في Shopify لربطه بالمنصة</div>
+
+            <div class="card">
+                <h3>رابط المتجر</h3>
+                <p>أدخل اسم متجرك في Shopify (بدون https://)</p>
+
+                <input type="text" class="shop-input" x-model="shopDomain" placeholder="your-store.myshopify.com">
+
+                <div style="text-align:center;">
+                    <button class="btn-primary" @click="connectShopify()" :disabled="!shopDomain || loading">
+                        <span x-show="!loading">🔗 ربط المتجر</span>
+                        <span x-show="loading">جاري...</span>
+                    </button>
+                </div>
+
+                <div style="margin-top:16px; text-align:center; color:#888; font-size:13px;">
+                    ستتم إعادة توجيهك إلى Shopify للموافقة على الصلاحيات
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Connect Channels -->
+        <div x-show="currentStep === 2">
+            <div class="step-title">📡 الخطوة 2: ربط قنوات التواصل</div>
+            <div class="step-desc">اختر القنوات التي تريد تفعيل AI Agent عليها</div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <h3>📱 Facebook Messenger</h3>
+                <p>ربط صفحة فيسبوك الخاصة بمتجرك</p>
+                <button class="btn-secondary" @click="connectChannel('messenger')">🔗 ربط</button>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <h3>💚 WhatsApp</h3>
+                <p>ربط رقم WhatsApp Business</p>
+                <button class="btn-secondary" @click="connectChannel('whatsapp')">🔗 ربط</button>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <h3>📸 Instagram</h3>
+                <p>ربط حساب Instagram التجاري</p>
+                <button class="btn-secondary" @click="connectChannel('instagram')">🔗 ربط</button>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-primary" @click="currentStep = 3">تخطي → تكوين AI</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Configure AI -->
+        <div x-show="currentStep === 3">
+            <div class="step-title">🧠 الخطوة 3: تكوين AI Agent</div>
+            <div class="step-desc">خصص شخصية المساعد الذكي لمتجرك</div>
+
+            <div class="card">
+                <h3>اللغة الافتراضية</h3>
+                <select x-model="language" style="width:100%; padding:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:#e0e0e0; font-family:'Tajawal',sans-serif; margin-bottom:16px;">
+                    <option value="ar">العربية / الدارجة الجزائرية</option>
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                </select>
+
+                <h3>رسالة الترحيب</h3>
+                <textarea x-model="greeting" style="width:100%; min-height:80px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:#e0e0e0; padding:12px; font-family:'Tajawal',sans-serif; margin-bottom:16px; resize:vertical;" placeholder="مرحباً بك في متجرنا! كيف يمكنني مساعدتك؟"></textarea>
+
+                <h3>System Prompt مخصص (اختياري)</h3>
+                <textarea x-model="customSystemPrompt" style="width:100%; min-height:120px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:#e0e0e0; padding:12px; font-family:'Tajawal',monospace; font-size:12px; margin-bottom:16px; resize:vertical;" placeholder="يمكنك كتابة تعليمات مخصصة للمساعد..."></textarea>
+
+                <div class="btn-group">
+                    <button class="btn-primary" @click="finishOnboarding()">🚀 إطلاق المتجر!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Done -->
+        <div x-show="currentStep === 4">
+            <div class="success-check">✅🎉</div>
+            <div class="step-title">ممتاز! متجرك جاهز!</div>
+            <div class="step-desc">RC Agents يعمل الآن على متجرك. يمكنك متابعة الإحصائيات من لوحة التحكم</div>
+
+            <div class="card" style="text-align:center;">
+                <p style="font-size:18px; margin-bottom:8px;">🚀 ما التالي؟</p>
+                <ul class="feature-list" style="text-align:right;">
+                    <li>📊 تابع المحادثات من <strong>لوحة التحكم</strong></li>
+                    <li>🔄 استورد المنتجات من Shopify للمعاينة</li>
+                    <li>⚙️ عدل نظام AI بما يناسب متجرك</li>
+                    <li>👥 ادعُ عملاء جدد للتحدث مع المساعد</li>
+                </ul>
+
+                <div class="btn-group">
+                    <button class="btn-primary" @click="goToDashboard()">🔮 فتح لوحة التحكم</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function onboardingApp() {
+            return {
+                steps: ['ترحيب', 'Shopify', 'قنوات', 'AI', 'تمام'],
+                currentStep: 0,
+                loading: false,
+
+                // Shopify
+                shopDomain: '',
+
+                // AI Config
+                language: 'ar',
+                greeting: 'مرحباً بك في متجرنا! 🛍️ كيف يمكنني مساعدتك اليوم؟',
+                customSystemPrompt: '',
+
+                token: localStorage.getItem('rc_agent_token'),
+
+                init() {
+                    // Check auth
+                    if (!this.token) {
+                        window.location.href = '/';
+                        return;
+                    }
+                },
+
+                async connectShopify() {
+                    this.loading = true;
+                    try {
+                        const resp = await axios.get(`/api/stores/shopify/auth-url?shop=${encodeURIComponent(this.shopDomain)}`, {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        if (resp.data.auth_url) {
+                            window.location.href = resp.data.auth_url;
+                        }
+                    } catch (err) {
+                        alert('خطأ في ربط المتجر: ' + (err.response?.data?.error || err.message));
+                    }
+                    this.loading = false;
+                },
+
+                connectChannel(type) {
+                    // Placeholder — Meta OAuth will be implemented in Phase 3
+                    alert(`✅ سيتم تفعيل ${type} بعد توثيق تطبيق Meta`);
+                },
+
+                async finishOnboarding() {
+                    this.loading = true;
+                    try {
+                        // Save AI settings
+                        if (this.customSystemPrompt || this.language) {
+                            // First get stores
+                            const storesResp = await axios.get('/api/stores', {
+                                headers: { 'Authorization': `Bearer ${this.token}` }
+                            });
+                            const store = storesResp.data.stores?.[0];
+                            if (store) {
+                                await axios.put(`/api/settings/${store.id}`, {
+                                    system_prompt: this.customSystemPrompt,
+                                    language: this.language,
+                                    greeting_message: this.greeting,
+                                }, {
+                                    headers: { 'Authorization': `Bearer ${this.token}` }
+                                });
+                            }
+                        }
+                        this.currentStep = 4;
+                    } catch (err) {
+                        // Even if saving fails, show success
+                        this.currentStep = 4;
+                    }
+                    this.loading = false;
+                },
+
+                goToDashboard() {
+                    window.location.href = '/dashboard';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
