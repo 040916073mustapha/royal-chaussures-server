@@ -1,0 +1,33 @@
+# RC Agents — SaaS Core Render Blueprint
+# Multi-Tenant Backend + PostgreSQL
+services:
+  # ─── Web Service ────────────────────────────────────────────
+  - type: web
+    name: rcagents-saas-core
+    env: python
+    region: frankfurt
+    plan: starter
+    buildCommand: pip install -r rcagents_saas_core/requirements.txt
+    startCommand: gunicorn rcagents_saas_core.app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --worker-class sync
+    healthCheckPath: /api/health
+    envVars:
+      - key: SAAS_DATABASE_URL
+        fromDatabase:
+          name: rcagents-db
+          property: connectionString
+      - key: SAAS_JWT_SECRET
+        generateValue: true
+      - key: AI_API_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: AI_MODEL
+        value: openai/deepseek-ai/DeepSeek-V4-Flash
+
+  # ─── PostgreSQL Database ────────────────────────────────────
+  - type: postgresql
+    name: rcagents-db
+    region: frankfurt
+    plan: starter
+    version: 16
+    ipAllowList: []
