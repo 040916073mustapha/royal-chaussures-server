@@ -9,18 +9,21 @@ from dotenv import load_dotenv
 load_dotenv()  # Load .env from parent workspace
 
 
+# Helper: read from primary env name first, fallback to secondary
+_env = os.getenv
+
+
 class Config:
     """Central configuration for SaaS Core"""
 
     # ─── Database ────────────────────────────────────────────
-    DB_ENGINE = os.getenv("SAAS_DB_ENGINE", "postgresql")
-    DATABASE_URL = os.getenv(
-        "SAAS_DATABASE_URL",
-        "postgresql://saas_user:saas_password@localhost:5432/rcagents"
-    )
+    DB_ENGINE = _env("SAAS_DB_ENGINE", _env("DB_ENGINE", "postgresql"))
+    DATABASE_URL = _env("SAAS_DATABASE_URL", _env("DATABASE_URL", ""))
+    if not DATABASE_URL:
+        DATABASE_URL = "postgresql://saas_user:saas_password@localhost:5432/rcagents"
 
     # ─── Auth ────────────────────────────────────────────────
-    JWT_SECRET = os.getenv("SAAS_JWT_SECRET", "change-me-in-production-v3")
+    JWT_SECRET = _env("SAAS_JWT_SECRET", _env("JWT_SECRET", "change-me-in-production-v3"))
     JWT_ALGORITHM = "HS256"
     JWT_EXPIRY_HOURS = 72
 

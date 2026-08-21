@@ -10,8 +10,11 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from flask import Blueprint, request, jsonify
 
+import traceback as _tb
 from ..config import Config
 from ..database.models import User, get_session
+import logging as _logging
+_logger = _logging.getLogger("saas-core.auth")
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -127,6 +130,7 @@ def register():
 
     except Exception as e:
         session.rollback()
+        _logger.error(f"Register error: {_tb.format_exc()}")
         return jsonify({"error": str(e)}), 500
     finally:
         session.close()
@@ -168,6 +172,7 @@ def login():
         })
 
     except Exception as e:
+        _logger.error(f"Login error: {_tb.format_exc()}")
         return jsonify({"error": str(e)}), 500
     finally:
         session.close()
