@@ -27,6 +27,7 @@ from .api.auth import auth_bp
 from .api.stores import stores_bp
 from .api.settings import settings_bp
 from .api.conversations import conversations_bp
+from .api.zr_express import zr_bp
 
 # ─── Logging ──────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ def create_app():
     app.register_blueprint(stores_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(conversations_bp)
+    app.register_blueprint(zr_bp)
 
     # ─── Init Database ────────────────────────────────────────
     with app.app_context():
