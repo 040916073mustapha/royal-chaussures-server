@@ -100,12 +100,13 @@ def create_app():
         obj = data.get("object", "")
         logger.info(f"Webhook object={obj}")
 
+        # TEMP: Legacy flow — import from server.py
         if obj == "page":
             process_messaging_entries(data.get("entry", []), "FB", send_fb_reply)
         elif obj == "instagram":
             process_messaging_entries(data.get("entry", []), "IG", send_ig_reply)
         elif obj == "whatsapp_business_account":
-            process_whatsapp_entries(data.get("entry", []))
+            _process_whatsapp_multi(data.get("entry", []))
         else:
             logger.warning(f"Unknown webhook object: {obj}")
 
@@ -128,7 +129,7 @@ def create_app():
         data = request.get_json(silent=True)
         if data:
             logger.info(f"WhatsApp webhook received")
-            process_whatsapp_entries(data.get("entry", []))
+            _process_whatsapp_multi(data.get("entry", []))
         return jsonify({"status": "ok"})
 
     # ─── Import webhook handlers from root server.py ────────
@@ -141,6 +142,82 @@ def create_app():
     process_whatsapp_entries = _mod.process_whatsapp_entries
     send_fb_reply = _mod.send_fb_reply
     send_ig_reply = _mod.send_ig_reply
+    send_whatsapp_reply = _mod.send_whatsapp_reply
+
+    # ─── Multi-Tenant Webhook Processors ─────────────────────
+
+    from .database.crud import get_store_id_by_platform, get_store_id_by_whatsapp_phone, get_or_create_conversation, save_message, get_or_create_ai_settings
+
+    def _get_store_id_from_entry(entry, channel_type):
+        """Extract store_id from webhook entry based on channel type"""
+        entry_id = entry.get("id", "")
+        if entry_id:
+            sid = get_store_id_by_platform(channel_type, str(entry_id))
+            if sid:
+                return sid
+        return None
+
+    def _process_messaging_multi(entries, platform, send_func):
+        """Multi-tenant: process Messenger/Instagram messages with store_id lookup"""
+        logger.info(f"[MT] process_messaging: plat={platform} entries={len(entries)}")
+        channel_type = "messenger" if platform == "FB" else "instagram"
+        for entry in entries:
+            store_id = _get_store_id_from_entry(entry, channel_type)
+            if not store_id:
+                logger.warning(f"[MT] No store for {channel_type} entry {entry.get('id','')}, falling back to legacy")
+                process_messaging_entries([entry], platform, send_func)
+                continue
+            for messaging in entry.get("messaging", []):
+                sid = messaging.get("sender", {}).get("id", "")
+                msg_data = messaging.get("message", {})
+                text = msg_data.get("text", "") or ""
+                image_url = ""
+                attachments = msg_data.get("attachments", [])
+                if attachments:
+                    for att in attachments:
+                        if att.get("type") == "image":
+                            payload = att.get("payload") or {}
+                            image_url = payload.get("url") or att.get("url") or ""
+                            if image_url:
+                                break
+                image_url = image_url or ""
+                if sid and (text or image_url):
+                    conv = get_or_create_conversation(store_id, channel_type, sid, customer_platform_id=sid)
+                    save_message(conv.id, store_id, "user", text or "[Image]", channel_type, "image" if image_url else "text", image_url)
+                    logger.info(f"[MT] {platform} msg from {sid}: text='{text[:60]}' store={store_id}")
+                    send_func(sid, text, image_url, store_id)
+
+    def _process_whatsapp_multi(entries):
+        """Multi-tenant: process WhatsApp messages with store_id lookup"""
+        logger.info(f"[MT] process_whatsapp: entries={len(entries)}")
+        for entry in entries:
+            for change in entry.get("changes", []):
+                value = change.get("value", {})
+                metadata = value.get("metadata", {})
+                phone_id = metadata.get("phone_number_id", "")
+                store_id = None
+                if phone_id:
+                    store_id = get_store_id_by_whatsapp_phone(str(phone_id))
+                if not store_id:
+                    logger.warning(f"[MT] No store for WA phone {phone_id}, falling back to legacy")
+                    process_whatsapp_entries([entry])
+                    continue
+                for msg in value.get("messages", []):
+                    sender = msg.get("from", "")
+                    text = (msg.get("text") or {}).get("body", "") or ""
+                    img = msg.get("image") or {}
+                    image_url = img.get("id") or img.get("link") or ""
+                    if sender and (text or image_url):
+                        conv = get_or_create_conversation(store_id, "whatsapp", sender, customer_platform_id=sender)
+                        save_message(conv.id, store_id, "user", text or "[Image]", "whatsapp", "image" if image_url else "text", image_url)
+                        logger.info(f"[MT] WA msg from {sender}: text='{text[:60]}' store={store_id}")
+                        import threading
+                        threading.Thread(target=send_whatsapp_reply, args=(sender, text, image_url, store_id), daemon=True).start()
+
+    # Assign multi-tenant processors to webhook routes
+    import threading
+    process_messaging_entries = _process_messaging_multi
+    process_whatsapp_entries = _process_whatsapp_multi
 
     @app.route("/api/health")
     def health():

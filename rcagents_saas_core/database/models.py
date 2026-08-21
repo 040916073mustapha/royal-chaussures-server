@@ -225,7 +225,8 @@ class Invoice(Base):
 
 def get_engine(database_url=None):
     """Create SQLAlchemy engine"""
-    url = database_url or "sqlite:///./rcagents.db"
+    # Read from multiple env var names for flexibility
+    url = database_url or os.getenv("SAAS_DATABASE_URL") or os.getenv("DATABASE_URL") or "sqlite:///./rcagents.db"
     if url.startswith("postgres"):
         return create_engine(url, pool_pre_ping=True, pool_size=10, max_overflow=20)
     return create_engine(url, connect_args={"check_same_thread": False})
@@ -245,3 +246,24 @@ def get_session(engine=None):
         engine = get_engine()
     SessionLocal = sessionmaker(bind=engine)
     return SessionLocal()
+
+
+# ─── Helper: Get engine via Session maker ─────────────────────
+
+_session_factory = None
+_session_lock = object()
+
+
+def get_global_engine():
+    """Get or create the global engine (singleton)"""
+    global _session_factory
+    if _session_factory is None:
+        _session_factory = get_engine()
+    return _session_factory
+
+
+def get_global_session():
+    """Get a new session from the global engine"""
+    engine = get_global_engine()
+    s = sessionmaker(bind=engine)
+    return s()
