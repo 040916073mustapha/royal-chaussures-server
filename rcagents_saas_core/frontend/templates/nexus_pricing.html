@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus POS — خطط الاشتراك</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Tajawal', sans-serif; }
+        body { background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e); min-height: 100vh; }
+        .glow-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s; }
+        .glow-card:hover { transform: translateY(-5px); box-shadow: 0 20px 60px rgba(168,85,247,0.2); }
+        .glow-card.popular { border-color: #A855F7; box-shadow: 0 0 30px rgba(168,85,247,0.3); }
+        .btn-neon { background: linear-gradient(135deg, #7C3AED, #A855F7); transition: all 0.3s; }
+        .btn-neon:hover { transform: translateY(-2px); box-shadow: 0 0 25px rgba(168,85,247,0.5); }
+        .btn-outline { border: 1px solid rgba(168,85,247,0.5); transition: all 0.3s; }
+        .btn-outline:hover { background: rgba(168,85,247,0.15); }
+        .feature-check { color: #10B981; }
+        .feature-cross { color: #6B7280; }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <div class="text-5xl mb-3">💎</div>
+            <h1 class="text-4xl font-bold text-white mb-2">Nexus POS</h1>
+            <p class="text-gray-400">اختر خطة الاشتراك المناسبة لمتجرك</p>
+            <div class="mt-4 flex items-center justify-center gap-4">
+                <button onclick="setPeriod('monthly')" id="period-monthly" class="px-6 py-2 rounded-xl font-bold text-sm transition-all bg-purple-600 text-white">شهري</button>
+                <button onclick="setPeriod('yearly')" id="period-yearly" class="px-6 py-2 rounded-xl font-bold text-sm transition-all text-gray-400 hover:text-white border border-gray-600">سنوي (وفر 20%)</button>
+            </div>
+        </div>
+
+        <!-- Plans Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="plans-grid">
+            {% for slug, plan in plans.items() %}
+            <div class="glow-card rounded-2xl p-6 {% if slug == 'basic' %}popular{% endif %}">
+                {% if slug == 'basic' %}
+                <div class="bg-purple-600 text-white text-xs font-bold py-1 px-3 rounded-full inline-block mb-3">الأكثر طلباً</div>
+                {% endif %}
+                <div class="text-2xl font-bold text-white mb-1">{{ plan['name_ar'] }}</div>
+                <div class="text-3xl font-extrabold text-purple-400 my-4" id="price-{{ slug }}">
+                    {% if slug == 'free' %}مجاني{% elif slug == 'enterprise' %}مخصص{% else %}{{ "{:,}".format(plan['price_dzd']) }} دج{% endif %}
+                </div>
+                <div class="text-gray-500 text-sm mb-4" id="period-{{ slug }}">
+                    {% if slug == 'free' %}دائماً{% elif slug == 'enterprise' %}تواصل معنا{% else %}/شهر{% endif %}
+                </div>
+
+                <ul class="space-y-3 mb-6">
+                    {% for feature in plan['features'] %}
+                    <li class="flex items-start gap-2 text-sm text-gray-300">
+                        <span class="feature-check mt-0.5">✓</span>
+                        {{ feature }}
+                    </li>
+                    {% endfor %}
+                    {% if plan['ai_agent'] %}
+                    <li class="flex items-start gap-2 text-sm text-gray-300">
+                        <span class="feature-check mt-0.5">✓</span>
+                        🤖 AI Agent للمخزون
+                    </li>
+                    {% else %}
+                    <li class="flex items-start gap-2 text-sm text-gray-500">
+                        <span class="feature-cross mt-0.5">✗</span>
+                        AI Agent غير متوفر
+                    </li>
+                    {% endif %}
+                    {% if plan['shopify_sync'] %}
+                    <li class="flex items-start gap-2 text-sm text-gray-300">
+                        <span class="feature-check mt-0.5">✓</span>
+                        🔄 مزامنة Shopify
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <button onclick="selectPlan('{{ slug }}')" 
+                    class="w-full py-3 rounded-xl font-bold text-sm transition-all 
+                    {% if slug == 'free' %}btn-outline text-white
+                    {% elif slug == 'enterprise' %}btn-outline text-white
+                    {% else %}btn-neon text-white{% endif %}">
+                    {% if slug == 'free' %}ابدأ مجاناً{% elif slug == 'enterprise' %}اتصل بنا{% else %}اشترك الآن{% endif %}
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- BaridiMob Info -->
+        <div class="glow-card rounded-2xl p-6 mt-8">
+            <h2 class="text-xl font-bold text-white mb-4">💚 الدفع عبر BaridiMob</h2>
+            <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div class="bg-gray-800/50 rounded-xl p-4">
+                    <div class="text-gray-400 mb-1">CCP</div>
+                    <div class="text-white font-bold text-lg">{{ baridi['ccp'] }}</div>
+                </div>
+                <div class="bg-gray-800/50 rounded-xl p-4">
+                    <div class="text-gray-400 mb-1">RIP</div>
+                    <div class="text-white font-bold text-sm break-all">{{ baridi['rip'] }}</div>
+                </div>
+                <div class="bg-gray-800/50 rounded-xl p-4">
+                    <div class="text-gray-400 mb-1">صاحب الحساب</div>
+                    <div class="text-white font-bold">{{ baridi['owner'] }}</div>
+                </div>
+            </div>
+            <p class="text-gray-500 text-xs mt-3">بعد التحويل، أرسل إيصال الدفع عبر واتساب أو من لوحة التحكم</p>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="modal-overlay" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50" onclick="closeModal(event)">
+            <div class="glow-card rounded-2xl p-8 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+                <div class="text-center">
+                    <div class="text-5xl mb-4">🎉</div>
+                    <h2 class="text-2xl font-bold text-white mb-2" id="modal-title">تم!</h2>
+                    <p class="text-gray-300 mb-6" id="modal-message"></p>
+                    <div id="modal-baridi" class="hidden mb-6">
+                        <div class="bg-purple-600/20 rounded-xl p-4 text-sm text-gray-300">
+                            <p class="mb-2">حول المبلغ إلى هذا الحساب وأرسل إيصال الدفع:</p>
+                            <p class="text-white font-bold">CCP: {{ baridi['ccp'] }}</p>
+                            <p class="text-white font-bold text-xs break-all">RIP: {{ baridi['rip'] }}</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal()" class="btn-neon w-full py-3 rounded-xl text-white font-bold">
+                        تم ✅
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedPeriod = 'monthly';
+
+        function setPeriod(period) {
+            selectedPeriod = period;
+            document.getElementById('period-monthly').className = period === 'monthly'
+                ? 'px-6 py-2 rounded-xl font-bold text-sm transition-all bg-purple-600 text-white'
+                : 'px-6 py-2 rounded-xl font-bold text-sm transition-all text-gray-400 hover:text-white border border-gray-600';
+            document.getElementById('period-yearly').className = period === 'yearly'
+                ? 'px-6 py-2 rounded-xl font-bold text-sm transition-all bg-purple-600 text-white'
+                : 'px-6 py-2 rounded-xl font-bold text-sm transition-all text-gray-400 hover:text-white border border-gray-600';
+
+            // Update prices
+            {% for slug, plan in plans.items() %}
+            const priceEl{{ slug|capitalize }} = document.getElementById('price-{{ slug }}');
+            const periodEl{{ slug|capitalize }} = document.getElementById('period-{{ slug }}');
+            if (priceEl{{ slug|capitalize }} && '{{ slug }}' !== 'free' && '{{ slug }}' !== 'enterprise') {
+                if (period === 'yearly') {
+                    const yearly = {{ plan['price_dzd'] }} * 12 * 0.8;
+                    priceEl{{ slug|capitalize }}.textContent = yearly.toLocaleString() + ' دج';
+                    periodEl{{ slug|capitalize }}.textContent = '/سنة (وفر 20%)';
+                } else {
+                    priceEl{{ slug|capitalize }}.textContent = '{{ plan['price_dzd'] }}'.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' دج';
+                    periodEl{{ slug|capitalize }}.textContent = '/شهر';
+                }
+            }
+            {% endfor %}
+        }
+
+        async function selectPlan(slug) {
+            if (slug === 'free') {
+                try {
+                    const res = await fetch('/api/v1/subscription/activate-trial', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({})
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        showModal('🎉', 'تم تفعيل الفترة التجريبية!', 'استمتع بـ Nexus POS مجاناً لمدة 30 يوماً');
+                    } else {
+                        showModal('⚠️', 'خطأ', data.error || 'حدث خطأ');
+                    }
+                } catch(e) {
+                    showModal('⚠️', 'خطأ', 'تعذر الاتصال بالخادم');
+                }
+                return;
+            }
+
+            if (slug === 'enterprise') {
+                showModal('💼', 'خطة المؤسسات', 'للاستفسار عن الخطة المؤسسية، تواصل معنا على: royalchaussures2@gmail.com');
+                return;
+            }
+
+            // Show payment options modal
+            showPaymentModal(slug);
+        }
+
+        function showModal(icon, title, message) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal-baridi').classList.add('hidden');
+            document.getElementById('modal-overlay').classList.remove('hidden');
+            document.getElementById('modal-overlay').classList.add('flex');
+        }
+
+        function showPaymentModal(slug) {
+            const prices = {
+                basic: 1500,
+                pro: 3500
+            };
+            const price = selectedPeriod === 'yearly' ? prices[slug] * 12 * 0.8 : prices[slug];
+            const periodText = selectedPeriod === 'yearly' ? 'سنوي' : 'شهري';
+
+            document.getElementById('modal-title').textContent = slug === 'basic' ? '🌟 أساسي' : '💎 احترافي';
+            document.getElementById('modal-message').innerHTML = `
+                المبلغ: <strong>${price.toLocaleString()} دج</strong> (${periodText})<br><br>
+                اختر طريقة الدفع:
+            `;
+            document.getElementById('modal-baridi').classList.remove('hidden');
+            document.getElementById('modal-overlay').classList.remove('hidden');
+            document.getElementById('modal-overlay').classList.add('flex');
+        }
+
+        function closeModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('modal-overlay').classList.add('hidden');
+            document.getElementById('modal-overlay').classList.remove('flex');
+        }
+
+        // Escape key closes modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal(e);
+        });
+    </script>
+</body>
+</html>

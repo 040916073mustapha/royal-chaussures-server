@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل تاجر جديد - RC Agents</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 520px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .logo p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            font-family: 'Tajawal', sans-serif;
+            transition: all 0.3s;
+            outline: none;
+        }
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(102, 126, 234, 0.5);
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-submit .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            margin-top: -10px;
+            display: none;
+        }
+        .btn-submit.loading .spinner { display: inline-block; }
+        .btn-submit.loading .btn-text { visibility: hidden; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .success-box, .error-box {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        .success-box {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+        .error-box {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        .success-box.show, .error-box.show {
+            display: block;
+        }
+        .success-result {
+            margin-top: 12px;
+        }
+        .success-result .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: 13px;
+        }
+        .success-result .info-label {
+            color: rgba(255,255,255,0.5);
+        }
+        .success-result .info-value {
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+        }
+        .btn-dashboard {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-top: 16px;
+            transition: all 0.3s;
+        }
+        .btn-dashboard:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.5);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+        }
+        .webhooks-section {
+            margin-bottom: 20px;
+        }
+        .webhooks-section summary {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+        .webhooks-section summary:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .webhook-fields {
+            margin-top: 12px;
+            padding: 16px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+        }
+        .webhook-fields .form-group {
+            margin-bottom: 12px;
+        }
+        .webhook-fields .form-group:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">
+                <h1>🚀 RC Agents</h1>
+                <p>منصة الوكلاء الذكيين لمتجرك</p>
+            </div>
+
+            <!-- Error / Success -->
+            <div class="error-box" id="errorBox"></div>
+            <div class="success-box" id="successBox">
+                <span id="successTitle">🎉 تم التسجيل بنجاح!</span>
+                <div class="success-result" id="successResult"></div>
+                <a class="btn-dashboard" id="dashboardBtn" href="">📊 الانتقال إلى لوحة التحكم</a>
+            </div>
+
+            <!-- Form -->
+            <form id="onboardForm" onsubmit="return handleSubmit(event)">
+                <div class="form-group">
+                    <label>اسم المتجر</label>
+                    <input type="text" id="storeName" placeholder="مثال: متجر الأزياء الفاخرة" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" id="email" placeholder="store@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم الهاتف</label>
+                        <input type="tel" id="phone" placeholder="+213xxxxxxxx">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="username" placeholder="admin" required>
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة المرور</label>
+                        <input type="password" id="password" placeholder="********" required minlength="6">
+                    </div>
+                </div>
+
+                <details class="webhooks-section">
+                    <summary>⚙️ ربط القنوات (اختياري)</summary>
+                    <div class="webhook-fields">
+                        <div class="form-group">
+                            <label>Facebook Page ID</label>
+                            <input type="text" id="fbPageId" placeholder="123456789">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp Phone Number ID</label>
+                            <input type="text" id="waPhoneId" placeholder="987654321">
+                        </div>
+                        <div class="form-group">
+                            <label>Instagram ID</label>
+                            <input type="text" id="igId" placeholder="instagram_business_id">
+                        </div>
+                    </div>
+                </details>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    <span class="spinner"></span>
+                    <span class="btn-text">✨ إنشاء المتجر</span>
+                </button>
+            </form>
+
+            <div class="footer">
+                RC Agents Platform &copy; 2026 &mdash; مدعوم بـ AI ومتعدد المتاجر
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const errorBox = document.getElementById('errorBox');
+            const successBox = document.getElementById('successBox');
+            
+            errorBox.classList.remove('show');
+            successBox.classList.remove('show');
+            btn.classList.add('loading');
+
+            const payload = {
+                store_name: document.getElementById('storeName').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value,
+                webhooks: {}
+            };
+
+            const fbId = document.getElementById('fbPageId').value.trim();
+            const waId = document.getElementById('waPhoneId').value.trim();
+            const igId = document.getElementById('igId').value.trim();
+
+            if (fbId) payload.webhooks.messenger = fbId;
+            if (waId) payload.webhooks.whatsapp = waId;
+            if (igId) payload.webhooks.instagram = igId;
+
+            fetch('/api/tenant/onboard', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.classList.remove('loading');
+                if (data.success) {
+                    document.getElementById('successTitle').textContent = '🎉 تم إنشاء المتجر بنجاح!';
+                    document.getElementById('successResult').innerHTML = `
+                        <div class="info-row">
+                            <span class="info-label">🏪 اسم المتجر</span>
+                            <span class="info-value">${data.store_name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">🆔 رقم المتجر</span>
+                            <span class="info-value">${data.store_id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">🔗 الرابط المختصر</span>
+                            <span class="info-value">${data.slug}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">👤 اسم المستخدم</span>
+                            <span class="info-value">${data.username}</span>
+                        </div>
+                    `;
+                    // Use subdomain if available, fallback to direct path
+                    const dashboardUrl = data.subdomain 
+                        ? 'https://' + data.subdomain + '/dashboard' 
+                        : '/dashboard/' + data.store_id;
+                    document.getElementById('dashboardBtn').href = dashboardUrl;
+                    successBox.classList.add('show');
+                    document.getElementById('onboardForm').style.display = 'none';
+                } else {
+                    errorBox.textContent = data.error || 'حدث خطأ غير متوقع';
+                    errorBox.classList.add('show');
+                }
+            })
+            .catch(err => {
+                btn.classList.remove('loading');
+                errorBox.textContent = 'خطأ في الاتصال: ' + err.message;
+                errorBox.classList.add('show');
+            });
+
+            return false;
+        }
+    </script>
+</body>
+</html>

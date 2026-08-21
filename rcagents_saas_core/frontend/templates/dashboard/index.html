@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f0f23">
+    <title>RC Admin — لوحة التحكم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #0a0a1a; --bg-secondary: #12122a; --bg-card: #1a1a3e;
+            --bg-input: #1e1e42; --text-primary: #e0e0ff; --text-secondary: #8888bb;
+            --text-muted: #5555aa; --accent-pink: #ff2d78; --accent-cyan: #00d4ff;
+            --accent-gold: #ffd700; --accent-green: #00ff88;
+            --border-color: #2a2a5e; --shadow-color: rgba(255,45,120,0.15);
+            --radius: 12px; --radius-sm: 8px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--accent-pink); border-radius: 4px; }
+
+        /* Login */
+        #login-screen {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 20px;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%);
+        }
+        #login-screen.hidden { display: none; }
+        .login-box {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius); padding: 40px; width: 100%; max-width: 400px;
+            box-shadow: 0 0 40px var(--shadow-color);
+        }
+        .login-logo { text-align: center; margin-bottom: 30px; }
+        .login-logo i { font-size: 48px; color: var(--accent-gold); }
+        .login-logo h1 {
+            font-size: 24px; font-weight: 900; margin-top: 10px;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-pink));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .login-logo p { color: var(--text-secondary); font-size: 14px; margin-top: 5px; }
+        .login-form input {
+            width: 100%; padding: 14px 16px; margin-bottom: 12px;
+            background: var(--bg-input); border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm); color: var(--text-primary);
+            font-family: 'Tajawal', sans-serif; font-size: 16px;
+            direction: ltr; text-align: left;
+        }
+        .login-form input:focus { outline: none; border-color: var(--accent-pink); box-shadow: 0 0 10px rgba(255,45,120,0.3); }
+        .login-error { color: var(--accent-pink); font-size: 14px; text-align: center; margin-top: 10px; display: none; }
+
+        .btn-primary {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, var(--accent-pink), #ff6b9d);
+            border: none; border-radius: var(--radius-sm); color: white;
+            font-family: 'Tajawal', sans-serif; font-size: 18px; font-weight: 700;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(255,45,120,0.4); }
+        .btn-primary:disabled { opacity: 0.6; transform: none; }
+
+        /* Dashboard */
+        #dashboard { display: none; }
+        #dashboard.active { display: block; }
+
+        .dash-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 25px; background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .dash-header .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; }
+        .dash-header .brand i { color: var(--accent-gold); }
+        .dash-header .user-info { display: flex; align-items: center; gap: 15px; color: var(--text-secondary); font-size: 14px; }
+        .btn-logout {
+            background: transparent; border: 1px solid var(--border-color);
+            color: var(--text-secondary); padding: 6px 14px;
+            border-radius: var(--radius-sm); cursor: pointer; font-family: 'Tajawal', sans-serif;
+        }
+        .btn-logout:hover { color: var(--accent-pink); border-color: var(--accent-pink); }
+
+        .dash-container {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* Sidebar */
+        .dash-sidebar {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            padding: 15px 0;
+        }
+        .dash-sidebar .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 20px; color: var(--text-secondary);
+            cursor: pointer; transition: all 0.2s; font-size: 14px;
+            border-right: 3px solid transparent;
+        }
+        .dash-sidebar .nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+        .dash-sidebar .nav-item.active {
+            background: var(--bg-card); color: var(--accent-pink);
+            border-right-color: var(--accent-pink);
+        }
+        .dash-sidebar .nav-item i { width: 20px; text-align: center; }
+
+        /* Main Content */
+        .dash-main { padding: 25px; overflow-y: auto; }
+        .dash-section { display: none; }
+        .dash-section.active { display: block; }
+        .dash-section h2 { font-size: 22px; margin-bottom: 20px; }
+
+        /* Stat Cards */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius); padding: 20px;
+        }
+        .stat-card .stat-label { color: var(--text-secondary); font-size: 13px; }
+        .stat-card .stat-value { font-size: 28px; font-weight: 900; color: var(--accent-gold); margin: 5px 0; }
+        .stat-card .stat-sub { color: var(--text-muted); font-size: 12px; }
+
+        /* Tables */
+        .dash-table-wrap {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius); overflow: hidden;
+        }
+        .dash-table {
+            width: 100%; border-collapse: collapse;
+        }
+        .dash-table th {
+            background: var(--bg-secondary); color: var(--text-secondary);
+            padding: 12px 15px; font-size: 13px; text-align: right;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .dash-table td {
+            padding: 10px 15px; font-size: 13px; border-bottom: 1px solid rgba(42,42,94,0.3);
+        }
+        .dash-table tr:hover { background: rgba(255,45,120,0.05); }
+
+        .badge {
+            padding: 3px 10px; border-radius: 20px; font-size: 11px;
+        }
+        .badge-success { background: rgba(0,255,136,0.2); color: var(--accent-green); }
+        .badge-warning { background: rgba(255,215,0,0.2); color: var(--accent-gold); }
+        .badge-danger { background: rgba(255,45,120,0.2); color: var(--accent-pink); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm); padding: 12px 24px;
+            z-index: 2000; display: none; font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .toast.show { display: block; animation: fadeInUp 0.3s; }
+        .toast.success { border-color: var(--accent-green); }
+        .toast.error { border-color: var(--accent-pink); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+        .spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 2px solid var(--bg-card); border-top-color: var(--accent-pink);
+            border-radius: 50%; animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Integrations */
+        .int-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px; margin-bottom: 20px;
+        }
+        .int-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius); padding: 15px; text-align: center;
+        }
+        .int-card i { font-size: 28px; margin-bottom: 8px; }
+        .int-card .int-name { font-size: 13px; color: var(--text-secondary); }
+        .int-card .int-status { font-size: 12px; margin-top: 5px; }
+        .int-card .int-status.on { color: var(--accent-green); }
+        .int-card .int-status.off { color: var(--text-muted); }
+
+        @media (max-width: 768px) {
+            .dash-container { grid-template-columns: 1fr; }
+            .dash-sidebar { display: flex; overflow-x: auto; padding: 10px; border-left: none; border-bottom: 1px solid var(--border-color); }
+            .dash-sidebar .nav-item { white-space: nowrap; border-right: none; border-bottom: 3px solid transparent; }
+            .dash-sidebar .nav-item.active { border-right: none; border-bottom-color: var(--accent-pink); }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+    <div class="login-box">
+        <div class="login-logo">
+            <i class="fas fa-crown"></i>
+            <h1>RC Admin</h1>
+            <p>لوحة التحكم المركزية</p>
+        </div>
+        <div class="login-form">
+            <input type="text" id="login-user" placeholder="اسم المستخدم" autocomplete="username" autofocus>
+            <input type="password" id="login-pass" placeholder="كلمة السر" autocomplete="current-password">
+            <button class="btn-primary" id="login-btn" onclick="login()">
+                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+            </button>
+            <div class="login-error" id="login-error"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+    <header class="dash-header">
+        <div class="brand"><i class="fas fa-crown"></i> RC Admin</div>
+        <div class="user-info">
+            <i class="fas fa-user-cog"></i> <span id="user-name">Admin</span>
+            <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </header>
+    <div class="dash-container">
+        <!-- Sidebar -->
+        <nav class="dash-sidebar" id="sidebar">
+            <div class="nav-item active" data-section="overview" onclick="switchSection('overview')">
+                <i class="fas fa-chart-pie"></i> نظرة عامة
+            </div>
+            <div class="nav-item" data-section="sales" onclick="switchSection('sales')">
+                <i class="fas fa-shopping-cart"></i> المبيعات
+            </div>
+            <div class="nav-item" data-section="inventory" onclick="switchSection('inventory')">
+                <i class="fas fa-boxes"></i> المخزون
+            </div>
+            <div class="nav-item" data-section="users" onclick="switchSection('users')">
+                <i class="fas fa-users"></i> المستخدمين
+            </div>
+            <div class="nav-item" data-section="integrations" onclick="switchSection('integrations')">
+                <i class="fas fa-plug"></i> التكاملات
+            </div>
+            <div class="nav-item" data-section="profit" onclick="switchSection('profit')">
+                <i class="fas fa-chart-line"></i> الأرباح
+            </div>
+            <div class="nav-item" data-section="health" onclick="switchSection('health')">
+                <i class="fas fa-heartbeat"></i> صحة النظام
+            </div>
+        </nav>
+
+        <!-- Main -->
+        <main class="dash-main">
+            <!-- Overview -->
+            <div class="dash-section active" id="section-overview">
+                <h2>📊 نظرة عامة</h2>
+                <div class="stat-grid" id="overview-stats">
+                    <div class="stat-card"><div class="stat-label">مبيعات المحل اليوم</div><div class="stat-value" id="stat-store-today">0</div><div class="stat-sub">DA</div></div>
+                    <div class="stat-card"><div class="stat-label">معاملات اليوم</div><div class="stat-value" id="stat-transactions">0</div><div class="stat-sub">عملية</div></div>
+                    <div class="stat-card"><div class="stat-label">المنتجات</div><div class="stat-value" id="stat-products">0</div><div class="stat-sub">نوع</div></div>
+                    <div class="stat-card"><div class="stat-label">مخزون منخفض</div><div class="stat-value" id="stat-low-stock">0</div><div class="stat-sub">منتج</div></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                    <div class="dash-table-wrap"><h3 style="padding:15px;font-size:15px;">🛒 آخر مبيعات المحل</h3><table class="dash-table" id="recent-store-sales"><thead><tr><th>المنتج</th><th>المبلغ</th><th>التوقيت</th></tr></thead><tbody></tbody></table></div>
+                    <div class="dash-table-wrap"><h3 style="padding:15px;font-size:15px;">🌐 آخر الطلبات الأونلاين</h3><table class="dash-table" id="recent-online-orders"><thead><tr><th>العميل</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- Sales -->
+            <div class="dash-section" id="section-sales">
+                <h2>💰 المبيعات</h2>
+                <div class="stat-grid">
+                    <div class="stat-card"><div class="stat-label">مبيعات المحل</div><div class="stat-value" id="sales-store-total">0</div><div class="stat-sub">DA</div></div>
+                    <div class="stat-card"><div class="stat-label">الطلبات الأونلاين</div><div class="stat-value" id="sales-online-count">0</div><div class="stat-sub">طلب</div></div>
+                </div>
+                <div class="dash-table-wrap" style="margin-top:15px;">
+                    <table class="dash-table" id="all-sales-table"><thead><tr><th>رقم</th><th>المنتج</th><th>الكمية</th><th>المبلغ</th><th>وسيلة الدفع</th><th>التاريخ</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- Inventory -->
+            <div class="dash-section" id="section-inventory">
+                <h2>📦 المخزون</h2>
+                <div class="dash-table-wrap">
+                    <table class="dash-table" id="inventory-table"><thead><tr><th>المنتج</th><th>SKU</th><th>المخزون</th><th>السعر</th><th>الحالة</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- Users -->
+            <div class="dash-section" id="section-users">
+                <h2>👥 المستخدمين</h2>
+                <div class="dash-table-wrap">
+                    <table class="dash-table" id="users-table"><thead><tr><th>الاسم</th><th>الدور</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- Integrations -->
+            <div class="dash-section" id="section-integrations">
+                <h2>🔌 التكاملات</h2>
+                <div class="int-grid" id="int-grid"></div>
+            </div>
+
+            <!-- Profit -->
+            <div class="dash-section" id="section-profit">
+                <h2>📈 تقرير الأرباح</h2>
+                <div class="stat-grid">
+                    <div class="stat-card"><div class="stat-label">الإيرادات</div><div class="stat-value" id="profit-revenue" style="color:var(--accent-green);">0</div><div class="stat-sub">DA</div></div>
+                    <div class="stat-card"><div class="stat-label">المصاريف</div><div class="stat-value" id="profit-expenses" style="color:var(--accent-pink);">0</div><div class="stat-sub">DA</div></div>
+                    <div class="stat-card"><div class="stat-label">صافي الربح</div><div class="stat-value" id="profit-net">0</div><div class="stat-sub">DA</div></div>
+                    <div class="stat-card"><div class="stat-label">الهامش</div><div class="stat-value" id="profit-margin">0%</div><div class="stat-sub"></div></div>
+                </div>
+            </div>
+
+            <!-- Health -->
+            <div class="dash-section" id="section-health">
+                <h2>🖥️ صحة النظام</h2>
+                <div class="stat-grid">
+                    <div class="stat-card"><div class="stat-label">المساحة</div><div class="stat-value" id="health-db-size">0 MB</div><div class="stat-sub">SQLite</div></div>
+                    <div class="stat-card"><div class="stat-label">الحالة</div><div class="stat-value" id="health-status" style="color:var(--accent-green);">✅ جيد</div><div class="stat-sub"></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var STATE = { token: null, user: null };
+
+// Toast
+function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || 'success');
+    setTimeout(function(){ t.className = 'toast'; }, 3000);
+}
+
+// Login
+async function login() {
+    var user = document.getElementById('login-user').value.trim();
+    var pass = document.getElementById('login-pass').value.trim();
+    var btn = document.getElementById('login-btn');
+    var err = document.getElementById('login-error');
+
+    if (!user || !pass) { err.textContent = 'يرجى إدخال اسم المستخدم وكلمة السر'; err.style.display = 'block'; return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> جاري تسجيل الدخول...';
+    err.style.display = 'none';
+
+    try {
+        var r = await fetch('/api/v1/admin/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: user, password: pass})
+        });
+        var data = await r.json();
+
+        if (data.token) {
+            STATE.token = data.token;
+            STATE.user = data.user;
+            localStorage.setItem('admin_token', data.token);
+            localStorage.setItem('admin_user', JSON.stringify(data.user));
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.add('active');
+            document.getElementById('user-name').textContent = data.user.display_name || data.user.username || 'Admin';
+            loadDashboard();
+        } else {
+            err.textContent = data.error || 'خطأ في تسجيل الدخول';
+            err.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
+        }
+    } catch(e) {
+        err.textContent = 'خطأ في الاتصال: ' + e.message;
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
+    }
+}
+
+// Auto-login
+(function(){
+    var t = localStorage.getItem('admin_token');
+    var u = localStorage.getItem('admin_user');
+    if (t && u) {
+        STATE.token = t; STATE.user = JSON.parse(u);
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard').classList.add('active');
+        document.getElementById('user-name').textContent = STATE.user.display_name || STATE.user.username || 'Admin';
+        loadDashboard();
+    }
+})();
+
+function logout() {
+    STATE.token = null; STATE.user = null;
+    localStorage.removeItem('admin_token'); localStorage.removeItem('admin_user');
+    document.getElementById('dashboard').classList.remove('active');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-btn').disabled = false;
+    document.getElementById('login-btn').innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
+}
+
+function switchSection(id) {
+    document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+    document.querySelectorAll('.dash-section').forEach(function(s){ s.classList.remove('active'); });
+    document.querySelector('.nav-item[data-section="' + id + '"]').classList.add('active');
+    document.getElementById('section-' + id).classList.add('active');
+}
+
+function headers() {
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + STATE.token
+    };
+}
+
+async function api(path) {
+    var r = await fetch(path, {headers: headers()});
+    if (r.status === 401) { showToast('انتهت الجلسة، سجل دخول مرة أخرى', 'error'); logout(); return null; }
+    return r.json();
+}
+
+async function loadDashboard() {
+    try {
+        // Overview
+        var dash = await api('/api/v1/admin/dashboard');
+        if (dash) {
+            var st = dash.store_today || {};
+            document.getElementById('stat-store-today').textContent = (st.total || 0).toLocaleString();
+            document.getElementById('stat-transactions').textContent = st.count || 0;
+            document.getElementById('stat-products').textContent = (dash.inventory_summary && dash.inventory_summary.total_products) || 0;
+            document.getElementById('stat-low-stock').textContent = dash.low_stock_count || 0;
+
+            var stBody = document.querySelector('#recent-store-sales tbody');
+            stBody.innerHTML = (dash.recent_store_sales || []).map(function(s){
+                return '<tr><td>' + (s.product_name || '') + '</td><td>' + (s.total || 0).toLocaleString() + ' DA</td><td>' + (s.sale_date || '').slice(0,16) + '</td></tr>';
+            }).join('') || '<tr><td colspan="3">لا توجد مبيعات</td></tr>';
+
+            var olBody = document.querySelector('#recent-online-orders tbody');
+            olBody.innerHTML = (dash.recent_online_orders || []).map(function(o){
+                var statusClass = o.status === 'delivered' ? 'badge-success' : o.status === 'cancelled' ? 'badge-danger' : 'badge-warning';
+                return '<tr><td>' + (o.customer_name || '') + '</td><td>' + (o.total || 0).toLocaleString() + ' DA</td><td><span class="badge ' + statusClass + '">' + o.status + '</span></td></tr>';
+            }).join('') || '<tr><td colspan="3">لا توجد طلبات</td></tr>';
+        }
+
+        // Products/Inventory
+        var prod = await api('/api/v1/admin/products');
+        if (prod) {
+            var invBody = document.querySelector('#inventory-table tbody');
+            invBody.innerHTML = (prod.products || []).slice(0,30).map(function(p){
+                var qty = p.store_quantity || 0;
+                var badge = qty > 5 ? 'badge-success' : qty > 0 ? 'badge-warning' : 'badge-danger';
+                var label = qty > 5 ? 'متوفر' : qty > 0 ? 'محدود' : 'غير متوفر';
+                return '<tr><td>' + (p.name || '') + '</td><td>' + (p.sku || '') + '</td><td>' + qty + '</td><td>' + (p.store_price || 0).toLocaleString() + ' DA</td><td><span class="badge ' + badge + '">' + label + '</span></td></tr>';
+            }).join('') || '<tr><td colspan="5">لا توجد منتجات</td></tr>';
+        }
+
+        // Sales full
+        var sales = await api('/api/v1/admin/sales/store');
+        if (sales) {
+            document.getElementById('sales-store-total').textContent = (sales.total_revenue || 0).toLocaleString();
+            var sBody = document.querySelector('#all-sales-table tbody');
+            sBody.innerHTML = (sales.sales || []).slice(0,50).map(function(s, i){
+                var pm = {cash:'نقدي',card:'بطاقة',bank_transfer:'تحويل',check:'شيك'};
+                return '<tr><td>' + (i+1) + '</td><td>' + (s.product_name || '') + '</td><td>' + s.quantity + '</td><td>' + (s.total || 0).toLocaleString() + ' DA</td><td>' + (pm[s.payment_method] || s.payment_method) + '</td><td>' + (s.sale_date || '').slice(0,16) + '</td></tr>';
+            }).join('') || '<tr><td colspan="6">لا توجد مبيعات</td></tr>';
+        }
+
+        // Online orders count
+        var online = await api('/api/v1/admin/sales/online');
+        if (online) {
+            document.getElementById('sales-online-count').textContent = (online.orders || []).length;
+        }
+
+        // Users
+        var users = await api('/api/v1/admin/users');
+        if (users) {
+            var uBody = document.querySelector('#users-table tbody');
+            uBody.innerHTML = (users.users || []).map(function(u){
+                var roleLabel = u.role === 'admin' ? 'مدير النظام' : 'مدير المحل';
+                return '<tr><td>' + (u.display_name || u.username) + '</td><td>' + roleLabel + '</td><td>' + (u.is_active ? '🟢 نشط' : '🔴 غير نشط') + '</td><td>' + (u.created_at || '').slice(0,10) + '</td></tr>';
+            }).join('') || '<tr><td colspan="4">لا يوجد مستخدمين</td></tr>';
+        }
+
+        // Integrations
+        var ints = await api('/api/v1/admin/integrations');
+        if (ints && ints.integrations) {
+            var ig = document.getElementById('int-grid');
+            var icons = {shopify:'fab fa-shopify', facebook:'fab fa-facebook', whatsapp:'fab fa-whatsapp', zr_express:'fas fa-truck', ai:'fas fa-robot'};
+            ig.innerHTML = Object.entries(ints.integrations).map(function(kv){
+                var name = kv[0]; var info = kv[1];
+                var icon = icons[name] || 'fas fa-plug';
+                var on = info.configured;
+                return '<div class="int-card"><i class="' + icon + '" style="color:' + (on ? 'var(--accent-green)' : 'var(--text-muted)') + '"></i><div class="int-name">' + name + '</div><div class="int-status ' + (on ? 'on' : 'off') + '">' + (on ? '🟢 متصل' : '⚫ غير متصل') + '</div></div>';
+            }).join('');
+        }
+
+        // Profit
+        var profit = await api('/api/v1/admin/reports/profit');
+        if (profit) {
+            document.getElementById('profit-revenue').textContent = (profit.revenue || 0).toLocaleString();
+            document.getElementById('profit-expenses').textContent = (profit.expenses || 0).toLocaleString();
+            document.getElementById('profit-net').textContent = (profit.profit || 0).toLocaleString();
+            document.getElementById('profit-margin').textContent = (profit.profit_margin || 0) + '%';
+        }
+
+        // Health
+        var health = await api('/api/v1/admin/system/health');
+        if (health && health.database) {
+            document.getElementById('health-db-size').textContent = (health.database.size_mb || 0).toFixed(2) + ' MB';
+        }
+
+        showToast('✅ تم تحميل البيانات بنجاح');
+    } catch(e) {
+        showToast('❌ خطأ في تحميل البيانات: ' + e.message, 'error');
+    }
+}
+
+console.log('👑 RC Admin Dashboard Ready');
+</script>
+</body>
+</html>

@@ -16,7 +16,7 @@ if _parent_dir not in sys.path:
 import hashlib
 import hmac
 
-from flask import Flask, jsonify, send_from_directory, request, Response
+from flask import Flask, jsonify, send_from_directory, request, Response, render_template
 from flask_cors import CORS
 
 from .config import Config
@@ -53,6 +53,13 @@ def create_app():
     app.register_blueprint(conversations_bp)
     app.register_blueprint(zr_bp)
 
+    # Configure template folder for Dark Neon Dashboard
+    _template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "templates")
+    if os.path.isdir(_template_dir):
+        app.template_folder = _template_dir
+        app.jinja_loader = __import__("jinja2").FileSystemLoader(_template_dir)
+        app.logger.info(f"Using template folder: {_template_dir}")
+    
     # ─── Init Database ────────────────────────────────────────
     with app.app_context():
         try:
@@ -69,11 +76,63 @@ def create_app():
 
     @app.route("/dashboard")
     def dashboard():
-        return send_from_directory(app.static_folder, "dashboard.html")
+        # Try the Dark Neon template first, fallback to static
+        try:
+            return render_template("store_dashboard.html")
+        except Exception:
+            return send_from_directory(app.static_folder, "dashboard.html")
 
     @app.route("/onboarding")
     def onboarding():
         return send_from_directory(app.static_folder, "onboarding.html")
+
+    @app.route("/dashboard/orders")
+    def dashboard_orders():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/clients")
+    def dashboard_clients():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/products")
+    def dashboard_products():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/chat")
+    def dashboard_chat():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/settings")
+    def dashboard_settings():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/shipments")
+    def dashboard_shipments():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/constellation")
+    def dashboard_constellation():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/auto-ship")
+    def dashboard_autoship():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/agents")
+    def dashboard_agents():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/analytics")
+    def dashboard_analytics():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/inventory")
+    def dashboard_inventory():
+        return send_from_directory(app.static_folder, "dashboard.html")
+
+    @app.route("/dashboard/marketing")
+    def dashboard_marketing():
+        return send_from_directory(app.static_folder, "dashboard.html")
 
     # ─── Webhook Endpoint (Messenger & Instagram) ────────────
 

@@ -1,0 +1,95 @@
+{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ messages:[], conversations:{}, activeConv:null, filter:'all', search:'', loadMsgs(){ fetch('/api/messages?limit=100').then(r=>r.json()).then(d=>{ if(d.success){ this.messages=d.messages; this.buildConvs() } }) }, buildConvs(){ let c={}; this.messages.forEach(m=>{ let k=m.sender_id+'@@'+m.platform; if(!c[k]) c[k]={sender_id:m.sender_id,platform:m.platform,messages:[],last_time:null,unread:0,display_name:null}; c[k].messages.push(m); if(!c[k].last_time||m.created_at>c[k].last_time) c[k].last_time=m.created_at; if(!m.reply) c[k].unread++ }); this.conversations=c; this.fetchNames() }, fetchNames(){ Object.values(this.conversations).forEach(c=>{ if(c.platform!='whatsapp'&&!c.display_name){ fetch('/api/profile?sender_id='+c.sender_id+'&platform='+c.platform).then(r=>r.json()).then(d=>{ if(d.success&&d.name) c.display_name=d.name }).catch(()=>{ c.display_name=c.sender_id.slice(0,16) }) } }) }, toggleIntervention(e){ let enabled=e.target.checked; if(enabled) fetch('/api/agent/switch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:'customer_support'})}) }, sendReply(){ if(!this.activeConv) return; let parts=this.activeConv.split('@@'); let sid=parts[0], plat=parts[1]; let text=document.getElementById('replyInput')?.value; if(!text) return; fetch('/api/agent/route-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,platform:plat,uid:sid})}).then(()=>{ document.getElementById('replyInput').value=''; this.loadMsgs(); if(plat==='whatsapp') fetch('/api/whatsapp/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:sid,text:text})}) }) } }" x-init="loadMsgs(); setInterval(()=>loadMsgs(),10000)">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">💬 المحادثات الحية <span class="text-sm text-gray-500 font-normal">Live Inbox</span></h1>
+        <div class="flex gap-2">
+            <div class="flex gap-1">
+                <button @click="filter='all'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='all'?'bg-royal-600/20 text-royal-300 border border-royal-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'">الكل</button>
+                <button @click="filter='whatsapp'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='whatsapp'?'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                <button @click="filter='messenger'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='messenger'?'bg-blue-600/20 text-blue-300 border border-blue-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'"><i class="fab fa-facebook-messenger"></i> Messenger</button>
+                <button @click="filter='instagram'; loadMsgs()" class="px-3 py-1.5 rounded-lg text-xs" :class="filter=='instagram'?'bg-pink-600/20 text-pink-300 border border-pink-500/30':'bg-[#1a1a23] text-gray-400 border border-[#2a2a35] hover:bg-[#252530]'"><i class="fab fa-instagram"></i> Instagram</button>
+            </div>
+            <input type="text" x-model="search" placeholder="بحث..." class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm w-40">
+        </div>
+    </div>
+
+    <div class="flex gap-4 h-[calc(100vh-180px)]">
+        <!-- Conversations list -->
+        <div class="w-80 shrink-0 bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden flex flex-col">
+            <div class="px-4 py-3 border-b border-[#2a2a35] flex justify-between items-center">
+                <span class="text-sm text-gray-400">المحادثات</span>
+                <span class="text-xs text-emerald-400 flex items-center gap-1"><span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> مباشر</span>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <template x-for="conv in Object.values(conversations).filter(c=>filter=='all'||c.platform==filter).filter(c=>!search||c.sender_id.includes(search)).sort((a,b)=>b.last_time?.localeCompare(a.last_time||''))" :key="conv.sender_id+conv.platform">
+                    <div @click="activeConv=conv.sender_id+'@@'+conv.platform" class="px-4 py-3 border-b border-[#2a2a35] cursor-pointer transition" :class="activeConv==conv.sender_id+'@@'+conv.platform?'bg-royal-600/10 border-r-2 border-royal-500':'hover:bg-[#252530]'">
+                        <div class="flex justify-between items-center">
+                            <p class="text-sm font-medium truncate" x-text="conv.display_name||conv.sender_id.slice(0,16)"></p>
+                            <span class="text-xs text-gray-500" x-text="conv.last_time?.slice(5,16)||''"></span>
+                        </div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <span class="w-1.5 h-1.5 rounded-full" :class="conv.unread>0?'bg-rose-500':'bg-transparent'"></span>
+                            <p class="text-xs text-gray-500 truncate" x-text="(conv.messages[conv.messages.length-1]?.message||'').slice(0,40)"></p>
+                        </div>
+                        <div class="text-[10px] text-gray-600 mt-1">
+                            <span :class="{'text-emerald-400':conv.platform=='whatsapp','text-blue-400':conv.platform=='messenger','text-pink-400':conv.platform=='instagram'}" x-text="conv.platform"></span>
+                            <span x-text="' · '+conv.messages.length+' رسالة'"></span>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="Object.keys(conversations).length===0">
+                    <div class="text-center py-12 text-gray-500 text-sm">لا توجد محادثات بعد</div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Chat detail -->
+        <div class="flex-1 bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden flex flex-col" x-show="activeConv">
+            <template x-if="activeConv && conversations[activeConv]">
+                <div class="flex flex-col h-full">
+                    <!-- Intervention bar -->
+                    <div class="px-4 py-2 bg-rose-600/10 border-b border-rose-500/20 flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-xs text-rose-400">
+                            <span>🛑</span> <span>وضع التدخل البشري — إيقاف الردود التلقائية</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" @change="toggleIntervention">
+                            <div class="w-10 h-5 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                        </label>
+                    </div>
+                    <!-- Messages -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="msgArea">
+                        <template x-for="msg in conversations[activeConv].messages.slice().reverse()" :key="msg.id">
+                            <div>
+                                <div class="flex items-start gap-2" :class="msg.reply ? 'justify-start flex-row-reverse' : ''">
+                                    <div class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed" :class="msg.reply ? 'bg-royal-600/20 border border-royal-500/20 rounded-tr-sm' : 'bg-[#252530] border border-[#2a2a35] rounded-tl-sm'">
+                                        <p x-text="msg.message"></p>
+                                        <template x-if="msg.reply">
+                                            <div class="mt-2 pt-2 border-t border-[#2a2a35] text-xs text-royal-300">🤖 <em x-text="msg.reply"></em></div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-gray-600 mt-1" :class="msg.reply ? 'text-right' : ''" x-text="msg.created_at?.slice(11,19)||''"></p>
+                            </div>
+                        </template>
+                    </div>
+                    <!-- Input -->
+                    <div class="px-4 py-3 border-t border-[#2a2a35] flex gap-2">
+                        <input id="replyInput" type="text" @keyup.enter="sendReply()" placeholder="اكتب رداً..." class="flex-1 bg-[#252530] border border-[#2a2a35] rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-royal-500/40">
+                        <button @click="sendReply()" class="bg-royal-500 hover:bg-royal-600 text-white rounded-lg px-4 py-2 text-sm transition flex items-center gap-2"><i class="fas fa-paper-plane"></i> إرسال</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+        <!-- Empty state -->
+        <div class="flex-1 bg-[#1a1a23] rounded-xl border border-[#2a2a35] flex items-center justify-center" x-show="!activeConv">
+            <div class="text-center text-gray-500">
+                <p class="text-5xl mb-3">💬</p>
+                <p class="text-sm">اختر محادثة لعرض الرسائل</p>
+                <p class="text-xs mt-1">جميع المحادثات من واتساب، ماسنجر، وإنستغرام</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

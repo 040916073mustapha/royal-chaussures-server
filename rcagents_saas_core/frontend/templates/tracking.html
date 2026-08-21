@@ -1,0 +1,40 @@
+{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ shipments: [], tracking: '', trackResult: null, loadShipments(){ fetch('/api/shipments').then(r=>r.json()).then(d=>this.shipments=d.shipments||[]) }, trackOrder(){ if(!this.tracking) return; fetch('/api/shipments/'+this.tracking).then(r=>r.json()).then(d=>this.trackResult=d); this.tracking='' } }" x-init="loadShipments()">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">🔍 تتبع الشحنات</h1>
+        <div class="flex gap-2">
+            <input type="text" x-model="tracking" @keyup.enter="trackOrder()" placeholder="رقم التتبع..." class="bg-[#1a1a23] border border-[#2a2a35] rounded-lg px-3 py-2 text-sm w-48">
+            <button @click="trackOrder()" class="bg-royal-500/20 text-royal-300 border border-royal-500/30 px-4 py-2 rounded-lg text-sm hover:bg-royal-500/30 transition">بحث</button>
+        </div>
+    </div>
+    <!-- Tracking result -->
+    <template x-if="trackResult">
+        <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] p-5 mb-4">
+            <h3 class="text-lg font-semibold mb-2" x-text="'شحنة: '+trackResult.tracking"></h3>
+            <p class="text-sm text-gray-400" x-text="'الحالة: '+trackResult.status"></p>
+            <p class="text-sm text-gray-400" x-text="'الوجهة: '+trackResult.destination"></p>
+        </div>
+    </template>
+    <!-- Shipments list -->
+    <div class="bg-[#1a1a23] rounded-xl border border-[#2a2a35] overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-[#252530] text-gray-400">
+                <tr><th class="p-3 text-right">رقم التتبع</th><th class="p-3 text-right">الزبون</th><th class="p-3 text-right">الولاية</th><th class="p-3 text-right">الحالة</th><th class="p-3 text-right">التاريخ</th></tr>
+            </thead>
+            <tbody>
+                <template x-for="s in shipments" :key="s.id">
+                    <tr class="border-t border-[#2a2a35] hover:bg-[#252530]/50">
+                        <td class="p-3 font-medium" x-text="s.tracking||'-'"></td>
+                        <td class="p-3" x-text="s.customer||'-'"></td>
+                        <td class="p-3 text-gray-400" x-text="s.wilaya||'-'"></td>
+                        <td class="p-3"><span class="text-xs px-2 py-1 rounded" :class="{'bg-emerald-500/20 text-emerald-400':s.status=='delivered','bg-yellow-500/20 text-yellow-400':s.status=='pending','bg-blue-500/20 text-blue-400':s.status=='shipped'}" x-text="s.status"></span></td>
+                        <td class="p-3 text-xs text-gray-500" x-text="s.date?.slice(0,10)||'-'"></td>
+                    </tr>
+                </template>
+                <tr x-show="shipments.length===0"><td colspan="5" class="p-8 text-center text-gray-500">لا توجد شحنات</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

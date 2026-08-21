@@ -1,0 +1,107 @@
+{% extends "dashboard_base.html" %}
+{% block content %}
+<div x-data="{ 
+        products: [], 
+        search: '', 
+        loading: true,
+        get filteredProducts() {
+            if (!this.search) return this.products;
+            return this.products.filter(p => p.title.toLowerCase().includes(this.search.toLowerCase()));
+        }
+     }" 
+     x-init="fetch('/api/products').then(r=>r.json()).then(d=>{ products=d.products||[]; loading=false; }).catch(()=>loading=false)">
+    
+    <!-- Top Header & Search -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400 shadow-sm">
+                <i class="fa-solid fa-shoe-prints text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-extrabold text-white tracking-tight font-serif flex items-center gap-2">
+                    <span>المنتجات والمخزون</span>
+                    <span class="text-gold-400 text-sm">👑</span>
+                </h1>
+                <p class="text-xs text-gray-400 mt-0.5">إدارة كتالوج أحذية وحقائب Royal Chaussures والمخزون المتاح</p>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative w-full md:w-80">
+            <i class="fa-solid fa-magnifying-glass absolute right-3.5 top-1/2 -translate-y-1/2 text-gold-500/60 text-xs"></i>
+            <input type="text" 
+                   x-model="search" 
+                   placeholder="بحث عن منتج بالاسم..." 
+                   class="w-full bg-luxury-card border border-gold-500/20 text-gray-200 text-xs rounded-xl py-2.5 pr-10 pl-4 focus:outline-none focus:border-gold-500/50 placeholder-gray-500 transition-all">
+        </div>
+    </div>
+
+    <!-- Skeleton Loading State -->
+    <div x-show="loading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+        <template x-for="i in 10">
+            <div class="bg-luxury-card border border-gold-500/10 rounded-2xl p-3 animate-pulse">
+                <div class="aspect-[3/4] bg-luxury-hover rounded-xl mb-3"></div>
+                <div class="h-4 bg-luxury-hover rounded w-3/4 mb-2"></div>
+                <div class="h-4 bg-luxury-hover rounded w-1/2"></div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Royal Vertical Products Grid (3:4 Ratio) -->
+    <div x-show="!loading && filteredProducts.length > 0" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+        <template x-for="p in filteredProducts" :key="p.id">
+            <div class="bg-luxury-card rounded-2xl border border-gold-500/20 overflow-hidden hover:border-gold-500/60 hover:shadow-xl hover:shadow-gold-950/20 transition-all duration-300 flex flex-col group">
+                
+                <!-- Portrait Image Container (3/4 Aspect Ratio) -->
+                <div class="relative w-full aspect-[3/4] bg-luxury-bg overflow-hidden flex items-center justify-center border-b border-gold-500/10">
+                    <img :src="p.image" 
+                         :alt="p.title" 
+                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
+                         x-show="p.image">
+                    
+                    <div x-show="!p.image" class="flex flex-col items-center justify-center text-gray-600">
+                        <i class="fa-solid fa-shoe-prints text-3xl mb-1 opacity-30 text-gold-400"></i>
+                        <span class="text-[11px] font-medium text-gray-500">لا توجد صورة</span>
+                    </div>
+
+                    <!-- Floating Stock Badge -->
+                    <div class="absolute top-2.5 right-2.5 bg-black/80 backdrop-blur-md border border-gold-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="p.stock > 0 ? 'bg-emerald-400' : 'bg-rose-500'"></span>
+                        <span class="text-[11px] font-bold text-gray-200" x-text="p.stock + ' قطعة'"></span>
+                    </div>
+                </div>
+
+                <!-- Product Details Footer -->
+                <div class="p-3.5 flex flex-col justify-between flex-1 gap-2.5">
+                    <div>
+                        <h3 class="font-bold text-gray-100 text-sm leading-snug group-hover:text-gold-300 transition-colors line-clamp-1" x-text="p.title"></h3>
+                        <p class="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-layer-group text-[10px] text-gold-400"></i>
+                            <span x-text="p.variants + ' مقاسات'"></span>
+                        </p>
+                    </div>
+
+                    <!-- Price Footer -->
+                    <div class="pt-2 border-t border-gold-500/15 flex items-center justify-between mt-auto">
+                        <span class="text-[11px] text-gray-400 font-medium">السعر</span>
+                        <span class="text-sm font-extrabold text-gold-300 font-serif" 
+                              x-text="(p.price_min==p.price_max ? p.price_min.toLocaleString() : p.price_min.toLocaleString()+' - '+p.price_max.toLocaleString()) + ' د.ج'">
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </template>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="!loading && filteredProducts.length === 0" class="bg-luxury-card border border-gold-500/20 rounded-2xl p-12 text-center max-w-md mx-auto my-12 shadow-xl">
+        <div class="w-16 h-16 rounded-2xl bg-luxury-hover border border-gold-500/20 flex items-center justify-center mx-auto mb-4 text-gold-400 text-2xl">
+            <i class="fa-solid fa-boxes-spin"></i>
+        </div>
+        <h3 class="text-lg font-bold text-gray-200 mb-1 font-serif">لم يتم العثور على أي منتج</h3>
+        <p class="text-xs text-gray-500" x-text="search ? 'جرب البحث بكلمة أخرى' : 'لا توجد منتجات مسجلة حالياً في النظام'"></p>
+    </div>
+
+</div>
+{% endblock %}

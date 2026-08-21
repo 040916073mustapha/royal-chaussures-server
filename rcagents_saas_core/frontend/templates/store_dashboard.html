@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - RC Agents</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #0a0a12;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        /* Sidebar */
+        .sidebar {
+            position: fixed; right: 0; top: 0; width: 260px; height: 100vh;
+            background: linear-gradient(180deg, #0f0c29, #1a153a);
+            border-left: 1px solid rgba(255,255,255,0.06);
+            padding: 20px; z-index: 100;
+            display: flex; flex-direction: column;
+        }
+        .logo { text-align: center; padding: 20px 0 30px; }
+        .logo h1 { font-size: 22px; font-weight: 900; background: linear-gradient(135deg, #667eea, #764ba2, #f093fb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo .store-badge { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; border-radius: 10px;
+            color: rgba(255,255,255,0.5); text-decoration: none;
+            transition: all 0.2s; margin-bottom: 4px;
+            font-size: 14px; font-weight: 500;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: rgba(102,126,234,0.12); color: #fff;
+        }
+        .nav-item.active { background: rgba(102,126,234,0.2); border-right: 3px solid #667eea; }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+        .sidebar-footer { margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .sidebar-footer .store-name { font-size: 13px; color: rgba(255,255,255,0.6); }
+        .sidebar-footer .store-id { font-size: 11px; color: rgba(255,255,255,0.3); }
+
+        /* Main */
+        .main { margin-right: 260px; padding: 30px; }
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .top-bar h2 { font-size: 24px; font-weight: 700; }
+        .top-bar .domain-badge {
+            font-size: 12px; padding: 4px 12px;
+            background: rgba(102,126,234,0.15); border-radius: 20px;
+            color: #667eea;
+        }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 30px; }
+        .stat-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; padding: 20px; transition: all 0.3s;
+        }
+        .stat-card:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+        .stat-card .label { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 900; }
+        .stat-card .sub { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 4px; }
+
+        /* Tables */
+        .card {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; margin-bottom: 24px; overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-header h3 { font-size: 16px; font-weight: 700; }
+        .card-header .badge { font-size: 11px; padding: 2px 10px; background: rgba(255,255,255,0.06); border-radius: 12px; color: rgba(255,255,255,0.5); }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: right; padding: 12px 16px; font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.04); text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        .status { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-pending { background: rgba(255,193,7,0.15); color: #ffc107; }
+        .status-confirmed { background: rgba(13,202,240,0.15); color: #0dcaf0; }
+        .status-delivered { background: rgba(25,135,84,0.15); color: #198754; }
+        .status-cancelled { background: rgba(220,53,69,0.15); color: #dc3545; }
+        
+        .loading { text-align: center; padding: 40px; color: rgba(255,255,255,0.3); }
+        .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #667eea; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-right: 0; padding: 20px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div x-data="dashboardApp()" x-init="init()">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <h1>🚀 RC Agents</h1>
+            <div class="store-badge" x-text="storeName"></div>
+        </div>
+        <nav>
+            <a class="nav-item" :class="{ active: activeTab === 'dashboard' }" @click.prevent="activeTab = 'dashboard'; loadData()" href="#">
+                <span class="nav-icon">📊</span> لوحة التحكم
+            </a>
+            <a class="nav-item" :class="{ active: activeTab === 'orders' }" @click.prevent="activeTab = 'orders'; loadOrders()" href="#">
+                <span class="nav-icon">📦</span> الطلبات
+            </a>
+            <a class="nav-item" :class="{ active: activeTab === 'products' }" @click.prevent="activeTab = 'products'; loadProducts()" href="#">
+                <span class="nav-icon">👟</span> المنتجات
+            </a>
+            <a class="nav-item" :class="{ active: activeTab === 'clients' }" @click.prevent="activeTab = 'clients'; loadClients()" href="#">
+                <span class="nav-icon">👥</span> العملاء
+            </a>
+            <a class="nav-item" :class="{ active: activeTab === 'settings' }" @click.prevent="activeTab = 'settings'" href="#">
+                <span class="nav-icon">⚙️</span> الإعدادات
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="store-name" x-text="storeName"></div>
+            <div class="store-id" x-text="'store_id: ' + storeId"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <div class="top-bar">
+            <h2 x-text="pageTitle"></h2>
+            <span class="domain-badge">🌐 {{ domain }}</span>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div x-show="activeTab === 'dashboard'">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">إجمالي الطلبات</div>
+                    <div class="value" style="color: #667eea;" x-text="stats.total_orders || '—'"></div>
+                    <div class="sub" x-text="'confirmé: ' + (stats.confirmed || 0)"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">الإيرادات</div>
+                    <div class="value" style="color: #10b981;" x-text="formatMoney(stats.revenue)"></div>
+                    <div class="sub" x-text="'DZD ' + (stats.revenue || 0).toLocaleString()"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">قيد الانتظار</div>
+                    <div class="value" style="color: #ffc107;" x-text="stats.pending || '—'"></div>
+                    <div class="sub" x-text="'نسبة التوصيل: ' + (stats.delivery_rate || 0) + '%'"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">العملاء</div>
+                    <div class="value" style="color: #f093fb;" x-text="stats.clients_count || '—'"></div>
+                    <div class="sub">مسجلون في النظام</div>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>🕐 آخر الطلبات</h3>
+                    <span class="badge" x-text="'من أصل ' + (stats.total_orders || 0)"></span>
+                </div>
+                <div class="loading" x-show="loading">
+                    <div class="spinner"></div>
+                    <div style="margin-top: 12px;">جاري تحميل البيانات...</div>
+                </div>
+                <table x-show="!loading && recentOrders.length > 0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>العميل</th>
+                            <th>المنتج</th>
+                            <th>المبلغ</th>
+                            <th>الحالة</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="order in recentOrders" :key="order.id">
+                            <tr>
+                                <td x-text="'#' + order.id" style="color: rgba(255,255,255,0.4);"></td>
+                                <td><strong x-text="order.customer"></strong><br><span style="font-size:11px;color:rgba(255,255,255,0.3)" x-text="order.phone"></span></td>
+                                <td x-text="order.product"></td>
+                                <td x-text="formatMoney(order.total)"></td>
+                                <td><span class="status" :class="'status-' + order.status.toLowerCase()" x-text="order.status"></span></td>
+                                <td style="font-size:11px;color:rgba(255,255,255,0.3)" x-text="order.date"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div x-show="activeTab === 'orders'" x-cloak>
+            <div class="card">
+                <div class="card-header">
+                    <h3>📦 جميع الطلبات</h3>
+                    <div>
+                        <select @change="loadOrders()" x-model="orderFilter" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:6px 12px; color:#fff; font-size:13px;">
+                            <option value="">الكل</option>
+                            <option value="Nouveau">جديد</option>
+                            <option value="Confirme">مؤكد</option>
+                            <option value="Livre">تم التوصيل</option>
+                            <option value="Annule">ملغي</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="loading" x-show="loading">
+                    <div class="spinner"></div>
+                    <div style="margin-top: 12px;">جاري تحميل الطلبات...</div>
+                </div>
+                <table x-show="!loading && orders.length > 0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>العميل</th>
+                            <th>رقم الهاتف</th>
+                            <th>المنتج</th>
+                            <th>الكمية</th>
+                            <th>المبلغ</th>
+                            <th>الحالة</th>
+                            <th>الولاية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="order in orders" :key="order.id">
+                            <tr>
+                                <td style="color:rgba(255,255,255,0.4)" x-text="'#' + order.id"></td>
+                                <td><strong x-text="order.customer"></strong></td>
+                                <td dir="ltr" style="text-align:left" x-text="order.phone"></td>
+                                <td x-text="order.product"></td>
+                                <td x-text="order.qty"></td>
+                                <td x-text="formatMoney(order.total)"></td>
+                                <td><span class="status" :class="'status-' + order.status.toLowerCase()" x-text="order.status"></span></td>
+                                <td x-text="order.wilaya"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                <div class="loading" x-show="!loading && orders.length === 0" style="color:rgba(255,255,255,0.3); padding: 40px;">
+                    لا توجد طلبات بعد
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Tab -->
+        <div x-show="activeTab === 'products'" x-cloak>
+            <div class="card">
+                <div class="card-header">
+                    <h3>👟 المنتجات المتاحة</h3>
+                    <span class="badge" x-text="products.length + ' منتج'"></span>
+                </div>
+                <div class="loading" x-show="loading">
+                    <div class="spinner"></div>
+                </div>
+                <table x-show="!loading">
+                    <thead>
+                        <tr>
+                            <th>الصورة</th>
+                            <th>الاسم</th>
+                            <th>الموديلات</th>
+                            <th>المخزون</th>
+                            <th>السعر</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="p in products" :key="p.id">
+                            <tr>
+                                <td><img :src="p.image" style="width:40px;height:40px;border-radius:8px;object-fit:cover;" alt=""></td>
+                                <td x-text="p.title"></td>
+                                <td x-text="p.variants + ' خيار'"></td>
+                                <td x-text="p.stock"></td>
+                                <td x-text="formatMoney(p.price_min) + ' - ' + formatMoney(p.price_max)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Clients Tab -->
+        <div x-show="activeTab === 'clients'" x-cloak>
+            <div class="card">
+                <div class="card-header">
+                    <h3>👥 العملاء</h3>
+                    <span class="badge" x-text="clients.length + ' عميل'"></span>
+                </div>
+                <div class="loading" x-show="loading">
+                    <div class="spinner"></div>
+                </div>
+                <table x-show="!loading">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>رقم الهاتف</th>
+                            <th>الولاية</th>
+                            <th>الطلبات</th>
+                            <th>إجمالي الإنفاق</th>
+                            <th>آخر طلب</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="c in clients" :key="c.id">
+                            <tr>
+                                <td><strong x-text="c.name || '—'"></strong></td>
+                                <td dir="ltr" style="text-align:left" x-text="c.phone"></td>
+                                <td x-text="c.wilaya"></td>
+                                <td x-text="c.orders"></td>
+                                <td x-text="formatMoney(c.spent)"></td>
+                                <td style="font-size:11px;color:rgba(255,255,255,0.3)" x-text="c.last_order || '—'"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div x-show="activeTab === 'settings'" x-cloak>
+            <div class="card">
+                <div class="card-header">
+                    <h3>⚙️ إعدادات المتجر</h3>
+                </div>
+                <div style="padding: 30px;">
+                    <p style="margin-bottom: 12px;"><strong>🏪 اسم المتجر:</strong> <span x-text="storeName"></span></p>
+                    <p style="margin-bottom: 12px;"><strong>🆔 رقم المتجر:</strong> <span x-text="storeId"></span></p>
+                    <p style="margin-bottom: 12px;"><strong>🌐 النطاق:</strong> <span x-text="domain"></span></p>
+                    <p><strong>🤖 AI Agent:</strong> DeepSeek-V4-Flash (متصفح 🔍)</p>
+                    <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                        <p style="color: rgba(255,255,255,0.5); font-size: 13px;">🚀 منصة RC Agents — مدعومة بـ AI ومتعددة المتاجر</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function dashboardApp() {
+    return {
+        activeTab: 'dashboard',
+        storeId: 0,
+        storeName: '...',
+        domain: 'rcagents.space',
+        loading: true,
+        
+        // Data
+        stats: {},
+        recentOrders: [],
+        orders: [],
+        products: [],
+        clients: [],
+        orderFilter: '',
+        
+        init() {
+            // Extract store_id from URL
+            const pathParts = window.location.pathname.split('/');
+            this.storeId = parseInt(pathParts[2]) || 1;
+            
+            // Fetch store info
+            fetch(`/api/store/${this.storeId}`).then(r => r.json()).then(data => {
+                if (data.name) this.storeName = data.name;
+                if (data.slug) this.domain = data.slug + '.rcagents.space';
+            }).catch(() => {});
+            
+            this.loadData();
+        },
+        
+        get pageTitle() {
+            const titles = {
+                dashboard: '📊 لوحة التحكم',
+                orders: '📦 الطلبات',
+                products: '👟 المنتجات',
+                clients: '👥 العملاء',
+                settings: '⚙️ الإعدادات'
+            };
+            return titles[this.activeTab] || 'لوحة التحكم';
+        },
+        
+        loadData() {
+            this.loading = true;
+            Promise.all([
+                fetch(`/api/stats?store_id=${this.storeId}`).then(r => r.json()),
+                fetch(`/api/orders?store_id=${this.storeId}&limit=10`).then(r => r.json())
+            ]).then(([statsData, ordersData]) => {
+                this.stats = statsData;
+                this.recentOrders = (ordersData.orders || []).slice(0, 10);
+                this.loading = false;
+            }).catch(() => { this.loading = false; });
+        },
+        
+        loadOrders() {
+            this.loading = true;
+            let url = `/api/orders?store_id=${this.storeId}`;
+            if (this.orderFilter) url += `&status=${this.orderFilter}`;
+            fetch(url).then(r => r.json()).then(data => {
+                this.orders = data.orders || [];
+                this.loading = false;
+            }).catch(() => { this.loading = false; });
+        },
+        
+        loadProducts() {
+            this.loading = true;
+            fetch('/api/products').then(r => r.json()).then(data => {
+                this.products = data.products || [];
+                this.loading = false;
+            }).catch(() => { this.loading = false; });
+        },
+        
+        loadClients() {
+            this.loading = true;
+            fetch(`/api/clients?store_id=${this.storeId}`).then(r => r.json()).then(data => {
+                this.clients = data.clients || [];
+                this.loading = false;
+            }).catch(() => { this.loading = false; });
+        },
+        
+        formatMoney(val) {
+            if (val === null || val === undefined) return '—';
+            const num = parseFloat(val);
+            return num.toLocaleString('ar-DZ') + ' د.ج';
+        }
+    }
+}
+</script>
+</body>
+</html>

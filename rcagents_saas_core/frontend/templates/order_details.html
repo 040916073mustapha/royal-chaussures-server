@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — تفاصيل الطلب</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+        .sidebar { position: fixed; top: 0; right: 0; width: 240px; height: 100vh; background: rgba(255,255,255,0.03); border-left: 1px solid rgba(255,255,255,0.06); padding: 32px 20px; }
+        .sidebar .logo { font-size: 20px; font-weight: 700; color: #e94560; margin-bottom: 32px; }
+        .sidebar .logo small { display: block; font-size: 12px; color: #667; font-weight: 400; }
+        .sidebar a { display: block; padding: 12px 16px; color: #999; text-decoration: none; border-radius: 10px; margin-bottom: 4px; font-size: 14px; transition: 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(233,69,96,0.1); color: #e94560; }
+        .main { margin-right: 240px; padding: 32px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 28px; color: #fff; }
+        .header .time { color: #667; font-size: 14px; }
+        .header .back-btn { padding: 10px 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #999; text-decoration: none; font-size: 14px; transition: 0.2s; }
+        .header .back-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* Order Info Cards */
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; }
+        .card .label { font-size: 12px; color: #667; margin-bottom: 6px; }
+        .card .value { font-size: 20px; font-weight: 700; color: #fff; }
+        .card .sub { font-size: 11px; color: #555; margin-top: 4px; }
+        .card.highlight { border-color: rgba(233,69,96,0.3); }
+        .card.highlight .value { color: #e94560; }
+
+        /* Sections */
+        .section { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+        .section .title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #fff; display: flex; align-items: center; gap: 8px; }
+
+        /* Status Badges */
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-pending { background: rgba(255,193,7,0.15); color: #ffc107; }
+        .badge-paid, .badge-confirmed { background: rgba(0,123,255,0.15); color: #0d6efd; }
+        .badge-shipped { background: rgba(13,202,240,0.15); color: #0dcaf0; }
+        .badge-delivered { background: rgba(25,135,84,0.15); color: #198754; }
+        .badge-cancelled { background: rgba(220,53,69,0.15); color: #dc3545; }
+
+        /* Buttons */
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+        .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+        .btn-primary { background: #0d6efd; color: #fff; }
+        .btn-success { background: #198754; color: #fff; }
+        .btn-warning { background: #ffc107; color: #000; }
+        .btn-info { background: #0dcaf0; color: #000; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #999; }
+
+        /* Info Table */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+        .info-row { display: flex; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .info-label { color: #667; font-size: 13px; min-width: 120px; }
+        .info-value { color: #e0e0e0; font-size: 13px; }
+
+        /* Products Table */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: right; padding: 10px 14px; color: #667; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 600; }
+        td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
+
+        /* Chat Log */
+        .chat-entry { padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; }
+        .chat-entry.customer { background: rgba(13,110,253,0.05); border-right: 3px solid #0d6efd; }
+        .chat-entry.agent { background: rgba(25,135,84,0.05); border-right: 3px solid #198754; }
+        .chat-entry .meta { font-size: 11px; color: #555; margin-bottom: 4px; }
+        .chat-entry .text { font-size: 13px; color: #ccc; line-height: 1.5; }
+
+        /* Input + Textarea */
+        input, textarea, select { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e0e0e0; padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; width: 100%; }
+        input:focus, textarea:focus, select:focus { border-color: #e94560; }
+        textarea { min-height: 60px; resize: vertical; }
+
+        .flex-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+        .flex-1 { flex: 1; min-width: 200px; }
+        .mt-12 { margin-top: 12px; }
+        .mb-12 { margin-bottom: 12px; }
+        .success-msg { padding: 10px 14px; border-radius: 8px; background: rgba(25,135,84,0.1); border: 1px solid rgba(25,135,84,0.2); color: #198754; font-size: 13px; display: none; }
+        .error-msg { padding: 10px 14px; border-radius: 8px; background: rgba(220,53,69,0.1); border: 1px solid rgba(220,53,69,0.2); color: #dc3545; font-size: 13px; display: none; }
+
+        /* Agent Selector */
+        .agent-select { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .agent-select select { width: auto; min-width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">Royal Chaussures &#x1F460;<small>Order Details v3.0</small></div>
+        <a href="/dashboard">&#x1F4CA; لوحة التحكم</a>
+        <a href="/dashboard/orders">&#x1F4E6; الطلبات</a>
+        <a href="/dashboard/products">&#x1F6CD;&#xFE0F; المنتجات</a>
+        <a href="/dashboard/tracking">&#x1F50D; تتبع الشحنات</a>
+        <a href="/health">&#x2764;&#xFE0F; صحة السيرفر</a>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div>
+                <h1 id="orderTitle">&#x1F4CB; تفاصيل الطلب</h1>
+                <div class="time" id="currentTime">جار التحميل...</div>
+            </div>
+            <a href="javascript:history.back()" class="back-btn">&#x2190; رجوع</a>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" style="text-align:center;padding:60px 0;color:#667;">
+            <div style="font-size:48px;margin-bottom:16px;">&#x23F3;</div>
+            <div>جار تحميل بيانات الطلب...</div>
+        </div>
+
+        <!-- Order Content (hidden initially) -->
+        <div id="orderContent" style="display:none;">
+
+            <!-- Summary Cards -->
+            <div class="cards">
+                <div class="card highlight">
+                    <div class="label">&#x1F4B0; الإجمالي</div>
+                    <div class="value" id="orderTotal">-</div>
+                    <div class="sub" id="orderCurrency">DZD</div>
+                </div>
+                <div class="card">
+                    <div class="label">&#x1F4C5; تاريخ الطلب</div>
+                    <div class="value" id="orderDate" style="font-size:15px;">-</div>
+                </div>
+                <div class="card">
+                    <div class="label">&#x1F4E6; الحالة المالية</div>
+                    <div class="value" id="orderFinancial" style="font-size:16px;">-</div>
+                </div>
+                <div class="card">
+                    <div class="label">&#x1F69A; حالة الشحن</div>
+                    <div class="value" id="orderFulfillment" style="font-size:16px;">-</div>
+                </div>
+            </div>
+
+            <!-- Section: Order Info -->
+            <div class="section">
+                <div class="title">&#x1F4CB; معلومات الطلب</div>
+                <div class="info-grid" id="orderInfoGrid"></div>
+            </div>
+
+            <!-- Section: Customer Info -->
+            <div class="section">
+                <div class="title">&#x1F464; معلومات الزبون</div>
+                <div class="info-grid" id="customerInfoGrid"></div>
+                <div class="mt-12 flex-row">
+                    <div class="flex-1">
+                        <a id="whatsappLink" href="#" target="_blank" style="display:inline-block;padding:10px 20px;background:#25D366;color:#fff;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;">&#x1F4AC; فتح واتساب</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Shipping / Address -->
+            <div class="section">
+                <div class="title">&#x1F4CD; عنوان التوصيل</div>
+                <div class="info-grid" id="addressInfoGrid"></div>
+            </div>
+
+            <!-- Section: Products -->
+            <div class="section">
+                <div class="title">&#x1F6CD;&#xFE0F; المنتجات في الطلب</div>
+                <div id="productsSection">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>المنتج</th>
+                                <th>الكمية</th>
+                                <th>السعر</th>
+                                <th>الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section: Status Updates -->
+            <div class="section">
+                <div class="title">&#x1F504; تحديث الحالة</div>
+                <div class="btn-group" id="statusButtons">
+                    <button class="btn btn-warning" onclick="updateStatus('pending')">&#x23F3; قيد الانتظار</button>
+                    <button class="btn btn-primary" onclick="updateStatus('confirmed')">&#x2705; تأكيد</button>
+                    <button class="btn btn-info" onclick="updateStatus('shipped')">&#x1F69A; شحن</button>
+                    <button class="btn btn-success" onclick="updateStatus('delivered')">&#x1F381; توصيل</button>
+                    <button class="btn btn-danger" onclick="updateStatus('cancelled')">&#x274C; إلغاء</button>
+                </div>
+                <div id="statusResult" class="success-msg mt-12"></div>
+                <div id="statusError" class="error-msg mt-12"></div>
+            </div>
+
+            <!-- Section: WhatsApp Send -->
+            <div class="section">
+                <div class="title">&#x1F4AC; إرسال رسالة واتساب</div>
+                <div class="flex-row">
+                    <div class="flex-1">
+                        <input type="text" id="whatsappNumber" placeholder="رقم الزبون (مثال: 0659832426)" value="">
+                    </div>
+                    <div class="flex-1">
+                        <select id="whatsappTemplate">
+                            <option value="">-- رسالة مخصصة --</option>
+                            <option value="confirmed">طلبك مؤكد ✅</option>
+                            <option value="shipped">طلبك تم شحنه 🚚</option>
+                            <option value="delivered">طلبك تم توصيله 🎉</option>
+                            <option value="tracking">رقم التتبع 📦</option>
+                        </select>
+                    </div>
+                </div>
+                <textarea id="whatsappMessage" class="mt-12" placeholder="اكتب الرسالة هنا..."></textarea>
+                <div class="flex-row mt-12">
+                    <button class="btn btn-success" onclick="sendWhatsApp()">&#x1F4E4; إرسال</button>
+                </div>
+                <div id="whatsappResult" class="success-msg mt-12"></div>
+                <div id="whatsappError" class="error-msg mt-12"></div>
+            </div>
+
+            <!-- Section: Agent Control -->
+            <div class="section">
+                <div class="title">&#x1F916; التحكم بالـ Agent</div>
+                <div class="agent-select mb-12">
+                    <label style="color:#667;font-size:13px;">توجيه هذا الطلب لـ:</label>
+                    <select id="agentSelect">
+                        <option value="customer_support">&#x1F91D; خدمة العملاء</option>
+                        <option value="shipping_tracking">&#x1F4E6; متابعة الشحنات</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="assignAgent()">&#x2705; تطبيق</button>
+                </div>
+                <div class="flex-row" style="gap:8px;">
+                    <input type="text" id="agentNote" placeholder="ملاحظة للوكيل (اختياري)" style="flex:2;">
+                </div>
+                <div id="agentResult" class="success-msg mt-12"></div>
+                <div id="agentError" class="error-msg mt-12"></div>
+            </div>
+
+            <!-- Section: Chat / Message Log -->
+            <div class="section">
+                <div class="title">&#x1F4AC; سجل المحادثات</div>
+                <div id="chatLog">
+                    <div style="text-align:center;padding:20px;color:#667;">لا توجد محادثات مسجلة لهذا الطلب</div>
+                </div>
+            </div>
+
+        </div><!-- /orderContent -->
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' };
+            document.getElementById('currentTime').textContent = now.toLocaleDateString('ar-DZ', options);
+        }
+        updateTime();
+        setInterval(updateTime, 60000);
+
+        // Get order ID from URL
+        const orderId = window.location.pathname.split('/').pop();
+
+        async function loadOrder() {
+            try {
+                const res = await fetch('/api/order-detail/' + orderId);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                renderOrder(data);
+            } catch(e) {
+                document.getElementById('loadingState').innerHTML =
+                    '<div style="text-align:center;padding:60px 0;color:#dc3545;">' +
+                    '&#x26A0;&#xFE0F; فشل تحميل الطلب: ' + e.message + '</div>';
+            }
+        }
+
+        function renderOrder(data) {
+            const o = data.order || {};
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('orderContent').style.display = 'block';
+
+            const name = o.name || '#' + orderId;
+            document.getElementById('orderTitle').textContent = '\uD83D\uDCCB ' + name;
+
+            // Summary
+            document.getElementById('orderTotal').textContent = (o.total_price || '0') + ' DZD';
+            document.getElementById('orderCurrency').textContent = o.currency || 'DZD';
+
+            const created = o.created_at || '';
+            document.getElementById('orderDate').textContent = created ? new Date(created).toLocaleDateString('ar-DZ') : '-';
+
+            const fin = o.financial_status || 'pending';
+            const ful = o.fulfillment_status || 'unfulfilled';
+            document.getElementById('orderFinancial').innerHTML = '<span class="badge badge-' + fin + '">' + fin + '</span>';
+            document.getElementById('orderFulfillment').innerHTML = '<span class="badge badge-' + (ful==='fulfilled'?'delivered':ful==='shipped'?'shipped':ful==='partial'?'shipped':'pending') + '">' + ful + '</span>';
+
+            // Order Info Grid
+            document.getElementById('orderInfoGrid').innerHTML = renderInfoGrid([
+                ['رقم الطلب', name],
+                ['المعرف Shopify', o.id || orderId],
+                ['الحالة المالية', fin],
+                ['حالة الشحن', ful],
+                ['تاريخ الإنشاء', created ? new Date(created).toLocaleString('ar-DZ') : '-'],
+                ['آخر تحديث', o.updated_at ? new Date(o.updated_at).toLocaleString('ar-DZ') : '-'],
+                ['العملة', o.currency || 'DZD'],
+                ['المنصة', o.source_name || 'shopify']
+            ]);
+
+            // Customer Info
+            const cust = o.customer || {};
+            document.getElementById('customerInfoGrid').innerHTML = renderInfoGrid([
+                ['الاسم', (cust.first_name || '') + ' ' + (cust.last_name || '')],
+                ['البريد', cust.email || 'غير متوفر'],
+                ['الهاتف', cust.phone || o.phone || 'غير متوفر']
+            ]);
+            const phone = cust.phone || o.phone || '';
+            const cleanPhone = phone.replace(/[^0-9]/g, '');
+            if (cleanPhone) {
+                document.getElementById('whatsappLink').href = 'https://wa.me/' + (cleanPhone.startsWith('213') ? cleanPhone : '213' + cleanPhone.slice(1));
+                document.getElementById('whatsappNumber').value = cleanPhone;
+            }
+
+            // Address
+            const addr = o.shipping_address || o.billing_address || {};
+            document.getElementById('addressInfoGrid').innerHTML = renderInfoGrid([
+                ['العنوان', (addr.address1 || '') + ' ' + (addr.address2 || '')],
+                ['المدينة', addr.city || '-'],
+                ['الولاية', addr.province || '-'],
+                ['الرمز البريدي', addr.zip || '-'],
+                ['الدولة', addr.country || '-'],
+                ['الهاتف', addr.phone || '-']
+            ]);
+
+            // Products
+            const items = o.line_items || [];
+            const tbody = document.getElementById('productsTable');
+            if (items.length > 0) {
+                tbody.innerHTML = items.map(function(item, i) {
+                    const qty = item.quantity || 1;
+                    const price = item.price || '0';
+                    const total = (parseFloat(price) * qty).toFixed(2);
+                    return '<tr>' +
+                        '<td>' + (i+1) + '</td>' +
+                        '<td>' + (item.title || item.name || 'منتج') + '</td>' +
+                        '<td>' + qty + '</td>' +
+                        '<td>' + price + ' DZD</td>' +
+                        '<td>' + total + ' DZD</td>' +
+                    '</tr>';
+                }).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#667;padding:20px;">لا توجد منتجات</td></tr>';
+            }
+
+            // WhatsApp Template
+            document.getElementById('whatsappTemplate').addEventListener('change', function() {
+                const val = this.value;
+                const msgBox = document.getElementById('whatsappMessage');
+                if (val === 'confirmed') msgBox.value = 'مرحباً! ✅ تم تأكيد طلبك ' + name + ' في Royal Chaussures. سنقوم بشحنه قريباً! شكراً لثقتك ❤️';
+                else if (val === 'shipped') msgBox.value = 'مرحباً! 🚚 تم شحن طلبك ' + name + '! وقت التوصيل المتوقع: 2-5 أيام عمل. شكراً لثقتك ❤️';
+                else if (val === 'delivered') msgBox.value = 'مرحباً! 🎉 تم توصيل طلبك ' + name + ' بنجاح! نتمنى أن ينال إعجابك. شكراً لتسوقك مع Royal Chaussures ❤️';
+                else if (val === 'tracking') msgBox.value = 'مرحباً! 📦 طلبك ' + name + ' في طريقه إليك. للتتبع: https://royal-chaussures-server.onrender.com/dashboard/tracking شكراً لثقتك ❤️';
+            });
+
+            // Chat log
+            const chats = data.chats || [];
+            if (chats.length > 0) {
+                document.getElementById('chatLog').innerHTML = chats.map(function(c) {
+                    const cls = c.type === 'customer' ? 'customer' : 'agent';
+                    const time = c.created_at ? new Date(c.created_at).toLocaleString('ar-DZ') : '-';
+                    return '<div class="chat-entry ' + cls + '">' +
+                        '<div class="meta">' + (c.platform || '') + ' | ' + time + '</div>' +
+                        '<div class="text">' + (c.message || c.text || '-') + '</div>' +
+                    '</div>';
+                }).join('');
+            }
+
+            // Local DB chats
+            const dbChats = data.db_chats || [];
+            if (dbChats.length > 0) {
+                const extra = dbChats.map(function(c) {
+                    const time = c.created_at || '-';
+                    return '<div class="chat-entry customer">' +
+                        '<div class="meta">' + (c.platform || 'system') + ' | ' + time + '</div>' +
+                        '<div class="text"><b>الزبون:</b> ' + (c.message || '-') + '</div>' +
+                        '<div class="text" style="margin-top:4px;"><b>الرد:</b> ' + (c.reply || '-') + '</div>' +
+                    '</div>';
+                }).join('');
+                document.getElementById('chatLog').innerHTML += extra;
+            }
+        }
+
+        function renderInfoGrid(rows) {
+            return rows.map(function(r) {
+                return '<div class="info-row"><span class="info-label">' + r[0] + ':</span><span class="info-value">' + r[1] + '</span></div>';
+            }).join('');
+        }
+
+        // Status Update
+        async function updateStatus(status) {
+            const resultEl = document.getElementById('statusResult');
+            const errorEl = document.getElementById('statusError');
+            resultEl.style.display = 'none';
+            errorEl.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/orders/' + orderId + '/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({status: status})
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (data.success) {
+                    resultEl.textContent = '✅ تم تحديث الحالة بنجاح: ' + status;
+                    resultEl.style.display = 'block';
+                    setTimeout(function() { resultEl.style.display = 'none'; }, 4000);
+                    loadOrder(); // Reload
+                } else {
+                    throw new Error(data.error || 'Unknown');
+                }
+            } catch(e) {
+                errorEl.textContent = '❌ فشل التحديث: ' + e.message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Send WhatsApp
+        async function sendWhatsApp() {
+            const number = document.getElementById('whatsappNumber').value.trim();
+            const message = document.getElementById('whatsappMessage').value.trim();
+            const resultEl = document.getElementById('whatsappResult');
+            const errorEl = document.getElementById('whatsappError');
+            resultEl.style.display = 'none';
+            errorEl.style.display = 'none';
+
+            if (!number || !message) {
+                errorEl.textContent = '❌ الرجاء إدخال رقم الهاتف والرسالة';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/whatsapp/send', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({to: number, text: message})
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (data.success) {
+                    resultEl.textContent = '✅ تم إرسال رسالة واتساب بنجاح!';
+                    resultEl.style.display = 'block';
+                    setTimeout(function() { resultEl.style.display = 'none'; }, 4000);
+                } else {
+                    throw new Error(data.error || 'Failed');
+                }
+            } catch(e) {
+                errorEl.textContent = '❌ فشل الإرسال: ' + e.message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Assign Agent
+        async function assignAgent() {
+            const agentId = document.getElementById('agentSelect').value;
+            const note = document.getElementById('agentNote').value.trim();
+            const resultEl = document.getElementById('agentResult');
+            const errorEl = document.getElementById('agentError');
+            resultEl.style.display = 'none';
+            errorEl.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/agent/assign-order', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({order_id: orderId, agent: agentId, note: note})
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (data.success) {
+                    resultEl.textContent = '✅ تم توجيه الطلب لـ ' + (agentId === 'customer_support' ? 'خدمة العملاء' : 'متابعة الشحنات') + ' بنجاح!';
+                    resultEl.style.display = 'block';
+                    setTimeout(function() { resultEl.style.display = 'none'; }, 4000);
+                } else {
+                    throw new Error(data.error || 'Failed');
+                }
+            } catch(e) {
+                errorEl.textContent = '❌ فشل التوجيه: ' + e.message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Load the order
+        loadOrder();
+    </script>
+</body>
+</html>

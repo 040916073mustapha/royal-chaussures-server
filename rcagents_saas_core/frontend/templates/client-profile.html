@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Chaussures — ملف العميل</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>:root{--gold:#D4AF37;--gold-light:#E8C95A;--gold-dark:#B8962A;--bg-primary:#08080f;--bg-card:rgba(255,255,255,0.03);--border-subtle:rgba(255,255,255,0.06);--border-gold:rgba(212,175,55,0.25);--text-primary:#f0f0f0;--text-secondary:#8888a0;--text-muted:#555570;--sidebar-width:240px;--radius-card:16px;--radius-sm:10px}
+    *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.25)}
+    .sidebar{position:fixed;top:0;right:0;width:var(--sidebar-width);height:100vh;background:rgba(10,10,20,0.88);backdrop-filter:blur(20px);border-left:1px solid var(--border-gold);padding:28px 16px;z-index:100;display:flex;flex-direction:column}
+    .sidebar .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--gold-light),var(--gold-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:8px 12px}
+    .sidebar .logo::after{content:'👑';font-size:14px;-webkit-text-fill-color:initial;margin-right:6px}
+    .sidebar .logo small{display:block;font-family:'Inter',sans-serif;font-size:11px;-webkit-text-fill-color:var(--text-muted);margin-top:2px}
+    .sidebar .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin:24px 12px 8px;font-weight:600}
+    .sidebar a{display:flex;align-items:center;gap:12px;padding:11px 14px;color:var(--text-secondary);text-decoration:none;border-radius:var(--radius-sm);margin-bottom:2px;font-size:14px;font-weight:500;transition:all 0.3s;position:relative}
+    .sidebar a::before{content:'';position:absolute;right:-16px;top:50%;transform:translateY(-50%) scaleY(0);width:3px;height:24px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--gold-light),var(--gold-dark));transition:transform 0.3s}
+    .sidebar a:hover,.sidebar a.active{background:rgba(212,175,55,0.08);color:var(--gold-light)}
+    .sidebar a:hover::before,.sidebar a.active::before{transform:translateY(-50%) scaleY(1)}
+    .sidebar-footer{margin-top:auto;padding:16px 14px;border-top:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-muted)}
+    .pulse-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulseDot 2s ease-in-out infinite}
+    @keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+    .main{margin-right:var(--sidebar-width);padding:28px 32px;min-height:100vh}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .header h1{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;background:linear-gradient(135deg,#fff 30%,var(--gold-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .header a{color:var(--gold-light);text-decoration:none;font-size:13px;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-gold);background:rgba(212,175,55,0.05);transition:0.3s}
+    .profile-card{background:linear-gradient(135deg,var(--bg-card),rgba(255,255,255,0.01));backdrop-filter:blur(12px);border:1px solid var(--border-subtle);border-radius:var(--radius-card);padding:28px;margin-bottom:24px}
+    .profile-card .name{font-family:'Playfair Display',serif;font-size:26px;color:#fff;margin-bottom:4px}
+    .profile-card .phone{color:var(--gold-light);font-size:18px;margin-bottom:16px}
+    .profile-stats{display:flex;gap:20px;flex-wrap:wrap}
+    .profile-stats .item{flex:1;min-width:120px;padding:14px 18px;background:rgba(255,255,255,0.02);border-radius:var(--radius-sm);border:1px solid var(--border-subtle)}
+    .profile-stats .item .lbl{font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+    .profile-stats .item .val{font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--gold-light),#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+    .actions a{padding:10px 20px;border-radius:var(--radius-sm);text-decoration:none;font-size:13px;font-weight:600;transition:0.3s}
+    .actions .whatsapp{background:rgba(37,211,102,0.12);color:#25D366;border:1px solid rgba(37,211,102,0.2)}
+    .actions .whatsapp:hover{background:rgba(37,211,102,0.2)}
+    .actions .call{background:rgba(0,122,255,0.12);color:#007AFF;border:1px solid rgba(0,122,255,0.2)}
+    .actions .call:hover{background:rgba(0,122,255,0.2)}
+    .section-title{font-size:16px;font-weight:600;margin:20px 0 14px;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:right;padding:12px 16px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border-subtle);font-weight:600;text-transform:uppercase}
+    td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.02);font-size:13px;color:var(--text-secondary)}
+    tr:hover{background:rgba(212,175,55,0.03)}
+    .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
+    .badge-paid{background:rgba(59,130,246,0.12);color:#3b82f6}
+    .badge-pending{background:rgba(234,179,8,0.12);color:#eab308}
+    .badge-delivered{background:rgba(34,197,94,0.12);color:#22c55e}
+    .badge-cancelled{background:rgba(239,68,68,0.12);color:#ef4444}
+    .loading{padding:40px;text-align:center;color:var(--text-muted)}
+    @media(max-width:768px){.sidebar{transform:translateX(100%)}.main{margin-right:0;padding:20px 16px;padding-top:68px}.header{flex-direction:column;gap:12px}.profile-stats{flex-direction:column}}
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">Royal Chaussures<small>Premium Command Center</small></div>
+        <div class="nav-label">🛠 العمليات</div>
+        <a href="/dashboard"><i class="fas fa-chart-pie icon"></i> لوحة التحكم</a>
+        <a href="/dashboard/orders"><i class="fas fa-box icon"></i> الطلبات</a>
+        <a href="/dashboard/products"><i class="fas fa-shoe-prints icon"></i> المنتجات</a>
+        <a href="/dashboard/tracking"><i class="fas fa-search icon"></i> تتبع الشحنات</a>
+        <a href="/dashboard/clients" class="active"><i class="fas fa-users icon"></i> العملاء</a>
+        <div class="nav-label">🧠 الذكاء</div>
+        <a href="/dashboard/constellation" target="_blank"><i class="fas fa-globe icon"></i> Agent Constellation</a>
+        <a href="/health"><i class="fas fa-heart icon"></i> صحة السيرفر</a>
+        <div class="sidebar-footer"><span class="pulse-dot"></span> Online</div>
+    </div>
+    <div class="main">
+        <div class="header">
+            <h1>👤 ملف العميل</h1>
+            <a href="/dashboard/clients"><i class="fas fa-arrow-right"></i> العودة للعملاء</a>
+        </div>
+        <div class="profile-card" id="profileCard">
+            <div class="name" id="clientName">جار التحميل...</div>
+            <div class="phone" id="clientPhone" dir="ltr">-</div>
+            <div class="profile-stats" id="profileStats">
+                <div class="item"><div class="lbl">إجمالي الطلبات</div><div class="val" id="pTotalOrders">0</div></div>
+                <div class="item"><div class="lbl">إجمالي الإنفاق</div><div class="val" id="pTotalSpent">0 DZD</div></div>
+                <div class="item"><div class="lbl">آخر طلب</div><div class="val" id="pLastOrder">-</div></div>
+            </div>
+            <div class="actions" id="clientActions">
+                <a href="#" target="_blank" class="whatsapp" id="whatsappBtn"><i class="fab fa-whatsapp"></i> واتساب</a>
+                <a href="#" class="call" id="callBtn"><i class="fas fa-phone"></i> اتصال</a>
+            </div>
+        </div>
+        <div class="section-title">📦 طلبات العميل</div>
+        <table><thead><tr><th>الطلب</th><th>المبلغ</th><th>المدينة</th><th>الحالة المالية</th><th>الشحن</th><th>التاريخ</th></tr></thead>
+            <tbody id="clientOrders"><tr><td colspan="6" class="loading">⏳ جار التحميل...</td></tr></tbody>
+        </table>
+    </div>
+    <script>
+    var phone = window.location.pathname.replace('/dashboard/client/','');
+    phone = decodeURIComponent(phone);
+    document.getElementById('clientPhone').textContent = phone;
+    document.getElementById('whatsappBtn').href = 'https://wa.me/'+phone.replace(/[^0-9]/g,'').replace(/^0/,'213');
+    document.getElementById('callBtn').href = 'tel:'+phone;
+    function loadClientProfile(){
+        fetch('/api/client-orders?phone='+encodeURIComponent(phone)).then(function(r){return r.json()}).then(function(d){
+            if(!d.success||!d.orders||!d.orders.length){
+                document.getElementById('clientOrders').innerHTML='<tr><td colspan="6" class="loading">لا توجد طلبات لهذا العميل</td></tr>';
+                document.getElementById('clientName').textContent='عميل';
+                return
+            }
+            var orders=d.orders;
+            document.getElementById('clientName').textContent=orders[0].customer_name||'عميل';
+            document.getElementById('pTotalOrders').textContent=orders.length;
+            var total=0;
+            orders.forEach(function(o){total+=parseFloat(o.total||0)});
+            document.getElementById('pTotalSpent').textContent=Math.round(total).toLocaleString()+' DZD';
+            document.getElementById('pLastOrder').textContent=orders[0].created_at?new Date(orders[0].created_at).toLocaleDateString('ar-DZ'):'-';
+            var tb=document.getElementById('clientOrders');
+            tb.innerHTML=orders.map(function(o){
+                var fc=o.financial_status==='paid'?'badge-paid':(o.financial_status==='cancelled'?'badge-cancelled':'badge-pending');
+                var fl=o.fulfillment_status||'unfulfilled';
+                var flc=fl==='fulfilled'?'badge-delivered':(fl==='partial'?'badge-paid':'badge-pending');
+                var date=o.created_at?new Date(o.created_at).toLocaleDateString('ar-DZ'):'-';
+                return '<tr><td>'+(o.name||o.id)+'</td><td>'+(o.total||'0')+' DZD</td><td>'+(o.city||o.wilaya||'-')+'</td><td><span class="badge '+fc+'">'+(o.financial_status||'pending')+'</span></td><td><span class="badge '+flc+'">'+fl+'</span></td><td>'+date+'</td></tr>'
+            }).join('')
+        }).catch(function(e){document.getElementById('clientOrders').innerHTML='<tr><td colspan="6" class="loading" style="color:#ef4444">⚠️ فشل التحميل</td></tr>'})
+    }
+    document.addEventListener('DOMContentLoaded',loadClientProfile);
+    </script>
+</body>
+</html>
