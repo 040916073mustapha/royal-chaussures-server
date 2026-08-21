@@ -242,6 +242,24 @@ def create_app():
         logger.error(f"500 error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+    @app.route("/api/admin/migrate")
+    def api_migrate():
+        """Run DB migration — create all tables on PostgreSQL"""
+        try:
+            from .database.models import Base, get_engine
+            url = os.getenv("DATABASE_URL") or os.getenv("SAAS_DATABASE_URL")
+            if not url:
+                return jsonify({"error": "No DATABASE_URL in environment"}), 400
+            engine = get_engine(url)
+            Base.metadata.create_all(engine)
+            inspector = __import__("sqlalchemy").inspect(engine)
+            tables = inspector.get_table_names()
+            logger.info(f"Migration complete: {', '.join(tables)}")
+            return jsonify({"status": "ok", "tables": tables})
+        except Exception as e:
+            logger.error(f"Migration error: {e}")
+            return jsonify({"error": str(e)}), 500
+
     return app
 
 
@@ -250,5 +268,5 @@ def create_app():
 if __name__ == "__main__":
     app = create_app()
     port = int(os.getenv("PORT", Config.DASHBOARD_PORT))
-    logger.info(f"🚀 RC Agents SaaS Core starting on port {port}")
+    logger.info(f"RC Agents SaaS Core starting on port {port}")
     app.run(host="0.0.0.0", port=port, debug=True)
