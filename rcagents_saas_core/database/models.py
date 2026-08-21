@@ -3,6 +3,7 @@ SaaS Core — Database Models (SQLAlchemy ORM)
 Multi-Tenant Schema for RC Agents Platform
 """
 
+import os
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
