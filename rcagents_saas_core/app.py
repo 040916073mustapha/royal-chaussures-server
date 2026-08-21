@@ -13,7 +13,10 @@ _parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
 
-from flask import Flask, jsonify, send_from_directory
+import hashlib
+import hmac
+
+from flask import Flask, jsonify, send_from_directory, request, Response
 from flask_cors import CORS
 
 from .config import Config
@@ -69,6 +72,73 @@ def create_app():
     @app.route("/onboarding")
     def onboarding():
         return send_from_directory(app.static_folder, "onboarding.html")
+
+    # ─── Webhook Endpoint (Messenger & Instagram) ────────────
+
+    FB_VERIFY_TOKEN = os.getenv("FB_VERIFY_TOKEN", "ROYAL-ROYAL-CH2026")
+
+    @app.route("/webhook", methods=["GET", "POST"])
+    def webhook():
+        # GET: Facebook verification challenge
+        if request.method == "GET":
+            mode = request.args.get("hub.mode")
+            token = request.args.get("hub.verify_token")
+            challenge = request.args.get("hub.challenge")
+            logger.info(f"Webhook GET: mode={mode}")
+            if mode == "subscribe" and token == FB_VERIFY_TOKEN:
+                logger.info("Webhook verified!")
+                return Response(challenge, status=200, content_type="text/plain")
+            logger.warning("Webhook verify failed")
+            return "Verification failed", 403
+
+        # POST: Process incoming message
+        logger.info("Webhook POST received")
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"status": "ok"})
+
+        obj = data.get("object", "")
+        logger.info(f"Webhook object={obj}")
+
+        if obj == "page":
+            process_messaging_entries(data.get("entry", []), "FB", send_fb_reply)
+        elif obj == "instagram":
+            process_messaging_entries(data.get("entry", []), "IG", send_ig_reply)
+        else:
+            logger.warning(f"Unknown webhook object: {obj}")
+
+        return jsonify({"status": "ok"})
+
+    @app.route("/webhook/", methods=["GET", "POST"])
+    def webhook_slash():
+        return webhook()
+
+    @app.route("/whatsapp/webhook", methods=["GET", "POST"])
+    def whatsapp_webhook():
+        if request.method == "GET":
+            mode = request.args.get("hub.mode")
+            token = request.args.get("hub.verify_token")
+            challenge = request.args.get("hub.challenge")
+            if mode == "subscribe" and token == FB_VERIFY_TOKEN:
+                return Response(challenge, status=200, content_type="text/plain")
+            return "Verification failed", 403
+
+        data = request.get_json(silent=True)
+        if data:
+            logger.info(f"WhatsApp webhook received")
+            process_whatsapp_entries(data.get("entry", []))
+        return jsonify({"status": "ok"})
+
+    # ─── Import webhook handlers from root server.py ────────
+    import importlib.util
+    _server_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server.py")
+    _spec = importlib.util.spec_from_file_location("webhook_server", _server_path)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    process_messaging_entries = _mod.process_messaging_entries
+    process_whatsapp_entries = _mod.process_whatsapp_entries
+    send_fb_reply = _mod.send_fb_reply
+    send_ig_reply = _mod.send_ig_reply
 
     @app.route("/api/health")
     def health():
