@@ -104,6 +104,8 @@ def create_app():
             process_messaging_entries(data.get("entry", []), "FB", send_fb_reply)
         elif obj == "instagram":
             process_messaging_entries(data.get("entry", []), "IG", send_ig_reply)
+        elif obj == "whatsapp_business_account":
+            process_whatsapp_entries(data.get("entry", []))
         else:
             logger.warning(f"Unknown webhook object: {obj}")
 
