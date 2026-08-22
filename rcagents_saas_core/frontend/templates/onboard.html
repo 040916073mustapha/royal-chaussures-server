@@ -340,10 +340,8 @@
                             <span class="info-value">${data.username}</span>
                         </div>
                     `;
-                    // Use subdomain if available, fallback to direct path
-                    const dashboardUrl = data.subdomain 
-                        ? 'https://' + data.subdomain + '/dashboard' 
-                        : '/dashboard/' + data.store_id;
+                    // Direct to main dashboard — subdomain causes Cloudflare Error 1000
+                    const dashboardUrl = '/dashboard';
                     document.getElementById('dashboardBtn').href = dashboardUrl;
                     successBox.classList.add('show');
                     document.getElementById('onboardForm').style.display = 'none';
