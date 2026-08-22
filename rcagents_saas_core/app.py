@@ -131,7 +131,7 @@ def create_app():
     _dashboard_pages = [
         "orders", "clients", "products", "chat", "settings",
         "shipments", "constellation", "auto-ship", "agents",
-        "analytics", "inventory", "marketing",
+        "analytics", "inventory", "marketing", "integrations",
     ]
 
     @app.route("/dashboard/<page>")
@@ -379,6 +379,130 @@ def create_app():
         except Exception as e:
             logger.error(f"Migration error: {e}")
             return jsonify({"error": str(e)}), 500
+
+    # ─── Shopify Sync Helper ──────────────────────────────────
+
+    def _sync_shopify_catalog(shopify_domain, access_token, store_id, app_instance):
+        """Sync products and orders from Shopify into memory cache"""
+        import requests as _req
+        import json as _json
+
+        products = []
+        orders = []
+        headers = {
+            "X-Shopify-Access-Token": access_token,
+            "Content-Type": "application/json"
+        }
+        base_url = f"https://{shopify_domain}/admin/api/2024-10"
+
+        # Fetch products
+        try:
+            resp = _req.get(f"{base_url}/products.json?limit=50", headers=headers, timeout=15)
+            if resp.status_code == 200:
+                products = resp.json().get("products", [])
+                logger.info(f"Synced {len(products)} products from {shopify_domain}")
+        except Exception as e:
+            logger.warning(f"Shopify products sync error: {e}")
+
+        # Fetch orders
+        try:
+            resp = _req.get(f"{base_url}/orders.json?status=any&limit=50", headers=headers, timeout=15)
+            if resp.status_code == 200:
+                orders = resp.json().get("orders", [])
+                logger.info(f"Synced {len(orders)} orders from {shopify_domain}")
+        except Exception as e:
+            logger.warning(f"Shopify orders sync error: {e}")
+
+        # Store synced data in app config (in-memory)
+        _shopify_cache = getattr(app_instance, "_shopify_cache", {})
+        _shopify_cache[store_id] = {
+            "products": products,
+            "orders": orders,
+            "last_sync": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+        }
+        app_instance._shopify_cache = _shopify_cache
+
+        return {"products": len(products), "orders": len(orders)}
+
+    # ─── API: Integrations Connect ────────────────────────────
+
+    @app.route("/api/integrations/connect", methods=["POST"])
+    def integrations_connect():
+        """Connect a platform integration for a store"""
+        try:
+            data = request.get_json(force=True)
+            store_id = data.get("store_id", "")
+            platform = data.get("platform", "")  # shopify, meta, zr_express
+            credentials = data.get("credentials", {})
+            sync_now = data.get("sync", False)
+
+            if not store_id:
+                return jsonify({"success": False, "error": "store_id is required"}), 400
+            if platform not in ("shopify", "meta", "zr_express"):
+                return jsonify({"success": False, "error": "Invalid platform"}), 400
+
+            _integrations = getattr(app, "_integrations", {})
+            if store_id not in _integrations:
+                _integrations[store_id] = {}
+
+            if platform == "shopify":
+                shopify_domain = credentials.get("shopify_domain", "")
+                access_token = credentials.get("access_token", "")
+                if not shopify_domain or not access_token:
+                    return jsonify({"success": False, "error": "Shopify domain and access token are required"}), 400
+                _integrations[store_id]["shopify"] = {
+                    "shopify_domain": shopify_domain,
+                    "access_token": access_token,
+                }
+                app._integrations = _integrations
+                logger.info(f"✅ Shopify connected for store {store_id}: {shopify_domain}")
+
+                # Initial sync — fetch products and orders from Shopify
+                if sync_now:
+                    try:
+                        sync_result = _sync_shopify_catalog(shopify_domain, access_token, store_id, app)
+                        return jsonify({
+                            "success": True,
+                            "message": f"Shopify connected! Synced {sync_result.get('products', 0)} products and {sync_result.get('orders', 0)} orders.",
+                            **sync_result
+                        })
+                    except Exception as sync_err:
+                        logger.warning(f"Shopify initial sync failed: {sync_err}")
+                        return jsonify({
+                            "success": True,
+                            "message": f"Shopify connected but initial sync failed: {sync_err}",
+                            "sync_error": str(sync_err)
+                        }), 200
+
+                return jsonify({"success": True, "message": "Shopify connected successfully"})
+
+            elif platform == "meta":
+                access_token = credentials.get("access_token", "")
+                page_id = credentials.get("page_id", "")
+                if not access_token or not page_id:
+                    return jsonify({"success": False, "error": "Access token and Page ID are required"}), 400
+                _integrations[store_id]["meta"] = {
+                    "access_token": access_token,
+                    "page_id": page_id,
+                }
+                app._integrations = _integrations
+                logger.info(f"✅ Meta connected for store {store_id}: page={page_id}")
+                return jsonify({"success": True, "message": "Meta connected successfully! The webhook will receive messages shortly."})
+
+            elif platform == "zr_express":
+                api_key = credentials.get("api_key", "")
+                if not api_key:
+                    return jsonify({"success": False, "error": "ZR Express API key is required"}), 400
+                _integrations[store_id]["zr_express"] = {
+                    "api_key": api_key,
+                }
+                app._integrations = _integrations
+                logger.info(f"✅ ZR Express connected for store {store_id}")
+                return jsonify({"success": True, "message": "ZR Express connected! Shipping rates and tracking will be available."})
+
+        except Exception as e:
+            logger.error(f"Integrations connect error: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
 
     return app
 

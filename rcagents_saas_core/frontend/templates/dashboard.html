@@ -1,21 +1,35 @@
 {% extends "dashboard_base.html" %}
 {% block content %}
-<div x-data="{ stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0, storeId: '', storeName: '' }" 
+<div x-data="{ 
+    stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0, 
+    storeId: '', storeName: '', page: 'overview',
+    integrations: { shopify: { url: '', token: '' }, meta: { token: '', pageId: '' }, zr: { apiKey: '' } },
+    integrationStatus: {}
+}" 
      x-init="
-        // Get store_id from URL or localStorage
         const pathParts = window.location.pathname.split('/');
         storeId = pathParts[2] && pathParts[2] !== 'dashboard' ? pathParts[2] : (localStorage.getItem('rc_store_id') || '');
+        page = pathParts[2] === 'integrations' ? 'integrations' : 'overview';
         
-        Promise.all([
-            storeId 
-                ? fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
-                    .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}))
-                : fetch('/api/stats').then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
-                    .then(() => fetch('/api/orders?limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
-            fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
-        ]).finally(()=>loading=false)
-    ">
+        if (page === 'overview') {
+            Promise.all([
+                storeId 
+                    ? fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+                        .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}))
+                    : fetch('/api/stats').then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+                        .then(() => fetch('/api/orders?limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
+                fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
+            ]).finally(()=>loading=false)
+        } else {
+            loading = false;
+        }
+    "
+>
 
+    <!-- OVERVIEW CONTENT -->
+    <template x-if="page === 'overview'">
+    <div>
+    
     <!-- Welcome + Date Range -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
         <div>
@@ -248,6 +262,225 @@
                 </div>
             </div>
         </div>
+    </div>
     </template>
+
+    <!-- INTEGRATIONS CONTENT -->
+    <template x-if="page === 'integrations'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Integrations <span class="text-neon-purple">🔌</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Connect your store, messaging platforms, and shipping provider.</p>
+            </div>
+        </div>
+
+        <!-- Integration Cards Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Shopify Card -->
+            <div class="bg-rc-card border border-rc-border/60 rounded-xl p-6 card-hover-glow transition-all duration-300">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400/10 to-emerald-600/10 border border-emerald-400/20 flex items-center justify-center text-2xl">🛍️</div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Shopify</h3>
+                        <p class="text-[10px] font-mono text-gray-500">Sync products & orders</p>
+                    </div>
+                    <span class="ml-auto text-[10px] font-mono px-2 py-0.5 rounded" 
+                          :class="integrationStatus.shopify ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/30' : 'bg-gray-400/10 text-gray-500 border border-gray-400/20'"
+                          x-text="integrationStatus.shopify ? 'Connected' : 'Not Connected'"></span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] font-mono text-gray-400 mb-1.5">Store URL</label>
+                        <input type="text" placeholder="my-store.myshopify.com" x-model="integrations.shopify.url"
+                               class="w-full px-3 py-2.5 text-xs bg-rc-bg border border-rc-border/60 rounded-lg text-gray-200 placeholder-gray-600 focus:border-neon-purple/50 focus:outline-none transition-colors font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-mono text-gray-400 mb-1.5">Admin API Access Token</label>
+                        <input type="password" placeholder="shpat_..." x-model="integrations.shopify.token"
+                               class="w-full px-3 py-2.5 text-xs bg-rc-bg border border-rc-border/60 rounded-lg text-gray-200 placeholder-gray-600 focus:border-neon-purple/50 focus:outline-none transition-colors font-mono">
+                    </div>
+                    <button @click="connectShopify()" 
+                            class="w-full py-2.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:shadow-[0_0_15px_-4px_rgba(16,185,129,0.4)] transition-all duration-300 hover:scale-[1.02]">
+                        <i class="fa-solid fa-link mr-1.5"></i> Connect & Sync
+                    </button>
+                </div>
+            </div>
+
+            <!-- Meta / Facebook & Instagram Card -->
+            <div class="bg-rc-card border border-rc-border/60 rounded-xl p-6 card-hover-glow transition-all duration-300">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400/10 to-blue-600/10 border border-blue-400/20 flex items-center justify-center text-2xl">💬</div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Meta Messenger & Instagram</h3>
+                        <p class="text-[10px] font-mono text-gray-500">Facebook & Instagram messaging</p>
+                    </div>
+                    <span class="ml-auto text-[10px] font-mono px-2 py-0.5 rounded"
+                          :class="integrationStatus.meta ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/30' : 'bg-gray-400/10 text-gray-500 border border-gray-400/20'"
+                          x-text="integrationStatus.meta ? 'Connected' : 'Not Connected'"></span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] font-mono text-gray-400 mb-1.5">Page Access Token</label>
+                        <input type="password" placeholder="EAAx..." x-model="integrations.meta.token"
+                               class="w-full px-3 py-2.5 text-xs bg-rc-bg border border-rc-border/60 rounded-lg text-gray-200 placeholder-gray-600 focus:border-neon-purple/50 focus:outline-none transition-colors font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-mono text-gray-400 mb-1.5">Page / Instagram ID</label>
+                        <input type="text" placeholder="123456789" x-model="integrations.meta.pageId"
+                               class="w-full px-3 py-2.5 text-xs bg-rc-bg border border-rc-border/60 rounded-lg text-gray-200 placeholder-gray-600 focus:border-neon-purple/50 focus:outline-none transition-colors font-mono">
+                    </div>
+                    <button @click="connectMeta()"
+                            class="w-full py-2.5 text-xs font-bold rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-[0_0_15px_-4px_rgba(59,130,246,0.4)] transition-all duration-300 hover:scale-[1.02]">
+                        <i class="fa-solid fa-link mr-1.5"></i> Connect & Verify
+                    </button>
+                </div>
+            </div>
+
+            <!-- ZR Express Card -->
+            <div class="bg-rc-card border border-rc-border/60 rounded-xl p-6 card-hover-glow transition-all duration-300">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400/10 to-amber-600/10 border border-amber-400/20 flex items-center justify-center text-2xl">🚚</div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">ZR Express</h3>
+                        <p class="text-[10px] font-mono text-gray-500">Shipping & delivery tracking</p>
+                    </div>
+                    <span class="ml-auto text-[10px] font-mono px-2 py-0.5 rounded"
+                          :class="integrationStatus.zr ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/30' : 'bg-gray-400/10 text-gray-500 border border-gray-400/20'"
+                          x-text="integrationStatus.zr ? 'Connected' : 'Not Connected'"></span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] font-mono text-gray-400 mb-1.5">ZR Express API Key</label>
+                        <input type="password" placeholder="Your ZR API key" x-model="integrations.zr.apiKey"
+                               class="w-full px-3 py-2.5 text-xs bg-rc-bg border border-rc-border/60 rounded-lg text-gray-200 placeholder-gray-600 focus:border-neon-purple/50 focus:outline-none transition-colors font-mono">
+                    </div>
+                    <div class="pt-1">
+                        <p class="text-[10px] font-mono text-gray-600 mb-3">Integrate for automated shipping labels, nationwide tracking, and delivery status updates.</p>
+                    </div>
+                    <button @click="connectZR()"
+                            class="w-full py-2.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-[0_0_15px_-4px_rgba(245,158,11,0.4)] transition-all duration-300 hover:scale-[1.02]">
+                        <i class="fa-solid fa-link mr-1.5"></i> Connect & Enable
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Connection Status -->
+        <div class="mt-8 bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-info-circle text-neon-cyan text-xs"></i>
+                <h3 class="text-sm font-semibold text-white">Connection Status</h3>
+            </div>
+            <div id="connectionStatusLog" class="bg-rc-bg border border-rc-border/40 rounded-lg p-4 text-xs font-mono text-gray-400 min-h-[60px]">
+                <p class="text-gray-600">⏳ Waiting for connection...</p>
+            </div>
+        </div>
+    </div>
+    </template>
+
 </div>
+
+<script>
+function connectShopify() {
+    const statusLog = document.getElementById('connectionStatusLog');
+    const storeId = document.querySelector('[x-data]').__x.$data.storeId || localStorage.getItem('rc_store_id');
+    const shopify = document.querySelector('[x-data]').__x.$data.integrations.shopify;
+    
+    statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to Shopify...</p>';
+    
+    fetch('/api/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            store_id: storeId,
+            platform: 'shopify',
+            credentials: {
+                shopify_domain: shopify.url,
+                access_token: shopify.token
+            },
+            sync: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            statusLog.innerHTML = '<p class="text-emerald-400">✅ ' + (data.message || 'Shopify connected & synced successfully!') + '</p>';
+            document.querySelector('[x-data]').__x.$data.integrationStatus.shopify = true;
+        } else {
+            statusLog.innerHTML = '<p class="text-rose-400">❌ Error: ' + (data.error || 'Unknown error') + '</p>';
+        }
+    })
+    .catch(err => {
+        statusLog.innerHTML = '<p class="text-rose-400">❌ Connection failed: ' + err.message + '</p>';
+    });
+}
+
+function connectMeta() {
+    const statusLog = document.getElementById('connectionStatusLog');
+    const storeId = document.querySelector('[x-data]').__x.$data.storeId || localStorage.getItem('rc_store_id');
+    const meta = document.querySelector('[x-data]').__x.$data.integrations.meta;
+    
+    statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Verifying Meta token...</p>';
+    
+    fetch('/api/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            store_id: storeId,
+            platform: 'meta',
+            credentials: {
+                access_token: meta.token,
+                page_id: meta.pageId
+            }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            statusLog.innerHTML = '<p class="text-emerald-400">✅ ' + (data.message || 'Meta connected successfully!') + '</p>';
+            document.querySelector('[x-data]').__x.$data.integrationStatus.meta = true;
+        } else {
+            statusLog.innerHTML = '<p class="text-rose-400">❌ Error: ' + (data.error || 'Unknown error') + '</p>';
+        }
+    })
+    .catch(err => {
+        statusLog.innerHTML = '<p class="text-rose-400">❌ Verification failed: ' + err.message + '</p>';
+    });
+}
+
+function connectZR() {
+    const statusLog = document.getElementById('connectionStatusLog');
+    const storeId = document.querySelector('[x-data]').__x.$data.storeId || localStorage.getItem('rc_store_id');
+    const zr = document.querySelector('[x-data]').__x.$data.integrations.zr;
+    
+    statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to ZR Express...</p>';
+    
+    fetch('/api/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            store_id: storeId,
+            platform: 'zr_express',
+            credentials: {
+                api_key: zr.apiKey
+            }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            statusLog.innerHTML = '<p class="text-emerald-400">✅ ' + (data.message || 'ZR Express connected!') + '</p>';
+            document.querySelector('[x-data]').__x.$data.integrationStatus.zr = true;
+        } else {
+            statusLog.innerHTML = '<p class="text-rose-400">❌ Error: ' + (data.error || 'Unknown error') + '</p>';
+        }
+    })
+    .catch(err => {
+        statusLog.innerHTML = '<p class="text-rose-400">❌ Connection failed: ' + err.message + '</p>';
+    });
+}
+</script>
 {% endblock %}
