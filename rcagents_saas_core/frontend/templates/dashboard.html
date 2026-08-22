@@ -7,21 +7,28 @@
     integrationStatus: {}
 }" 
      x-init="
-        const pathParts = window.location.pathname.split('/');
-        const pageFromUrl = pathParts[2] && pathParts[2] !== 'dashboard' ? pathParts[2] : null;
-        storeId = pathParts[2] && pathParts[2] !== 'dashboard' ? pathParts[2] : (localStorage.getItem('rc_store_id') || '');
-        page = pageFromUrl || '{{ active_page | default("overview") }}';
+        // Read page from Jinja2 and force Alpine reactivity
+        storeId = localStorage.getItem('rc_store_id') || '';
+        const targetPage = '{{ active_page | default("overview") }}';
+        if (targetPage && targetPage !== 'overview') {
+            page = targetPage;
+        }
         
         if (page === 'overview') {
-            Promise.all([
-                storeId 
-                    ? fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
-                        .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}))
-                    : fetch('/api/stats').then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
-                        .then(() => fetch('/api/orders?limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
-                fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
-            ]).finally(()=>loading=false)
+            // Lazy load overview data — $nextTick is undefined in x-init, use setTimeout
+            setTimeout(() => {
+                loading = false;
+                Promise.all([
+                    storeId 
+                        ? fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+                            .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}))
+                        : fetch('/api/stats').then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+                            .then(() => fetch('/api/orders?limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
+                    fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
+                ]).finally(()=>loading=false)
+            }, 50);
         } else {
+            // Non-overview pages: just stop loading, content via x-if
             loading = false;
         }
     "
