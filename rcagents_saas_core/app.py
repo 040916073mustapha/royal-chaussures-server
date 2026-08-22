@@ -237,8 +237,8 @@ def create_app():
     _spec = importlib.util.spec_from_file_location("webhook_server", _server_path)
     _mod = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_mod)
-    process_messaging_entries = _mod.process_messaging_entries
-    process_whatsapp_entries = _mod.process_whatsapp_entries
+    _legacy_process_messaging = _mod.process_messaging_entries
+    _legacy_process_whatsapp = _mod.process_whatsapp_entries
     send_fb_reply = _mod.send_fb_reply
     send_ig_reply = _mod.send_ig_reply
     send_whatsapp_reply = _mod.send_whatsapp_reply
@@ -264,7 +264,7 @@ def create_app():
             store_id = _get_store_id_from_entry(entry, channel_type)
             if not store_id:
                 logger.warning(f"[MT] No store for {channel_type} entry {entry.get('id','')}, falling back to legacy")
-                process_messaging_entries([entry], platform, send_func)
+                _legacy_process_messaging([entry], platform, send_func)
                 continue
             for messaging in entry.get("messaging", []):
                 sid = messaging.get("sender", {}).get("id", "")
@@ -299,7 +299,7 @@ def create_app():
                     store_id = get_store_id_by_whatsapp_phone(str(phone_id))
                 if not store_id:
                     logger.warning(f"[MT] No store for WA phone {phone_id}, falling back to legacy")
-                    process_whatsapp_entries([entry])
+                    _legacy_process_whatsapp([entry])
                     continue
                 for msg in value.get("messages", []):
                     sender = msg.get("from", "")
