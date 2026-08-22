@@ -139,7 +139,7 @@ def create_app():
         if page not in _dashboard_pages:
             return send_from_directory(app.static_folder, "dashboard.html"), 404
         try:
-            return render_template("dashboard.html")
+            return render_template("dashboard.html", active_page=page)
         except Exception:
             return send_from_directory(app.static_folder, "dashboard.html")
 
@@ -162,24 +162,32 @@ def create_app():
             return "Verification failed", 403
 
         # POST: Process incoming message
+        # IMPORTANT: Entire webhook wrapped in try/except to avoid RecursionError in errorhandler
         logger.info("Webhook POST received")
-        data = request.get_json(silent=True)
-        if not data:
-            return jsonify({"status": "ok"})
+        try:
+            data = request.get_json(silent=True)
+            if not data:
+                return jsonify({"status": "ok"})
 
-        obj = data.get("object", "")
-        logger.info(f"Webhook object={obj}")
+            obj = data.get("object", "")
+            logger.info(f"Webhook object={obj}")
 
-        # TEMP: Legacy flow — import from server.py
-        if obj == "page":
-            process_messaging_entries(data.get("entry", []), "FB", send_fb_reply)
-        elif obj == "instagram":
-            process_messaging_entries(data.get("entry", []), "IG", send_ig_reply)
-        elif obj == "whatsapp_business_account":
-            _process_whatsapp_multi(data.get("entry", []))
-        else:
-            logger.warning(f"Unknown webhook object: {obj}")
+            # TEMP: Legacy flow — import from server.py
+            try:
+                if obj == "page":
+                    process_messaging_entries(data.get("entry", []), "FB", send_fb_reply)
+                elif obj == "instagram":
+                    process_messaging_entries(data.get("entry", []), "IG", send_ig_reply)
+                elif obj == "whatsapp_business_account":
+                    _process_whatsapp_multi(data.get("entry", []))
+                else:
+                    logger.warning(f"Unknown webhook object: {obj}")
+            except Exception as inner_e:
+                logger.error(f"Webhook processing error: {inner_e}")
+        except Exception as outer_e:
+            logger.error(f"Webhook parse error: {outer_e}")
 
+        # Always return 200 OK to Meta even if processing failed
         return jsonify({"status": "ok"})
 
     @app.route("/webhook/", methods=["GET", "POST"])
@@ -359,6 +367,7 @@ def create_app():
 
     @app.errorhandler(500)
     def server_error(e):
+        # IMPORTANT: Do NOT touch DB here — avoids RecursionError
         logger.error(f"500 error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 

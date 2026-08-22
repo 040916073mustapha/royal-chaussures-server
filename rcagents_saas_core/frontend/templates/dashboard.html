@@ -2,14 +2,15 @@
 {% block content %}
 <div x-data="{ 
     stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0, 
-    storeId: '', storeName: '', page: 'overview',
+    storeId: '', storeName: '', page: '{{ active_page | default("overview") }}',
     integrations: { shopify: { url: '', token: '' }, meta: { token: '', pageId: '' }, zr: { apiKey: '' } },
     integrationStatus: {}
 }" 
      x-init="
         const pathParts = window.location.pathname.split('/');
+        const pageFromUrl = pathParts[2] && pathParts[2] !== 'dashboard' ? pathParts[2] : null;
         storeId = pathParts[2] && pathParts[2] !== 'dashboard' ? pathParts[2] : (localStorage.getItem('rc_store_id') || '');
-        page = pathParts[2] === 'integrations' ? 'integrations' : 'overview';
+        page = pageFromUrl || '{{ active_page | default("overview") }}';
         
         if (page === 'overview') {
             Promise.all([
@@ -376,6 +377,180 @@
             </div>
             <div id="connectionStatusLog" class="bg-rc-bg border border-rc-border/40 rounded-lg p-4 text-xs font-mono text-gray-400 min-h-[60px]">
                 <p class="text-gray-600">⏳ Waiting for connection...</p>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- ORDERS PAGE -->
+    <template x-if="page === 'orders'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Orders <span class="text-neon-cyan">📦</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Manage and track all your store orders.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-box-archive text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">Orders will appear here once synced via Integrations.</p>
+                <a href="/dashboard/integrations" class="inline-block mt-4 text-xs text-neon-purple hover:text-neon-cyan transition-colors">→ Connect Shopify</a>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- PRODUCTS PAGE -->
+    <template x-if="page === 'products'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Products <span class="text-emerald-400">👟</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Your product catalog synced from Shopify.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-tag text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">Products will appear here once synced via Integrations.</p>
+                <a href="/dashboard/integrations" class="inline-block mt-4 text-xs text-neon-purple hover:text-neon-cyan transition-colors">→ Connect Shopify</a>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- CLIENTS PAGE -->
+    <template x-if="page === 'clients'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Customers <span class="text-amber-400">👥</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Your customers across all channels.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-users text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">Customers will appear here once conversations start flowing.</p>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- CHAT PAGE -->
+    <template x-if="page === 'chat'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Live Chat <span class="text-sky-400">💬</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Real-time conversations from Messenger, Instagram & WhatsApp.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-comments text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">Messages will appear here once Meta integrations are connected.</p>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- SETTINGS PAGE -->
+    <template x-if="page === 'settings'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Settings <span class="text-gray-400">⚙️</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Configure your store and AI agent.</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                <h3 class="text-sm font-semibold text-white mb-4">Store Info</h3>
+                <div class="space-y-3 text-xs">
+                    <div class="flex justify-between"><span class="text-gray-500">Store ID</span><span class="text-gray-200 font-mono" x-text="storeId || '—'"></span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Store Name</span><span class="text-gray-200 font-mono" x-text="storeName || '—'"></span></div>
+                </div>
+            </div>
+            <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                <h3 class="text-sm font-semibold text-white mb-4">AI Agent</h3>
+                <div class="space-y-3 text-xs">
+                    <div class="flex justify-between"><span class="text-gray-500">Model</span><span class="text-gray-200 font-mono">DeepSeek-V4-Flash</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="text-emerald-400 font-mono">● Active</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- ANALYTICS PAGE -->
+    <template x-if="page === 'analytics'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Analytics <span class="text-amber-400">📊</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Deep insights and performance metrics.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-chart-line text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">Analytics dashboard — coming with data sync.</p>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- MARKETING PAGE -->
+    <template x-if="page === 'marketing'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Marketing <span class="text-neon-pink">📢</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Campaigns and promotions.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-bullhorn text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">Marketing tools coming soon.</p>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- INVENTORY PAGE -->
+    <template x-if="page === 'inventory'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Inventory <span class="text-cyan-400">📦</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Stock levels and warehouse management.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-warehouse text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">Inventory sync coming with Shopify connection.</p>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- SHIPMENTS PAGE -->
+    <template x-if="page === 'shipments'">
+    <div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Shipping <span class="text-orange-400">🚚</span></h1>
+                <p class="text-xs text-gray-500 mt-1 font-mono">Delivery tracking and labels.</p>
+            </div>
+        </div>
+        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+            <div class="text-center py-16 text-gray-500">
+                <i class="fa-solid fa-truck text-4xl mb-4 opacity-30"></i>
+                <p class="text-sm font-mono">ZR Express integration coming soon.</p>
             </div>
         </div>
     </div>
