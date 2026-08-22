@@ -181,8 +181,10 @@ def get_or_create_conversation(store_id, channel, platform_conversation_id, cust
     if db is None:
         db = get_global_session()
     try:
+        from sqlalchemy import cast, String as _SA_Str
+        _store_id_str = str(store_id) if not isinstance(store_id, str) else store_id
         conv = db.query(Conversation).filter(
-            Conversation.store_id == store_id,
+            cast(Conversation.store_id, _SA_Str) == _store_id_str,
             Conversation.platform_conversation_id == platform_conversation_id
         ).first()
         if conv:
@@ -217,9 +219,10 @@ def save_message(conversation_id, store_id, role, content, channel, content_type
     if db is None:
         db = get_global_session()
     try:
+        _store_id_str = str(store_id) if not isinstance(store_id, str) else store_id
         msg = Message(
-            conversation_id=conversation_id,
-            store_id=store_id,
+            conversation_id=str(conversation_id),
+            store_id=_store_id_str,
             role=role,
             content=content,
             content_type=content_type,
