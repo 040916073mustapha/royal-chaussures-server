@@ -15,6 +15,7 @@ if _parent_dir not in sys.path:
 
 import hashlib
 import hmac
+import uuid
 
 from flask import Flask, jsonify, send_from_directory, request, Response, render_template
 from flask_cors import CORS
@@ -323,6 +324,56 @@ def create_app():
     @app.route("/api/plans")
     def list_plans():
         return jsonify(Config.PLANS)
+
+    # ─── API: Tenant Onboard (Multi-Store Registration) ─────
+
+    @app.route("/api/tenant/onboard", methods=["POST"])
+    def tenant_onboard():
+        """Register a new store/tenant"""
+        try:
+            data = request.get_json(force=True)
+            store_name = data.get("store_name", "").strip()
+            email = data.get("email", "").strip()
+            phone = data.get("phone", "").strip()
+            username = data.get("username", "").strip()
+            password = data.get("password", "")
+            webhooks = data.get("webhooks", {})
+
+            if not store_name or not username or not password:
+                return jsonify({"success": False, "error": "store_name, username, and password are required"}), 400
+            if len(password) < 6:
+                return jsonify({"success": False, "error": "Password must be at least 6 characters"}), 400
+
+            store_id = str(uuid.uuid4())[:8]
+            slug = store_name.lower().replace(" ", "-").replace("'", "")[:20]
+
+            # Simple in-memory registration for now (DB persistence in next iteration)
+            _tenant_registry = getattr(app, "_tenant_registry", {})
+            _tenant_registry[store_id] = {
+                "store_name": store_name,
+                "email": email,
+                "phone": phone,
+                "username": username,
+                "password": password,
+                "webhooks": webhooks,
+                "slug": slug,
+                "store_id": store_id,
+            }
+            app._tenant_registry = _tenant_registry
+
+            logger.info(f"✅ New tenant registered: {store_name} (ID: {store_id})")
+
+            return jsonify({
+                "success": True,
+                "store_name": store_name,
+                "store_id": store_id,
+                "slug": slug,
+                "username": username,
+                "subdomain": f"{slug}.rcagents.space",
+            })
+        except Exception as e:
+            logger.error(f"Tenant onboard error: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
 
     # ─── Error Handlers ──────────────────────────────────────
 
