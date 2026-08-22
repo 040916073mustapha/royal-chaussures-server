@@ -154,8 +154,6 @@ def get_stats():
             ).scalar() or 0.0
         except Exception:
             pass
-            Invoice.status == "paid"
-        ).scalar() or 0.0
 
         return jsonify({
             "store_name": store.shopify_domain.split(".")[0].capitalize() if store.shopify_domain else "My Store",
