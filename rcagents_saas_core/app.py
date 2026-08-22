@@ -245,15 +245,34 @@ def create_app():
 
     # ─── Multi-Tenant Webhook Processors ─────────────────────
 
-    from .database.crud import get_store_id_by_platform, get_store_id_by_whatsapp_phone, get_or_create_conversation, save_message, get_or_create_ai_settings
+    from .database.crud import get_store_id_by_platform as _saas_get_store_id, get_store_id_by_whatsapp_phone as _saas_get_store_wa, get_or_create_conversation, save_message, get_or_create_ai_settings
+    import importlib as _imp2
+    _legacy_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "database", "db.py")
+    _legacy_db_spec = _imp2.util.spec_from_file_location("legacy_db", _legacy_db_path)
+    _legacy_db_mod = _imp2.util.module_from_spec(_legacy_db_spec)
+    try:
+        _legacy_db_spec.loader.exec_module(_legacy_db_mod)
+    except Exception:
+        _legacy_db_mod = None
 
     def _get_store_id_from_entry(entry, channel_type):
         """Extract store_id from webhook entry based on channel type"""
         entry_id = entry.get("id", "")
         if entry_id:
-            sid = get_store_id_by_platform(channel_type, str(entry_id))
-            if sid:
-                return sid
+            try:
+                sid = _saas_get_store_id(channel_type, str(entry_id))
+                if sid:
+                    return sid
+            except Exception:
+                pass
+            # Fallback to local SQLite DB if PostgreSQL fails
+            if _legacy_db_mod:
+                try:
+                    sid = _legacy_db_mod.get_store_id_by_platform(channel_type, str(entry_id))
+                    if sid and sid != 1 or True:  # use fallback result
+                        return sid
+                except Exception:
+                    pass
         return None
 
     def _process_messaging_multi(entries, platform, send_func):
@@ -296,7 +315,15 @@ def create_app():
                 phone_id = metadata.get("phone_number_id", "")
                 store_id = None
                 if phone_id:
-                    store_id = get_store_id_by_whatsapp_phone(str(phone_id))
+                    try:
+                        store_id = _saas_get_store_wa(str(phone_id))
+                    except Exception:
+                        pass
+                    if not store_id and _legacy_db_mod:
+                        try:
+                            store_id = _legacy_db_mod.get_store_id_by_whatsapp_phone(str(phone_id))
+                        except Exception:
+                            pass
                 if not store_id:
                     logger.warning(f"[MT] No store for WA phone {phone_id}, falling back to legacy")
                     _legacy_process_whatsapp([entry])
