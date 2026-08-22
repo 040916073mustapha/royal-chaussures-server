@@ -102,6 +102,22 @@ def create_app():
         except Exception:
             return send_from_directory(app.static_folder, "dashboard_login.html")
 
+    @app.route("/privacy")
+    def privacy():
+        """Privacy Policy — required for Meta App Review"""
+        try:
+            return render_template("privacy.html")
+        except Exception:
+            return send_from_directory(app.static_folder, "privacy.html")
+
+    @app.route("/terms")
+    def terms():
+        """Terms of Service — required for Meta App Review"""
+        try:
+            return render_template("terms.html")
+        except Exception:
+            return send_from_directory(app.static_folder, "terms.html")
+
     @app.route("/dashboard/orders")
     def dashboard_orders():
         return send_from_directory(app.static_folder, "dashboard.html")
