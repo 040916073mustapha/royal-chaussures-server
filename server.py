@@ -426,10 +426,14 @@ except Exception as _db_err:
 _db_init_ok = False
 import traceback as _tb
 try:
-    from database.db import init_db as init_store_db
-    init_store_db()
-    _db_init_ok = True
-    logger.info("[Store POS] Database initialized successfully")
+    _db_url = __import__('os').environ.get('DATABASE_URL', '')
+    if _db_url:
+        from database.db import init_db as init_store_db
+        init_store_db()
+        _db_init_ok = True
+        logger.info("[Store POS] Database initialized successfully")
+    else:
+        logger.warning("[Store POS] DATABASE_URL not set — skipping store DB init (SaaS Core will handle DB)")
 except Exception as e:
     logger.error(f"[Store POS] Database init FAILED: {e}")
     logger.error(f"[Store POS] Full traceback:\n{_tb.format_exc()}")

@@ -83,11 +83,14 @@ def create_app():
 
     @app.route("/dashboard")
     def dashboard():
-        # Try the Dark Neon template first, fallback to static
+        """Dark Neon Cyberpunk Dashboard — full with AI Brain + Charts + Live Chat"""
         try:
-            return render_template("store_dashboard.html")
+            return render_template("dashboard.html")
         except Exception:
-            return send_from_directory(app.static_folder, "dashboard.html")
+            try:
+                return render_template("dashboard_base.html")
+            except Exception:
+                return send_from_directory(app.static_folder, "dashboard.html")
 
     @app.route("/onboard")
     def onboard():
