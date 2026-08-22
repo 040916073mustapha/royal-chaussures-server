@@ -208,6 +208,38 @@ def get_or_create_conversation(store_id, channel, platform_conversation_id, cust
         return conv
     except Exception as e:
         db.rollback()
+        _err_str = str(e)
+        if "ForeignKeyViolation" in _err_str or "foreign key" in _err_str.lower() or "is not present in table 'stores'" in _err_str:
+            # Auto-create the store if it doesn't exist
+            logger.warning(f"[DB] Store {store_id} not found, attempting to create it")
+            try:
+                from sqlalchemy import text
+                from datetime import datetime
+                from .models import get_engine
+                eng = get_engine()
+                with eng.connect() as conn:
+                    # Ensure a user exists
+                    user_r = conn.execute(text("SELECT id FROM users LIMIT 1")).fetchone()
+                    if not user_r:
+                        import uuid
+                        uid = str(uuid.uuid4())
+                        conn.execute(
+                            text("INSERT INTO users (id, email, name, created_at, updated_at) VALUES (:id, :email, :name, :now, :now)"),
+                            {"id": uid, "email": "auto@rcagents.space", "name": "Auto User", "now": datetime.now()}
+                        )
+                        user_r = (uid,)
+                    conn.execute(
+                        text("""INSERT INTO stores (id, user_id, shopify_domain, shopify_access_token, is_connected, created_at, updated_at)
+                               VALUES (:sid, :uid, 'auto.myshopify.com', 'auto', TRUE, :now, :now)
+                               ON CONFLICT (id) DO NOTHING"""),
+                        {"sid": _store_id_str, "uid": user_r[0], "now": datetime.now()}
+                    )
+                    conn.commit()
+                logger.info(f"[DB] Store {store_id} auto-created successfully, retrying...")
+                # Retry: recursively call self (one level only)
+                return get_or_create_conversation(store_id, channel, platform_conversation_id, customer_name, customer_platform_id)
+            except Exception as retry_err:
+                logger.error(f"[DB] Auto-create store failed: {retry_err}")
         logger.error(f"Get/create conversation failed: {e}")
         raise
     finally:

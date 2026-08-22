@@ -234,11 +234,46 @@ def get_engine(database_url=None):
 
 
 def init_db(engine=None):
-    """Create all tables"""
+    """Create all tables and ensure default store exists"""
     if engine is None:
         engine = get_engine()
     Base.metadata.create_all(engine)
+    _seed_default_store(engine)
     return engine
+
+
+def _seed_default_store(engine):
+    """Ensure a default store with id='1' exists for backward compatibility"""
+    from sqlalchemy import text
+    from datetime import datetime
+    try:
+        with engine.connect() as conn:
+            # Check if an entry with id='1' already exists
+            result = conn.execute(text("SELECT id FROM stores WHERE id = '1'")).fetchone()
+            if not result:
+                # Check if any user exists, if not create default user
+                user_result = conn.execute(text("SELECT id FROM users LIMIT 1")).fetchone()
+                if not user_result:
+                    import uuid
+                    default_user_id = str(uuid.uuid4())
+                    conn.execute(
+                        text("INSERT INTO users (id, email, name, created_at, updated_at) VALUES (:id, :email, :name, :now, :now)"),
+                        {"id": default_user_id, "email": "admin@rcagents.space", "name": "RC Agents Admin", "now": datetime.now()}
+                    )
+                    user_result = (default_user_id,)
+                _user_id = user_result[0]
+                # Insert default store with id='1'
+                conn.execute(
+                    text("""INSERT INTO stores (id, user_id, shopify_domain, shopify_access_token, is_connected, created_at, updated_at)
+                           VALUES ('1', :uid, 'rwqchh-na.myshopify.com', 'auto', TRUE, :now, :now)
+                           ON CONFLICT (id) DO NOTHING"""),
+                    {"uid": _user_id, "now": datetime.now()}
+                )
+                print(f"[DB] Default store (id=1) seeded successfully")
+            else:
+                print(f"[DB] Default store (id=1) already exists")
+    except Exception as e:
+        print(f"[DB] Seed warning (non-critical): {e}")
 
 
 def get_session(engine=None):
