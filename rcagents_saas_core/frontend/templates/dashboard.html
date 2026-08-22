@@ -5,7 +5,34 @@
     loading: true, convCount: 0, msgCount: 0, 
     storeId: 'royal-main', storeName: 'Royal Chaussures', page: 'overview',
     integrations: { shopify: { url: '', token: '' }, meta: { token: '', pageId: '' }, zr: { apiKey: '' } },
-    integrationStatus: {}
+    integrationStatus: {},
+    connectShopify() {
+        const statusLog = document.getElementById('connectionStatusLog');
+        const s = this.storeId || localStorage.getItem('rc_store_id');
+        const shopify = this.integrations.shopify;
+        statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to Shopify...</p>';
+        fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:s, platform:'shopify', credentials:{shopify_domain:shopify.url, access_token:shopify.token}, sync:true}) })
+        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class="text-emerald-400">✅ '+data.message+'</p>'; this.integrationStatus.shopify=true; } else { statusLog.innerHTML='<p class="text-rose-400">❌ '+data.error+'</p>'; } })
+        .catch(err=>{ statusLog.innerHTML='<p class="text-rose-400">❌ '+err.message+'</p>'; });
+    },
+    connectMeta() {
+        const statusLog = document.getElementById('connectionStatusLog');
+        const s = this.storeId || localStorage.getItem('rc_store_id');
+        const meta = this.integrations.meta;
+        statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Verifying Meta token...</p>';
+        fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:s, platform:'meta', credentials:{access_token:meta.token, page_id:meta.pageId}}) })
+        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class="text-emerald-400">✅ '+data.message+'</p>'; this.integrationStatus.meta=true; } else { statusLog.innerHTML='<p class="text-rose-400">❌ '+data.error+'</p>'; } })
+        .catch(err=>{ statusLog.innerHTML='<p class="text-rose-400">❌ '+err.message+'</p>'; });
+    },
+    connectZR() {
+        const statusLog = document.getElementById('connectionStatusLog');
+        const s = this.storeId || localStorage.getItem('rc_store_id');
+        const zr = this.integrations.zr;
+        statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to ZR Express...</p>';
+        fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:s, platform:'zr_express', credentials:{api_key:zr.apiKey}}) })
+        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class="text-emerald-400">✅ '+data.message+'</p>'; this.integrationStatus.zr=true; } else { statusLog.innerHTML='<p class="text-rose-400">❌ '+data.error+'</p>'; } })
+        .catch(err=>{ statusLog.innerHTML='<p class="text-rose-400">❌ '+err.message+'</p>'; });
+    }
 }" 
      x-init="
         try {
@@ -695,5 +722,4 @@ function connectZR() {
         statusLog.innerHTML = '<p class="text-rose-400">❌ Connection failed: ' + err.message + '</p>';
     });
 }
-</script>
 {% endblock %}
