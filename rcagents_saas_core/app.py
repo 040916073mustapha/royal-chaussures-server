@@ -29,6 +29,7 @@ from .api.stores import stores_bp
 from .api.settings import settings_bp
 from .api.conversations import conversations_bp
 from .api.zr_express import zr_bp
+from .api.stats import stats_bp
 
 # ─── Logging ──────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ def create_app():
     app.register_blueprint(settings_bp)
     app.register_blueprint(conversations_bp)
     app.register_blueprint(zr_bp)
+    app.register_blueprint(stats_bp)
 
     # Configure template folder for Dark Neon Dashboard
     _template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "templates")
