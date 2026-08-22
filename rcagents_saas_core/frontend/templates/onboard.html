@@ -340,6 +340,12 @@
                             <span class="info-value">${data.username}</span>
                         </div>
                     `;
+                    // Save to localStorage for dashboard to pick up
+                    localStorage.setItem('rc_user_name', data.store_name || data.username);
+                    localStorage.setItem('rc_user_role', 'Store Owner');
+                    localStorage.setItem('rc_store_id', data.store_id);
+                    localStorage.setItem('rc_store_slug', data.slug);
+
                     // Direct to main dashboard — subdomain causes Cloudflare Error 1000
                     const dashboardUrl = '/dashboard';
                     document.getElementById('dashboardBtn').href = dashboardUrl;

@@ -210,11 +210,11 @@
                     <!-- Profile -->
                     <div class="flex items-center gap-2.5 pl-3 border-l border-rc-border/40">
                         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-purple to-neon-cyan flex items-center justify-center text-white text-xs font-bold shadow-[0_0_10px_-2px_rgba(168,85,247,0.3)]">
-                            RC
+                            <span x-text="userInitials">RC</span>
                         </div>
                         <div class="hidden sm:block">
-                            <p class="text-xs font-medium text-gray-200 leading-tight">Mustapha</p>
-                            <p class="text-[10px] text-gray-500 leading-tight font-mono">Admin</p>
+                            <p class="text-xs font-medium text-gray-200 leading-tight" x-text="userName || 'Mustapha'">Mustapha</p>
+                            <p class="text-[10px] text-gray-500 leading-tight font-mono" x-text="userRole || 'Admin'">Admin</p>
                         </div>
                     </div>
                 </div>
@@ -232,6 +232,9 @@
     <script>
     function app() {
         return {
+            userName: '',
+            userRole: '',
+            userInitials: 'RC',
             activeNav: 'overview',
             navItems: [
                 { id: 'overview', label: 'Overview', icon: 'fa-solid fa-chart-pie', href: '/dashboard' },
@@ -259,6 +262,29 @@
                 const path = window.location.pathname;
                 const found = this.navItems.find(i => !i.separator && path.startsWith(i.href));
                 if (found) this.activeNav = found.id;
+
+                // Load user info from local storage (set during onboarding/login)
+                this.userName = localStorage.getItem('rc_user_name') || '';
+                this.userRole = localStorage.getItem('rc_user_role') || 'Admin';
+                if (this.userName) {
+                    this.userInitials = this.userName.split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
+                }
+
+                // Fallback: try fetching from API
+                if (!this.userName) {
+                    fetch('/api/auth/me')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.name) {
+                                this.userName = data.name;
+                                this.userRole = data.role || 'Admin';
+                                this.userInitials = data.name.split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
+                                localStorage.setItem('rc_user_name', data.name);
+                                localStorage.setItem('rc_user_role', data.role || 'Admin');
+                            }
+                        })
+                        .catch(() => {});
+                }
             }
         };
     }

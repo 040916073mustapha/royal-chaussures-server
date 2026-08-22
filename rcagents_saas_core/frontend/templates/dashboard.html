@@ -1,16 +1,25 @@
 {% extends "dashboard_base.html" %}
 {% block content %}
-<div x-data="{ stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0 }" 
-     x-init="Promise.all([
-        fetch('/api/stats').then(r=>r.json()).then(d=>stats=d).catch(()=>{}),
-        fetch('/api/orders').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}),
-        fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
-     ]).finally(()=>loading=false)">
+<div x-data="{ stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0, storeId: '', storeName: '' }" 
+     x-init="
+        // Get store_id from URL or localStorage
+        const pathParts = window.location.pathname.split('/');
+        storeId = pathParts[2] && pathParts[2] !== 'dashboard' ? pathParts[2] : (localStorage.getItem('rc_store_id') || '');
+        
+        Promise.all([
+            storeId 
+                ? fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+                    .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}))
+                : fetch('/api/stats').then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+                    .then(() => fetch('/api/orders?limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
+            fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
+        ]).finally(()=>loading=false)
+    ">
 
     <!-- Welcome + Date Range -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
         <div>
-            <h1 class="text-xl font-bold text-white tracking-tight">Welcome back, Mustapha <span class="inline-block animate-pulse">👋</span></h1>
+            <h1 class="text-xl font-bold text-white tracking-tight">Welcome back, <span x-text="userName || storeName || 'Mustapha'">Mustapha</span> <span class="inline-block animate-pulse">👋</span></h1>
             <p class="text-xs text-gray-500 mt-1 font-mono">Your AI-powered dashboard is synced and ready.</p>
         </div>
         <div class="flex items-center gap-3">
