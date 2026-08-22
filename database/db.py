@@ -18,7 +18,9 @@ from datetime import datetime
 # اختيار محرك قاعدة البيانات
 # 🔵 PRODUCTION: PostgreSQL (Neon) — الافتراضي
 # 🟡 LOCAL DEV:   قم بضبط DB_ENGINE=sqlite
-_DB_ENGINE = os.environ.get("DB_ENGINE", "postgres").strip().lower()
+# 🛡️ إذا DATABASE_URL غير مضبوطة، نستخدم SQLite تلقائياً
+_DB_ENGINE_DEFAULT = "sqlite" if not os.environ.get("DATABASE_URL", "") else "postgres"
+_DB_ENGINE = os.environ.get("DB_ENGINE", _DB_ENGINE_DEFAULT).strip().lower()
 
 
 # ============================================================

@@ -640,6 +640,10 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
     # 🆕 Multi-Tenant: قراءة System Prompt من قاعدة البيانات حسب store_id
     system_prompt = ""
     try:
+        # Force SQLite engine to avoid PostgreSQL dependency issues
+        _old_engine = os.environ.get('DB_ENGINE', '')
+        if not _old_engine:
+            os.environ['DB_ENGINE'] = 'sqlite'
         from database.db import get_store_prompt
         db_prompt = get_store_prompt(store_id, "customer_support")
         if db_prompt:
@@ -892,6 +896,9 @@ def process_messaging_entries(entries, platform, send_func):
                 # 🆕 Multi-Tenant: إيجاد store_id من المحادثة (FB Page ID)
                 store_id = 1
                 try:
+                    _old_engine2 = __import__('os').environ.get('DB_ENGINE', '')
+                    if not _old_engine2:
+                        __import__('os').environ['DB_ENGINE'] = 'sqlite'
                     from database.db import get_store_id_by_platform
                     # نمرر صفحة FB ID — سنأخذها من أول entry في webhook
                     entry_page_id = entry.get('id', '')
@@ -925,6 +932,9 @@ def process_whatsapp_entries(entries):
                     # 🆕 Multi-Tenant: إيجاد store_id من WhatsApp Phone Number ID
                     store_id = 1
                     try:
+                        _old_engine3 = __import__('os').environ.get('DB_ENGINE', '')
+                        if not _old_engine3:
+                            __import__('os').environ['DB_ENGINE'] = 'sqlite'
                         from database.db import get_store_id_by_whatsapp_phone
                         # نحاول نجيب الـ metadata_phone_number_id من الـ webhook payload
                         metadata = change.get('value', {}).get('metadata', {})
