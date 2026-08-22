@@ -1,36 +1,29 @@
 {% extends "dashboard_base.html" %}
 {% block content %}
 <div x-data="{ 
-    stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0, 
+    stats: {}, orders: [], orderList: [], msgs: [], products: [], 
+    loading: true, convCount: 0, msgCount: 0, 
     storeId: '', storeName: '', page: '{{ active_page | default("overview") }}',
     integrations: { shopify: { url: '', token: '' }, meta: { token: '', pageId: '' }, zr: { apiKey: '' } },
     integrationStatus: {}
 }" 
      x-init="
-        // Read page from Jinja2 and force Alpine reactivity
-        storeId = localStorage.getItem('rc_store_id') || '';
+        storeId = localStorage.getItem('rc_store_id') || 'royal-main';
         const targetPage = '{{ active_page | default("overview") }}';
-        if (targetPage && targetPage !== 'overview') {
-            page = targetPage;
-        }
+        if (targetPage) page = targetPage;
         
-        if (page === 'overview') {
-            // Lazy load overview data — $nextTick is undefined in x-init, use setTimeout
-            setTimeout(() => {
-                loading = false;
-                Promise.all([
-                    storeId 
-                        ? fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
-                            .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}))
-                        : fetch('/api/stats').then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
-                            .then(() => fetch('/api/orders?limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
-                    fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
-                ]).finally(()=>loading=false)
-            }, 50);
-        } else {
-            // Non-overview pages: just stop loading, content via x-if
-            loading = false;
-        }
+        const loadOverview = () => Promise.all([
+            fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+                .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
+            fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
+        ]).finally(()=>loading=false);
+        const loadOrdersPage = () => fetch('/api/orders?store_id=' + storeId + '&limit=50').then(r=>r.json()).then(d=>{ orderList=d.orders||[] }).catch(()=>{}).finally(()=>loading=false);
+        const loadProductsPage = () => fetch('/api/products?store_id=' + storeId).then(r=>r.json()).then(d=>{ products=d.products||[] }).catch(()=>{}).finally(()=>loading=false);
+        
+        if (page === 'overview') { setTimeout(loadOverview, 50); }
+        else if (page === 'orders') { setTimeout(loadOrdersPage, 50); }
+        else if (page === 'products') { setTimeout(loadProductsPage, 50); }
+        else { loading = false; }
     "
 >
 
@@ -399,10 +392,29 @@
             </div>
         </div>
         <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-            <div class="text-center py-16 text-gray-500">
-                <i class="fa-solid fa-box-archive text-4xl mb-4 opacity-30"></i>
-                <p class="text-sm font-mono">Orders will appear here once synced via Integrations.</p>
-                <a href="/dashboard/integrations" class="inline-block mt-4 text-xs text-neon-purple hover:text-neon-cyan transition-colors">→ Connect Shopify</a>
+            <div class="overflow-x-auto">
+                <template x-if="orderList.length === 0">
+                    <div class="text-center py-16 text-gray-500">
+                        <i class="fa-solid fa-box-archive text-4xl mb-4 opacity-30"></i>
+                        <p class="text-sm font-mono">No orders yet. Syncing from Shopify...</p>
+                    </div>
+                </template>
+                <table x-show="orderList.length > 0" class="w-full text-xs">
+                    <thead><tr class="text-gray-500 font-mono text-[10px] border-b border-rc-border/40">
+                        <th class="text-left py-2.5 pr-2 font-medium">ID</th><th class="text-left py-2.5 pr-2 font-medium">Customer</th><th class="text-left py-2.5 pr-2 font-medium">Total</th><th class="text-left py-2.5 pr-2 font-medium">Status</th><th class="text-right py-2.5 pr-2 font-medium">Date</th>
+                    </tr></thead>
+                    <tbody>
+                        <template x-for="o in orderList" :key="o.id">
+                            <tr class="border-b border-rc-border/20 hover:bg-rc-card-hover/30 transition-colors">
+                                <td class="py-3 pr-2 font-mono text-gray-400" x-text="o.order_number||o.id"></td>
+                                <td class="py-3 pr-2"><span class="text-gray-200" x-text="o.customer||'Guest'"></span></td>
+                                <td class="py-3 pr-2 font-mono" x-text="o.total"></td>
+                                <td class="py-3 pr-2"><span class="text-[10px] font-mono font-semibold px-2 py-1 rounded border capitalize" :class="{'bg-emerald-400/10 text-emerald-400 border-emerald-400/30':o.status==='paid'||o.status==='confirmed','bg-yellow-400/10 text-yellow-400 border-yellow-400/30':o.status==='pending'||o.status==='nouveau','bg-rose-400/10 text-rose-400 border-rose-400/30':o.status==='cancelled','bg-sky-400/10 text-sky-400 border-sky-400/30':o.status==='delivered'}" x-text="o.status"></span></td>
+                                <td class="py-3 pr-2 text-right font-mono text-gray-500 text-[10px]" x-text="o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -417,12 +429,23 @@
                 <p class="text-xs text-gray-500 mt-1 font-mono">Your product catalog synced from Shopify.</p>
             </div>
         </div>
-        <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-            <div class="text-center py-16 text-gray-500">
-                <i class="fa-solid fa-tag text-4xl mb-4 opacity-30"></i>
-                <p class="text-sm font-mono">Products will appear here once synced via Integrations.</p>
-                <a href="/dashboard/integrations" class="inline-block mt-4 text-xs text-neon-purple hover:text-neon-cyan transition-colors">→ Connect Shopify</a>
-            </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <template x-if="products.length === 0">
+                <div class="col-span-full bg-rc-card border border-rc-border/60 rounded-xl p-5 text-center py-16 text-gray-500">
+                    <i class="fa-solid fa-tag text-4xl mb-4 opacity-30"></i>
+                    <p class="text-sm font-mono">No products yet. Syncing from Shopify...</p>
+                </div>
+            </template>
+            <template x-for="p in products" :key="p.id">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4 card-hover-glow transition-all duration-300 group">
+                    <div class="w-full h-36 rounded-lg bg-rc-bg border border-rc-border/40 mb-3 overflow-hidden">
+                        <img x-show="p.images && p.images.length > 0" :src="p.images[0].src" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div x-show="!p.images || p.images.length === 0" class="w-full h-full flex items-center justify-center text-gray-600 text-2xl">👟</div>
+                    </div>
+                    <p class="text-xs font-semibold text-white truncate" x-text="p.title"></p>
+                    <p class="text-[10px] font-mono text-neon-purple mt-1" x-text="'$' + (p.variants && p.variants[0] ? p.variants[0].price : '0.00')"></p>
+                </div>
+            </template>
         </div>
     </div>
     </template>

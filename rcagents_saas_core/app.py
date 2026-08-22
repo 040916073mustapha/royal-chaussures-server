@@ -513,6 +513,27 @@ def create_app():
             logger.error(f"Integrations connect error: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
+    # ─── Auto-Sync Royal Chaussures at Startup ───────────────
+
+    @app.before_request
+    def _auto_sync_royal():
+        """Auto-sync Royal Chaussures Shopify data on first request"""
+        if not getattr(app, "_royal_synced", False):
+            app._royal_synced = True
+            try:
+                import threading
+                def _do_sync():
+                    with app.app_context():
+                        domain = "rwqchh-na.myshopify.com"
+                        token = os.getenv("SHOPIFY_CATALOG_TOKEN", "")
+                        store_id = "royal-main"
+                        logger.info("🚀 Auto-syncing Royal Chaussures Shopify data...")
+                        result = _sync_shopify_catalog(domain, token, store_id, app)
+                        logger.info(f"✅ Auto-sync complete: {result.get('products', 0)} products, {result.get('orders', 0)} orders")
+                threading.Thread(target=_do_sync, daemon=True).start()
+            except Exception as e:
+                logger.warning(f"Auto-sync init error: {e}")
+
     return app
 
 
