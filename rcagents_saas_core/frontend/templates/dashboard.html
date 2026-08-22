@@ -3,27 +3,35 @@
 <div x-data="{ 
     stats: {}, orders: [], orderList: [], msgs: [], products: [], 
     loading: true, convCount: 0, msgCount: 0, 
-    storeId: '', storeName: '', page: '{{ active_page | default("overview") }}',
+    storeId: 'royal-main', storeName: 'Royal Chaussures', page: 'overview',
     integrations: { shopify: { url: '', token: '' }, meta: { token: '', pageId: '' }, zr: { apiKey: '' } },
     integrationStatus: {}
 }" 
      x-init="
-        storeId = localStorage.getItem('rc_store_id') || 'royal-main';
-        const targetPage = '{{ active_page | default("overview") }}';
-        if (targetPage) page = targetPage;
+        try {
+            storeId = localStorage.getItem('rc_store_id') || 'royal-main';
+            const targetPage = '{{ active_page | default("overview") }}';
+            if (targetPage && ['overview','orders','products','clients','chat','settings','analytics','marketing','inventory','shipments','integrations','agents','auto-ship','constellation'].includes(targetPage)) {
+                page = targetPage;
+            } else {
+                page = 'overview';
+            }
+        } catch(e) { page = 'overview'; }
         
         const loadOverview = () => Promise.all([
-            fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'' }).catch(()=>{})
+            fetch('/api/stats?store_id=' + storeId).then(r=>r.json()).then(d=>{ stats=d; storeName=d.store_name||'Royal Chaussures' }).catch(()=>{})
                 .then(() => fetch('/api/orders?store_id=' + storeId + '&limit=10').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{})),
             fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
         ]).finally(()=>loading=false);
         const loadOrdersPage = () => fetch('/api/orders?store_id=' + storeId + '&limit=50').then(r=>r.json()).then(d=>{ orderList=d.orders||[] }).catch(()=>{}).finally(()=>loading=false);
         const loadProductsPage = () => fetch('/api/products?store_id=' + storeId).then(r=>r.json()).then(d=>{ products=d.products||[] }).catch(()=>{}).finally(()=>loading=false);
         
-        if (page === 'overview') { setTimeout(loadOverview, 50); }
-        else if (page === 'orders') { setTimeout(loadOrdersPage, 50); }
-        else if (page === 'products') { setTimeout(loadProductsPage, 50); }
-        else { loading = false; }
+        try {
+            if (page === 'overview') { setTimeout(loadOverview, 50); }
+            else if (page === 'orders') { setTimeout(loadOrdersPage, 50); }
+            else if (page === 'products') { setTimeout(loadProductsPage, 50); }
+            else { loading = false; }
+        } catch(e) { loading = false; }
     "
 >
 

@@ -232,8 +232,8 @@
     <script>
     function app() {
         return {
-            userName: '',
-            userRole: '',
+            userName: 'Merchant',
+            userRole: 'Admin',
             userInitials: 'RC',
             activeNav: 'overview',
             navItems: [
@@ -264,8 +264,17 @@
                 if (found) this.activeNav = found.id;
 
                 // Load user info from local storage (set during onboarding/login)
-                this.userName = localStorage.getItem('rc_user_name') || '';
-                this.userRole = localStorage.getItem('rc_user_role') || 'Admin';
+                try {
+                    const uname = localStorage.getItem('rc_user_name');
+                    this.userName = uname && uname.trim() ? uname : 'Merchant';
+                    this.userRole = localStorage.getItem('rc_user_role') || 'Admin';
+                    if (this.userName) {
+                        this.userInitials = this.userName.split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
+                    }
+                } catch(e) {
+                    this.userName = 'Merchant';
+                    this.userRole = 'Admin';
+                }
                 if (this.userName) {
                     this.userInitials = this.userName.split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
                 }
