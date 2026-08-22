@@ -124,53 +124,24 @@ def create_app():
         except Exception:
             return send_from_directory(app.static_folder, "terms.html")
 
-    @app.route("/dashboard/orders")
-    def dashboard_orders():
-        return send_from_directory(app.static_folder, "dashboard.html")
+    # ─── Dynamic Dashboard Routes ────────────────────────────
+    # All /dashboard/* sub-routes render the same Dark Neon Cyberpunk template
+    # AlpineJS handles client-side navigation and active tab state
 
-    @app.route("/dashboard/clients")
-    def dashboard_clients():
-        return send_from_directory(app.static_folder, "dashboard.html")
+    _dashboard_pages = [
+        "orders", "clients", "products", "chat", "settings",
+        "shipments", "constellation", "auto-ship", "agents",
+        "analytics", "inventory", "marketing",
+    ]
 
-    @app.route("/dashboard/products")
-    def dashboard_products():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/chat")
-    def dashboard_chat():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/settings")
-    def dashboard_settings():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/shipments")
-    def dashboard_shipments():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/constellation")
-    def dashboard_constellation():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/auto-ship")
-    def dashboard_autoship():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/agents")
-    def dashboard_agents():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/analytics")
-    def dashboard_analytics():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/inventory")
-    def dashboard_inventory():
-        return send_from_directory(app.static_folder, "dashboard.html")
-
-    @app.route("/dashboard/marketing")
-    def dashboard_marketing():
-        return send_from_directory(app.static_folder, "dashboard.html")
+    @app.route("/dashboard/<page>")
+    def dashboard_page(page):
+        if page not in _dashboard_pages:
+            return send_from_directory(app.static_folder, "dashboard.html"), 404
+        try:
+            return render_template("dashboard.html")
+        except Exception:
+            return send_from_directory(app.static_folder, "dashboard.html")
 
     # ─── Webhook Endpoint (Messenger & Instagram) ────────────
 
