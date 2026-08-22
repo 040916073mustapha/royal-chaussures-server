@@ -10,31 +10,31 @@
         const statusLog = document.getElementById('connectionStatusLog');
         const s = this.storeId || localStorage.getItem('rc_store_id');
         const shopify = this.integrations.shopify;
-        statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to Shopify...</p>';
+        statusLog.innerHTML = '<p class=&quot;text-neon-cyan&quot;>🔄 Connecting to Shopify...</p>';
         fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:s, platform:'shopify', credentials:{shopify_domain:shopify.url, access_token:shopify.token}, sync:true}) })
-        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class="text-emerald-400">✅ '+data.message+'</p>'; this.integrationStatus.shopify=true; } else { statusLog.innerHTML='<p class="text-rose-400">❌ '+data.error+'</p>'; } })
-        .catch(err=>{ statusLog.innerHTML='<p class="text-rose-400">❌ '+err.message+'</p>'; });
+        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class=&quot;text-emerald-400&quot;>✅ '+data.message+'</p>'; this.integrationStatus.shopify=true; } else { statusLog.innerHTML='<p class=&quot;text-rose-400&quot;>❌ '+data.error+'</p>'; } })
+        .catch(err=>{ statusLog.innerHTML='<p class=&quot;text-rose-400&quot;>❌ '+err.message+'</p>'; });
     },
     connectMeta() {
         const statusLog = document.getElementById('connectionStatusLog');
         const s = this.storeId || localStorage.getItem('rc_store_id');
         const meta = this.integrations.meta;
-        statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Verifying Meta token...</p>';
+        statusLog.innerHTML = '<p class=&quot;text-neon-cyan&quot;>🔄 Verifying Meta token...</p>';
         fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:s, platform:'meta', credentials:{access_token:meta.token, page_id:meta.pageId}}) })
-        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class="text-emerald-400">✅ '+data.message+'</p>'; this.integrationStatus.meta=true; } else { statusLog.innerHTML='<p class="text-rose-400">❌ '+data.error+'</p>'; } })
-        .catch(err=>{ statusLog.innerHTML='<p class="text-rose-400">❌ '+err.message+'</p>'; });
+        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class=&quot;text-emerald-400&quot;>✅ '+data.message+'</p>'; this.integrationStatus.meta=true; } else { statusLog.innerHTML='<p class=&quot;text-rose-400&quot;>❌ '+data.error+'</p>'; } })
+        .catch(err=>{ statusLog.innerHTML='<p class=&quot;text-rose-400&quot;>❌ '+err.message+'</p>'; });
     },
     connectZR() {
         const statusLog = document.getElementById('connectionStatusLog');
         const s = this.storeId || localStorage.getItem('rc_store_id');
         const zr = this.integrations.zr;
-        statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to ZR Express...</p>';
+        statusLog.innerHTML = '<p class=&quot;text-neon-cyan&quot;>🔄 Connecting to ZR Express...</p>';
         fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:s, platform:'zr_express', credentials:{api_key:zr.apiKey}}) })
-        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class="text-emerald-400">✅ '+data.message+'</p>'; this.integrationStatus.zr=true; } else { statusLog.innerHTML='<p class="text-rose-400">❌ '+data.error+'</p>'; } })
-        .catch(err=>{ statusLog.innerHTML='<p class="text-rose-400">❌ '+err.message+'</p>'; });
+        .then(r=>r.json()).then(data=>{ if(data.success){ statusLog.innerHTML='<p class=&quot;text-emerald-400&quot;>✅ '+data.message+'</p>'; this.integrationStatus.zr=true; } else { statusLog.innerHTML='<p class=&quot;text-rose-400&quot;>❌ '+data.error+'</p>'; } })
+        .catch(err=>{ statusLog.innerHTML='<p class=&quot;text-rose-400&quot;>❌ '+err.message+'</p>'; });
     }
 }" 
-     x-init="
+     x-init="dashInit(this)"
         try {
             storeId = localStorage.getItem('rc_store_id') || 'royal-main';
             const targetPage = '{{ active_page | default("overview") }}';
@@ -184,7 +184,7 @@
                         </div>
                     </div>
                     <div class="relative h-52">
-                        <canvas x-init="setTimeout(()=>{new Chart($el.getContext('2d'),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],datasets:[{label:'Revenue',data:[28000,35000,42000,38000,51000,47000,62000,58000,73000,69000,85000,stats.revenue||92000],borderColor:'#A855F7',backgroundColor:ctx=>{let g=ctx.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(168,85,247,0.25)');g.addColorStop(1,'rgba(168,85,247,0)');return g},fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#A855F7',pointBorderColor:'#0A0A0F',pointBorderWidth:2,borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(30,30,48,0.5)',drawBorder:false},ticks:{color:'#64748B',font:{size:9,family:'JetBrains Mono'}}},y:{grid:{color:'rgba(30,30,48,0.5)',drawBorder:false},ticks:{color:'#64748B',font:{size:9,family:'JetBrains Mono'},callback:v=>v/1000+'k'}}},interaction:{intersect:false,mode:'index'}}});},150)"></canvas>
+                        <canvas x-init="dashInit(this)"setTimeout(()=>{new Chart($el.getContext('2d'),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],datasets:[{label:'Revenue',data:[28000,35000,42000,38000,51000,47000,62000,58000,73000,69000,85000,stats.revenue||92000],borderColor:'#A855F7',backgroundColor:ctx=>{let g=ctx.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(168,85,247,0.25)');g.addColorStop(1,'rgba(168,85,247,0)');return g},fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#A855F7',pointBorderColor:'#0A0A0F',pointBorderWidth:2,borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(30,30,48,0.5)',drawBorder:false},ticks:{color:'#64748B',font:{size:9,family:'JetBrains Mono'}}},y:{grid:{color:'rgba(30,30,48,0.5)',drawBorder:false},ticks:{color:'#64748B',font:{size:9,family:'JetBrains Mono'},callback:v=>v/1000+'k'}}},interaction:{intersect:false,mode:'index'}}});},150)"></canvas>
                     </div>
                 </div>
 
@@ -227,7 +227,7 @@
                         <div><h3 class="text-sm font-semibold text-white">Sales by Channel</h3></div>
                     </div>
                     <div class="flex items-center justify-center h-36">
-                        <canvas x-init="setTimeout(()=>{new Chart($el.getContext('2d'),{type:'doughnut',data:{labels:['Online Store','Instagram','Facebook','WhatsApp'],datasets:[{data:[45,25,18,12],backgroundColor:['#A855F7','#EC4899','#3B82F6','#22C55E'],borderColor:'#0A0A0F',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{color:'#94A3B8',font:{size:9,family:'JetBrains Mono'},padding:10,usePointStyle:true,pointStyle:'circle'}}}}});},200)"></canvas>
+                        <canvas x-init="dashInit(this)"setTimeout(()=>{new Chart($el.getContext('2d'),{type:'doughnut',data:{labels:['Online Store','Instagram','Facebook','WhatsApp'],datasets:[{data:[45,25,18,12],backgroundColor:['#A855F7','#EC4899','#3B82F6','#22C55E'],borderColor:'#0A0A0F',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{color:'#94A3B8',font:{size:9,family:'JetBrains Mono'},padding:10,usePointStyle:true,pointStyle:'circle'}}}}});},200)"></canvas>
                     </div>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-center">
                         <div class="bg-rc-card-hover/50 rounded-lg p-2"><p class="text-[10px] font-mono text-gray-500">Online Store</p><p class="text-sm font-bold text-neon-purple font-mono">45%</p></div>
@@ -422,7 +422,7 @@
     <div>
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
             <div>
-                <h1 class="text-xl font-bold text-white tracking-tight">Orders <span class="text-neon-cyan">📦</span></h1>
+                <h1 class="text-xl font-bold text-white tracking-tight">Orders <span class=&quot;text-neon-cyan&quot;>📦</span></h1>
                 <p class="text-xs text-gray-500 mt-1 font-mono">Manage and track all your store orders.</p>
             </div>
         </div>
@@ -460,7 +460,7 @@
     <div>
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
             <div>
-                <h1 class="text-xl font-bold text-white tracking-tight">Products <span class="text-emerald-400">👟</span></h1>
+                <h1 class="text-xl font-bold text-white tracking-tight">Products <span class=&quot;text-emerald-400&quot;>👟</span></h1>
                 <p class="text-xs text-gray-500 mt-1 font-mono">Your product catalog synced from Shopify.</p>
             </div>
         </div>
@@ -629,7 +629,7 @@ function connectShopify() {
     const storeId = document.querySelector('[x-data]').__x.$data.storeId || localStorage.getItem('rc_store_id');
     const shopify = document.querySelector('[x-data]').__x.$data.integrations.shopify;
     
-    statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to Shopify...</p>';
+    statusLog.innerHTML = '<p class=&quot;text-neon-cyan&quot;>🔄 Connecting to Shopify...</p>';
     
     fetch('/api/integrations/connect', {
         method: 'POST',
@@ -647,14 +647,14 @@ function connectShopify() {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            statusLog.innerHTML = '<p class="text-emerald-400">✅ ' + (data.message || 'Shopify connected & synced successfully!') + '</p>';
+            statusLog.innerHTML = '<p class=&quot;text-emerald-400&quot;>✅ ' + (data.message || 'Shopify connected & synced successfully!') + '</p>';
             document.querySelector('[x-data]').__x.$data.integrationStatus.shopify = true;
         } else {
-            statusLog.innerHTML = '<p class="text-rose-400">❌ Error: ' + (data.error || 'Unknown error') + '</p>';
+            statusLog.innerHTML = '<p class=&quot;text-rose-400&quot;>❌ Error: ' + (data.error || 'Unknown error') + '</p>';
         }
     })
     .catch(err => {
-        statusLog.innerHTML = '<p class="text-rose-400">❌ Connection failed: ' + err.message + '</p>';
+        statusLog.innerHTML = '<p class=&quot;text-rose-400&quot;>❌ Connection failed: ' + err.message + '</p>';
     });
 }
 
@@ -663,7 +663,7 @@ function connectMeta() {
     const storeId = document.querySelector('[x-data]').__x.$data.storeId || localStorage.getItem('rc_store_id');
     const meta = document.querySelector('[x-data]').__x.$data.integrations.meta;
     
-    statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Verifying Meta token...</p>';
+    statusLog.innerHTML = '<p class=&quot;text-neon-cyan&quot;>🔄 Verifying Meta token...</p>';
     
     fetch('/api/integrations/connect', {
         method: 'POST',
@@ -680,14 +680,14 @@ function connectMeta() {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            statusLog.innerHTML = '<p class="text-emerald-400">✅ ' + (data.message || 'Meta connected successfully!') + '</p>';
+            statusLog.innerHTML = '<p class=&quot;text-emerald-400&quot;>✅ ' + (data.message || 'Meta connected successfully!') + '</p>';
             document.querySelector('[x-data]').__x.$data.integrationStatus.meta = true;
         } else {
-            statusLog.innerHTML = '<p class="text-rose-400">❌ Error: ' + (data.error || 'Unknown error') + '</p>';
+            statusLog.innerHTML = '<p class=&quot;text-rose-400&quot;>❌ Error: ' + (data.error || 'Unknown error') + '</p>';
         }
     })
     .catch(err => {
-        statusLog.innerHTML = '<p class="text-rose-400">❌ Verification failed: ' + err.message + '</p>';
+        statusLog.innerHTML = '<p class=&quot;text-rose-400&quot;>❌ Verification failed: ' + err.message + '</p>';
     });
 }
 
@@ -696,7 +696,7 @@ function connectZR() {
     const storeId = document.querySelector('[x-data]').__x.$data.storeId || localStorage.getItem('rc_store_id');
     const zr = document.querySelector('[x-data]').__x.$data.integrations.zr;
     
-    statusLog.innerHTML = '<p class="text-neon-cyan">🔄 Connecting to ZR Express...</p>';
+    statusLog.innerHTML = '<p class=&quot;text-neon-cyan&quot;>🔄 Connecting to ZR Express...</p>';
     
     fetch('/api/integrations/connect', {
         method: 'POST',
@@ -712,14 +712,94 @@ function connectZR() {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            statusLog.innerHTML = '<p class="text-emerald-400">✅ ' + (data.message || 'ZR Express connected!') + '</p>';
+            statusLog.innerHTML = '<p class=&quot;text-emerald-400&quot;>✅ ' + (data.message || 'ZR Express connected!') + '</p>';
             document.querySelector('[x-data]').__x.$data.integrationStatus.zr = true;
         } else {
-            statusLog.innerHTML = '<p class="text-rose-400">❌ Error: ' + (data.error || 'Unknown error') + '</p>';
+            statusLog.innerHTML = '<p class=&quot;text-rose-400&quot;>❌ Error: ' + (data.error || 'Unknown error') + '</p>';
         }
     })
     .catch(err => {
-        statusLog.innerHTML = '<p class="text-rose-400">❌ Connection failed: ' + err.message + '</p>';
+        statusLog.innerHTML = '<p class=&quot;text-rose-400&quot;>❌ Connection failed: ' + err.message + '</p>';
     });
 }
+<script>
+// Dashboard state factory
+function dashData() {
+    return {
+        stats: {}, orders: [], orderList: [], msgs: [], products: [], 
+        loading: true, convCount: 0, msgCount: 0, 
+        storeId: 'royal-main', storeName: 'Royal Chaussures', page: 'overview',
+        integrations: { shopify: { url: '', token: '' }, meta: { token: '', pageId: '' }, zr: { apiKey: '' } },
+        integrationStatus: {}
+    };
+}
+// Dashboard init (called from x-init)
+function dashInit(el) {
+    try {
+        var d = el.__x.$data;
+        d.storeId = localStorage.getItem('rc_store_id') || 'royal-main';
+        var tp = '{{ active_page | default("overview") }}';
+        if (tp && ['overview','orders','products','clients','chat','settings','analytics','marketing','inventory','shipments','integrations','agents','auto-ship','constellation'].indexOf(tp) >= 0) {
+            d.page = tp;
+        }
+    } catch(e) { if(el.__x && el.__x.$data) el.__x.$data.page = 'overview'; }
+    
+    var d = el.__x.$data;
+    
+    function loadOverview() {
+        Promise.all([
+            fetch('/api/stats?store_id=' + d.storeId).then(function(r){return r.json()}).then(function(d2){ d.stats=d2; d.storeName=d2.store_name||'Royal Chaussures' }).catch(function(){}).then(function(){ return fetch('/api/orders?store_id=' + d.storeId + '&limit=10').then(function(r){return r.json()}).then(function(d2){d.orders=d2.orders||[]}).catch(function(){}) }),
+            fetch('/api/messages?limit=200').then(function(r){return r.json()}).then(function(d2){ if(d2.success){ d.msgs=d2.messages; d.msgCount=d2.count; var s=new Set(); d2.messages.forEach(function(m){s.add(m.sender_id+'|'+m.platform)}); d.convCount=s.size } }).catch(function(){})
+        ]).finally(function(){d.loading=false});
+    }
+    function loadOrdersPage() {
+        fetch('/api/orders?store_id=' + d.storeId + '&limit=50').then(function(r){return r.json()}).then(function(d2){ d.orderList=d2.orders||[] }).catch(function(){}).finally(function(){d.loading=false});
+    }
+    function loadProductsPage() {
+        fetch('/api/products?store_id=' + d.storeId).then(function(r){return r.json()}).then(function(d2){ d.products=d2.products||[] }).catch(function(){}).finally(function(){d.loading=false});
+    }
+    
+    try {
+        if (d.page === 'overview') { setTimeout(loadOverview, 50); }
+        else if (d.page === 'orders') { setTimeout(loadOrdersPage, 50); }
+        else if (d.page === 'products') { setTimeout(loadProductsPage, 50); }
+        else { d.loading = false; }
+    } catch(e) { d.loading = false; }
+}
+
+// Global connect functions (called from @click in integrations.html)
+function connectShopify() {
+    var el = document.querySelector('[x-data]');
+    if (!el || !el.__x) return;
+    var d = el.__x.$data;
+    var log = document.getElementById('connectionStatusLog');
+    var shopify = d.integrations.shopify;
+    log.innerHTML = 'Connecting to Shopify...';
+    fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:d.storeId, platform:'shopify', credentials:{shopify_domain:shopify.url, access_token:shopify.token}, sync:true}) })
+    .then(function(r){return r.json()}).then(function(data){ if(data.success){ log.innerHTML='Connected!'; d.integrationStatus.shopify=true; } else { log.innerHTML='Error: '+data.error; } })
+    .catch(function(err){ log.innerHTML='Failed: '+err.message; });
+}
+function connectMeta() {
+    var el = document.querySelector('[x-data]');
+    if (!el || !el.__x) return;
+    var d = el.__x.$data;
+    var log = document.getElementById('connectionStatusLog');
+    var meta = d.integrations.meta;
+    log.innerHTML = 'Verifying Meta token...';
+    fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:d.storeId, platform:'meta', credentials:{access_token:meta.token, page_id:meta.pageId}}) })
+    .then(function(r){return r.json()}).then(function(data){ if(data.success){ log.innerHTML='Meta connected!'; d.integrationStatus.meta=true; } else { log.innerHTML='Error: '+data.error; } })
+    .catch(function(err){ log.innerHTML='Failed: '+err.message; });
+}
+function connectZR() {
+    var el = document.querySelector('[x-data]');
+    if (!el || !el.__x) return;
+    var d = el.__x.$data;
+    var log = document.getElementById('connectionStatusLog');
+    var zr = d.integrations.zr;
+    log.innerHTML = 'Connecting to ZR Express...';
+    fetch('/api/integrations/connect', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({store_id:d.storeId, platform:'zr_express', credentials:{api_key:zr.apiKey}}) })
+    .then(function(r){return r.json()}).then(function(data){ if(data.success){ log.innerHTML='ZR connected!'; d.integrationStatus.zr=true; } else { log.innerHTML='Error: '+data.error; } })
+    .catch(function(err){ log.innerHTML='Failed: '+err.message; });
+}
+</script>
 {% endblock %}
