@@ -72,7 +72,11 @@ def create_app():
 
     @app.route("/")
     def index():
-        return send_from_directory(app.static_folder, "login.html")
+        """Landing Page — the main entrance to RC Agents"""
+        try:
+            return render_template("landing.html")
+        except Exception:
+            return send_from_directory(app.static_folder, "landing.html")
 
     @app.route("/dashboard")
     def dashboard():
@@ -82,9 +86,21 @@ def create_app():
         except Exception:
             return send_from_directory(app.static_folder, "dashboard.html")
 
-    @app.route("/onboarding")
-    def onboarding():
-        return send_from_directory(app.static_folder, "onboarding.html")
+    @app.route("/onboard")
+    def onboard():
+        """Onboarding / Sign-Up page"""
+        try:
+            return render_template("onboard.html")
+        except Exception:
+            return send_from_directory(app.static_folder, "onboard.html")
+
+    @app.route("/login")
+    def login():
+        """Login page"""
+        try:
+            return render_template("dashboard_login.html")
+        except Exception:
+            return send_from_directory(app.static_folder, "dashboard_login.html")
 
     @app.route("/dashboard/orders")
     def dashboard_orders():
