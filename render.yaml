@@ -8,8 +8,8 @@ services:
     env: python
     region: frankfurt
     plan: free
-    buildCommand: pip install -r rcagents_saas_core/requirements.txt
-    startCommand: gunicorn run_saas:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --env AI_MODEL=openai/deepseek-ai/DeepSeek-V4-Flash
     healthCheckPath: /api/health
     envVars:
       - key: SAAS_DATABASE_URL
