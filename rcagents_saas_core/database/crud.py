@@ -321,7 +321,7 @@ def get_or_create_ai_settings(store_id, db=None):
             # Ensure model is set even if previously null/empty
             _changed = False
             if not settings.ai_model:
-                settings.ai_model = "meta-llama/Llama-3.3-70B-Instruct"
+                settings.ai_model = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
                 _changed = True
             if not settings.system_prompt:
                 settings.system_prompt = DEFAULT_SYSTEM_PROMPT
@@ -335,7 +335,7 @@ def get_or_create_ai_settings(store_id, db=None):
             return settings
         settings = AISettings(
             store_id=store_id,
-            ai_model="meta-llama/Llama-3.3-70B-Instruct",
+            ai_model="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
             system_prompt=DEFAULT_SYSTEM_PROMPT,
             temperature=0.7,
             max_tokens=2048,
@@ -418,3 +418,4 @@ def get_system_prompt_for_store(store_id, db=None):
         return settings.system_prompt or ""
     finally:
         db.close()
+

@@ -9,7 +9,7 @@ services:
     region: frankfurt
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --env AI_MODEL=meta-llama/Llama-3.3-70B-Instruct
+    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --env AI_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
     healthCheckPath: /api/health
     envVars:
       - key: SAAS_DATABASE_URL
@@ -23,7 +23,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: AI_MODEL
-        value: meta-llama/Llama-3.3-70B-Instruct
+        value: meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
 
   # â”€â”€â”€ PostgreSQL Database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   - type: postgresql
@@ -32,4 +32,5 @@ services:
     plan: free
     version: 16
     ipAllowList: []
+
 

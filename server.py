@@ -60,7 +60,7 @@ AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_API_URL = os.getenv("AI_API_URL", "https://api.deepinfra.com/v1/openai/chat/completions")
 # Force AI_MODEL â€” set in os.environ so all downstream readers see it
 if "AI_MODEL" not in os.environ:
-    os.environ["AI_MODEL"] = "meta-llama/Llama-3.3-70B-Instruct"
+    os.environ["AI_MODEL"] = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
 AI_MODEL = os.environ["AI_MODEL"]
 
 # Shopify API config
@@ -2061,4 +2061,5 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 10000))
     logger.info(f"Starting Royal Chaussures Server on port {port}")
     app.run(host='0.0.0.0', port=port)
+
 

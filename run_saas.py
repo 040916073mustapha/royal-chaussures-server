@@ -12,8 +12,8 @@ import importlib.util
 __all__ = ["app"]
 
 # â”€â”€â”€ Force AI_MODEL default before anything loads â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-os.environ.setdefault("AI_MODEL", "meta-llama/Llama-3.3-70B-Instruct")
-os.environ["AI_MODEL"] = "meta-llama/Llama-3.3-70B-Instruct"
+os.environ.setdefault("AI_MODEL", "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo")
+os.environ["AI_MODEL"] = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
 
 # â”€â”€â”€ Force-load the package without relying on sys.path â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -81,3 +81,4 @@ if __name__ == "__main__":
     logger = logging.getLogger("saas-core")
     logger.info(f"ðŸš€ RC Agents SaaS Core starting on port {port}")
     app.run(host="0.0.0.0", port=port, debug=True)
+
