@@ -60,7 +60,7 @@ AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_API_URL = os.getenv("AI_API_URL", "https://api.deepinfra.com/v1/openai/chat/completions")
 # Force AI_MODEL â€” set in os.environ so all downstream readers see it
 if "AI_MODEL" not in os.environ:
-    os.environ["AI_MODEL"] = "Qwen/Qwen3-VL-30B-A3B-Instruct"
+    os.environ["AI_MODEL"] = "meta-llama/Llama-3.3-70B-Instruct"
 AI_MODEL = os.environ["AI_MODEL"]
 
 # Shopify API config
@@ -753,7 +753,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
             "max_tokens": 500,
             "temperature": 0.7
         }
-        resp = requests.post(AI_API_URL, json=payload, headers=headers, timeout=40)
+        resp = requests.post(AI_API_URL, json=payload, headers=headers, timeout=90)
         status_info = f"[AI] Response {resp.status_code} in {resp.elapsed.total_seconds():.1f}s"
         logger.info(status_info)
         logger.info(f"[AI] Response text (first 800): {resp.text[:800]}")
@@ -767,7 +767,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         else:
             logger.error("AI API error: " + str(resp.status_code) + " " + resp.text[:2000])
     except requests.exceptions.Timeout:
-        logger.error(f"[AI] TIMEOUT after 40s â€” model={_model}")
+        logger.error(f"[AI] timeout after 90s â€” model={_model}")
     except requests.exceptions.ConnectionError as ce:
         logger.error(f"[AI] CONNECTION ERROR: {ce}")
     except Exception as e:

@@ -81,7 +81,7 @@ def create_app():
                         _needs_update = not _existing[1] or not _existing[2]
                         if _needs_update:
                             _conn.execute(
-                                _sql_text("UPDATE ai_settings SET ai_model = 'Qwen/Qwen3-VL-30B-A3B-Instruct', system_prompt = :prompt, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"),
+                                _sql_text("UPDATE ai_settings SET ai_model = 'meta-llama/Llama-3.3-70B-Instruct', system_prompt = :prompt, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"),
                                 {"prompt": _DEFAULT_PROMPT, "now": _dt.utcnow()}
                             )
                             _conn.commit()
@@ -90,7 +90,7 @@ def create_app():
                             logger.info("âœ… AI settings for store 1 already configured")
                     else:
                         _conn.execute(
-                            _sql_text("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (gen_random_uuid()::text, '1', 'Qwen/Qwen3-VL-30B-A3B-Instruct', :prompt, 'ar', 0.7, 2048, TRUE)"),
+                            _sql_text("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (gen_random_uuid()::text, '1', 'meta-llama/Llama-3.3-70B-Instruct', :prompt, 'ar', 0.7, 2048, TRUE)"),
                             {"prompt": _DEFAULT_PROMPT}
                         )
                         _conn.commit()
@@ -380,7 +380,7 @@ def create_app():
             "status": "ok",
             "service": "rc-agents-saas-core",
             "version": "2.0.1",
-            "ai_model": os.getenv("AI_MODEL", "Qwen/Qwen3-VL-30B-A3B-Instruct"),
+            "ai_model": os.getenv("AI_MODEL", "meta-llama/Llama-3.3-70B-Instruct"),
         })
 
     @app.route("/api/plans")
@@ -471,17 +471,17 @@ def create_app():
                 with engine.connect() as _conn:
                     _existing = _conn.execute(_txt("SELECT id FROM ai_settings WHERE store_id = '1'")).fetchone()
                     if _existing:
-                        _conn.execute(_txt("UPDATE ai_settings SET ai_model = 'Qwen/Qwen3-VL-30B-A3B-Instruct', system_prompt = :p, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"), {"p": _ai_prompt, "now": _dt.utcnow()})
+                        _conn.execute(_txt("UPDATE ai_settings SET ai_model = 'meta-llama/Llama-3.3-70B-Instruct', system_prompt = :p, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"), {"p": _ai_prompt, "now": _dt.utcnow()})
                         _seed_result = "updated"
                     else:
-                        _conn.execute(_txt("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (:id, '1', 'Qwen/Qwen3-VL-30B-A3B-Instruct', :p, 'ar', 0.7, 2048, TRUE)"), {"id": str(uuid.uuid4()), "p": _ai_prompt})
+                        _conn.execute(_txt("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (:id, '1', 'meta-llama/Llama-3.3-70B-Instruct', :p, 'ar', 0.7, 2048, TRUE)"), {"id": str(uuid.uuid4()), "p": _ai_prompt})
                         _seed_result = "created"
                     _conn.commit()
             except Exception as _se:
                 _seed_result = f"error: {_se}"
 
             engine.dispose()
-            return jsonify({"status": "ok", "tables": tables, "ai_seed": _seed_result, "model": "Qwen/Qwen3-VL-30B-A3B-Instruct"})
+            return jsonify({"status": "ok", "tables": tables, "ai_seed": _seed_result, "model": "meta-llama/Llama-3.3-70B-Instruct"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 

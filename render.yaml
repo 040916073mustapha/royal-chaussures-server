@@ -9,7 +9,7 @@ services:
     region: frankfurt
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --env AI_MODEL=Qwen/Qwen3-VL-30B-A3B-Instruct
+    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 --env AI_MODEL=meta-llama/Llama-3.3-70B-Instruct
     healthCheckPath: /api/health
     envVars:
       - key: SAAS_DATABASE_URL
@@ -23,7 +23,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: AI_MODEL
-        value: Qwen/Qwen3-VL-30B-A3B-Instruct
+        value: meta-llama/Llama-3.3-70B-Instruct
 
   # â”€â”€â”€ PostgreSQL Database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   - type: postgresql
