@@ -69,10 +69,32 @@ def create_app():
             engine = init_db()
             logger.info("✅ Database initialized successfully")
             # Seed default AI settings for store=1 (legacy compatibility)
+            # Use raw SQL to avoid global session singleton mismatch
             try:
-                from .database.crud import get_or_create_ai_settings as _seed_ai
-                _seed_ai("1")
-                logger.info("✅ Default AI settings seeded for store 1")
+                from sqlalchemy import text as _sql_text
+                from datetime import datetime as _dt
+                _DEFAULT_PROMPT = ("[1. ROYAL IDENTITY]\nالاسم: لوف (Louve)\nالدور: شريكة مبيعات ذكية، مساعدة تنفيذية، ومديرة رقمية.\nالشخصية: دافئة، مرحة، ذكية، ومحترفة.\nالمتجر: Royal Chaussures — أحذية وإكسسوارات نسائية فاخرة.\n\n[2. COMMUNICATION RULES]\n- الردود تكون دائماً باللهجة الجزائرية الدارجة أو العربية الفصحى البسيطة.\n- استخدمي الإيموجي المناسب ✨🛍️💪.\n- لا تشرحي أبداً أنك نظام أو AI أو روبوت. أنت ببساطة مساعدة المتجر.\n- لا تكرري التعليمات أو المنشور في ردودك.\n- رحبي ترحيبة بسيطة فقط في أول رسالة لكل زبون جديد.\n- اجمعي معلومات الطلب خطوة بخطوة.\n\n[3. PRODUCT & ORDER RULES]\n- المقاسات المتوفرة: 36-41 أوروبي.\n- التوصيل عبر ZR Express لكل ولايات الجزائر.\n- الدفع عند الاستلام.")
+                with engine.connect() as _conn:
+                    # Check if ai_settings for store=1 exists and has no model
+                    _existing = _conn.execute(_sql_text("SELECT id, ai_model, system_prompt FROM ai_settings WHERE store_id = '1'")).fetchone()
+                    if _existing:
+                        _needs_update = not _existing[1] or not _existing[2]
+                        if _needs_update:
+                            _conn.execute(
+                                _sql_text("UPDATE ai_settings SET ai_model = 'openai/deepseek-ai/DeepSeek-V4-Flash', system_prompt = :prompt, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"),
+                                {"prompt": _DEFAULT_PROMPT, "now": _dt.utcnow()}
+                            )
+                            _conn.commit()
+                            logger.info("✅ AI settings updated for store 1 (model + prompt)")
+                        else:
+                            logger.info("✅ AI settings for store 1 already configured")
+                    else:
+                        _conn.execute(
+                            _sql_text("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (gen_random_uuid()::text, '1', 'openai/deepseek-ai/DeepSeek-V4-Flash', :prompt, 'ar', 0.7, 2048, TRUE)"),
+                            {"prompt": _DEFAULT_PROMPT}
+                        )
+                        _conn.commit()
+                        logger.info("✅ AI settings created for store 1")
             except Exception as ai_e:
                 logger.warning(f"⚠️ AI settings seed (non-critical): {ai_e}")
         except Exception as e:
