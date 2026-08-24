@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Royal Chaussures - Cloud Server for Render
@@ -19,9 +19,9 @@ import sqlite3
 import logging
 import hashlib
 
-# ════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # RC Agents Platform - Multi-Tenant SaaS
-# ════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 PLATFORM_DOMAIN = os.getenv("PLATFORM_DOMAIN", "rcagents.space")
 import hmac
 import re
@@ -58,9 +58,9 @@ logger = logging.getLogger("royal-server")
 
 AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_API_URL = os.getenv("AI_API_URL", "https://api.deepinfra.com/v1/openai/chat/completions")
-# Force AI_MODEL — set in os.environ so all downstream readers see it
+# Force AI_MODEL â€” set in os.environ so all downstream readers see it
 if "AI_MODEL" not in os.environ:
-    os.environ["AI_MODEL"] = "openai/deepseek-ai/DeepSeek-V4-Flash"
+    os.environ["AI_MODEL"] = "Qwen/Qwen3-VL-30B-A3B-Instruct"
 AI_MODEL = os.environ["AI_MODEL"]
 
 # Shopify API config
@@ -78,7 +78,7 @@ _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "royal_order
 
 
 def _open_orders_db():
-    """فتح اتصال بـ royal_orders.db مع WAL + busy_timeout لمنع القفل"""
+    """ÙØªØ­ Ø§ØªØµØ§Ù„ Ø¨Ù€ royal_orders.db Ù…Ø¹ WAL + busy_timeout Ù„Ù…Ù†Ø¹ Ø§Ù„Ù‚ÙÙ„"""
     conn = sqlite3.connect(_DB_PATH, timeout=60, check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=30000")
@@ -88,8 +88,8 @@ def _open_orders_db():
 
 def init_db():
     """
-    تهيئة قاعدة البيانات المحلية (royal_orders.db)
-    مع دعم Multi-Tenancy: store_id في كل الجداول
+    ØªÙ‡ÙŠØ¦Ø© Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø­Ù„ÙŠØ© (royal_orders.db)
+    Ù…Ø¹ Ø¯Ø¹Ù… Multi-Tenancy: store_id ÙÙŠ ÙƒÙ„ Ø§Ù„Ø¬Ø¯Ø§ÙˆÙ„
     """
     conn = _open_orders_db()
     c = conn.cursor()
@@ -130,7 +130,7 @@ def init_db():
         message TEXT, reply TEXT,
         created_at TEXT DEFAULT (datetime('now'))
     )""")
-    # ترقية الجداول القديمة — إضافة store_id إذا كان مفقوداً
+    # ØªØ±Ù‚ÙŠØ© Ø§Ù„Ø¬Ø¯Ø§ÙˆÙ„ Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© â€” Ø¥Ø¶Ø§ÙØ© store_id Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…ÙÙ‚ÙˆØ¯Ø§Ù‹
     try:
         c.execute("SELECT store_id FROM orders LIMIT 1")
     except:
@@ -171,7 +171,7 @@ def upsert_order_from_shopify(od):
             variant = items[0].get("variant_title", "") if items else ""
             conn = _open_orders_db()
             c = conn.cursor()
-            # store_id=1 لـ Royal Chaussures — سيدعم Multi-Store لاحقاً عبر header
+            # store_id=1 Ù„Ù€ Royal Chaussures â€” Ø³ÙŠØ¯Ø¹Ù… Multi-Store Ù„Ø§Ø­Ù‚Ø§Ù‹ Ø¹Ø¨Ø± header
             store_id = 1
             c.execute("INSERT INTO orders (store_id, shopify_order_id, customer_name, customer_phone, wilaya, municipality, product, variant, total_price) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(store_id, shopify_order_id) DO UPDATE SET total_price=excluded.total_price, updated_at=datetime('now')", (store_id, oid, name, phone, wilaya, city, product, variant, total))
             if phone:
@@ -317,7 +317,7 @@ def check_product_inventory(product_query, size=None, color=None):
 
 # --- Conversation Memory (Thread Storage) ---
 # Stores last N messages per sender_id for continuity
-# 🆕 Multi-Tenant: CONVERSATION_MEMORY[store_id][sender_id] = [...]
+# ðŸ†• Multi-Tenant: CONVERSATION_MEMORY[store_id][sender_id] = [...]
 CONVERSATION_MEMORY = {}
 MAX_HISTORY = 10  # keep last 10 exchanges per user
 
@@ -355,11 +355,11 @@ threading.Thread(target=sync_shopify_orders, daemon=True).start()
 
 def detect_product_query(user_message):
     """Detect if user is asking about products and return search query."""
-    keywords = ["┘à┘åÏ¬Ï¼", "Ï¡Ï░ÏºÏí", "ÏÁ┘åÏ»┘ä", "Ï¿┘êÏ¬", "Ï¿Ïº┘ä┘èÏ▒┘è┘åÏº", "ÏºÏ│┘âÏ▒Ï¿┘è┘å",
+    keywords = ["â”˜Ã â”˜Ã¥ÃÂ¬ÃÂ¼", "ÃÂ¡Ãâ–‘ÃÂºÃÃ­", "ÃÃâ”˜Ã¥ÃÂ»â”˜Ã¤", "ÃÂ¿â”˜ÃªÃÂ¬", "ÃÂ¿ÃÂºâ”˜Ã¤â”˜Ã¨Ãâ–’â”˜Ã¨â”˜Ã¥ÃÂº", "ÃÂºÃâ”‚â”˜Ã¢Ãâ–’ÃÂ¿â”˜Ã¨â”˜Ã¥",
                 "escarpin", "ballerine", "botte", "sandale", "mule",
-                "product", "shoe", "size", "price", "Ï│Ï╣Ï▒", "┘à┘éÏºÏ│",
-                "┘ä┘ê┘å", "color", "┘àÏ¬┘ê┘üÏ▒", "disponible", "stock",
-                "Ï╣┘åÏ»┘â┘à", "Ï╣┘åÏ»┘â", "Ï┤┘å┘ê", "┘êÏºÏ┤", "product"]
+                "product", "shoe", "size", "price", "Ãâ”‚Ãâ•£Ãâ–’", "â”˜Ã â”˜Ã©ÃÂºÃâ”‚",
+                "â”˜Ã¤â”˜Ãªâ”˜Ã¥", "color", "â”˜Ã ÃÂ¬â”˜Ãªâ”˜Ã¼Ãâ–’", "disponible", "stock",
+                "Ãâ•£â”˜Ã¥ÃÂ»â”˜Ã¢â”˜Ã ", "Ãâ•£â”˜Ã¥ÃÂ»â”˜Ã¢", "Ãâ”¤â”˜Ã¥â”˜Ãª", "â”˜ÃªÃÂºÃâ”¤", "product"]
     msg_lower = user_message.lower()
     for kw in keywords:
         if kw in msg_lower:
@@ -389,12 +389,12 @@ app.secret_key = os.urandom(24).hex()
 # ?? Zero impact on existing webhooks/meta routes
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-# ========== إصلاح قاعدة البيانات أولاً إن كانت تالفة ==========
+# ========== Ø¥ØµÙ„Ø§Ø­ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø£ÙˆÙ„Ø§Ù‹ Ø¥Ù† ÙƒØ§Ù†Øª ØªØ§Ù„ÙØ© ==========
 import glob as _glob
 _db_path = os.environ.get("STORE_DB_PATH", 
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "royal_store.db"))
 _db_dir = os.path.dirname(_db_path)
-# حذف أي ملفات WAL/SHM عالقة من جلسات سابقة
+# Ø­Ø°Ù Ø£ÙŠ Ù…Ù„ÙØ§Øª WAL/SHM Ø¹Ø§Ù„Ù‚Ø© Ù…Ù† Ø¬Ù„Ø³Ø§Øª Ø³Ø§Ø¨Ù‚Ø©
 for _ext in ["-wal", "-shm"]:
     for _f in _glob.glob(os.path.join(_db_dir, "*" + _ext)):
         try:
@@ -402,7 +402,7 @@ for _ext in ["-wal", "-shm"]:
             logger.info(f"[Store POS] Cleaned stale {_f}")
         except:
             pass
-# اختبار قاعدة البيانات — إن كانت تالفة، احذفها
+# Ø§Ø®ØªØ¨Ø§Ø± Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª â€” Ø¥Ù† ÙƒØ§Ù†Øª ØªØ§Ù„ÙØ©ØŒ Ø§Ø­Ø°ÙÙ‡Ø§
 import sqlite3 as _sqlite3
 try:
     _test_con = _sqlite3.connect(_db_path, timeout=5)
@@ -436,7 +436,7 @@ try:
         _db_init_ok = True
         logger.info("[Store POS] Database initialized successfully")
     else:
-        logger.warning("[Store POS] DATABASE_URL not set — skipping store DB init (SaaS Core will handle DB)")
+        logger.warning("[Store POS] DATABASE_URL not set â€” skipping store DB init (SaaS Core will handle DB)")
 except Exception as e:
     logger.error(f"[Store POS] Database init FAILED: {e}")
     logger.error(f"[Store POS] Full traceback:\n{_tb.format_exc()}")
@@ -578,8 +578,8 @@ def require_auth_for_dashboard():
 
 def _get_store_id_from_subdomain():
     """
-    استخراج store_id من الـ Subdomain في Host header
-    مثال: puma.rcagents.space → يستخرج 'puma' ويبحث عن store_id في DB
+    Ø§Ø³ØªØ®Ø±Ø§Ø¬ store_id Ù…Ù† Ø§Ù„Ù€ Subdomain ÙÙŠ Host header
+    Ù…Ø«Ø§Ù„: puma.rcagents.space â†’ ÙŠØ³ØªØ®Ø±Ø¬ 'puma' ÙˆÙŠØ¨Ø­Ø« Ø¹Ù† store_id ÙÙŠ DB
     """
     _host = request.headers.get("Host", "")
     if _host.count(".") >= 2:
@@ -633,14 +633,14 @@ def get_fb_page_token():
 
 def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
     """
-    توليد رد AI باستخدام System Prompt خاص بالمتجر
+    ØªÙˆÙ„ÙŠØ¯ Ø±Ø¯ AI Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… System Prompt Ø®Ø§Øµ Ø¨Ø§Ù„Ù…ØªØ¬Ø±
     store_id: 1 = Royal Chaussures (default)
     """
     if not AI_API_KEY:
         logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
     
-    # 🆕 Multi-Tenant: قراءة AI Model و System Prompt من قاعدة بيانات SaaS Core
+    # ðŸ†• Multi-Tenant: Ù‚Ø±Ø§Ø¡Ø© AI Model Ùˆ System Prompt Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø¨ÙŠØ§Ù†Ø§Øª SaaS Core
     _model = AI_MODEL  # default from env
     system_prompt = ""
     try:
@@ -661,7 +661,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
     except Exception as _e:
         logger.warning(f"[AI] SaaS DB model read failed, using env default: {_safe_str(_e)}")
     
-    # 🆕 Multi-Tenant: قراءة System Prompt من قاعدة البيانات حسب store_id (legacy SQLite fallback)
+    # ðŸ†• Multi-Tenant: Ù‚Ø±Ø§Ø¡Ø© System Prompt Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø­Ø³Ø¨ store_id (legacy SQLite fallback)
     if not system_prompt:
         try:
             _old_engine = os.environ.get('DB_ENGINE', '')
@@ -675,7 +675,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         except Exception as _prompt_err:
             logger.warning(f"[PROMPT] DB prompt failed, falling back to file: {_safe_str(_prompt_err)}")
     
-    # Fallback: ملف prompt.txt إذا ماكانش prompt في DB
+    # Fallback: Ù…Ù„Ù prompt.txt Ø¥Ø°Ø§ Ù…Ø§ÙƒØ§Ù†Ø´ prompt ÙÙŠ DB
     if not system_prompt:
         _prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt.txt")
         try:
@@ -693,7 +693,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
                 )
                 logger.info("[PROMPT] Using hardcoded default system prompt")
 
-    # Pre-call Shopify inventory — always fetch live data for full context
+    # Pre-call Shopify inventory â€” always fetch live data for full context
     shopify_context = ""
     try:
         logger.info("Fetching live Shopify inventory...")
@@ -723,9 +723,9 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
     # Add context flag: is this the first user message in this conversation?
     is_first_message = len([m for m in history if m["role"] == "user"]) <= 1
     if is_first_message:
-        shopify_context += "\n\n[CONVERSATION STATE: FIRST MESSAGE — Welcome the customer warmly.]"
+        shopify_context += "\n\n[CONVERSATION STATE: FIRST MESSAGE â€” Welcome the customer warmly.]"
     else:
-        shopify_context += "\n\n[CONVERSATION STATE: CONTINUING — Do NOT welcome again, continue naturally.]"
+        shopify_context += "\n\n[CONVERSATION STATE: CONTINUING â€” Do NOT welcome again, continue naturally.]"
     # Rebuild system prompt with updated context
     messages[0] = {"role": "system", "content": system_prompt + shopify_context}
     # Build user content: plain string for text-only, OpenAI standard array for text+image
@@ -767,7 +767,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         else:
             logger.error("AI API error: " + str(resp.status_code) + " " + resp.text[:2000])
     except requests.exceptions.Timeout:
-        logger.error(f"[AI] TIMEOUT after 40s — model={_model}")
+        logger.error(f"[AI] TIMEOUT after 40s â€” model={_model}")
     except requests.exceptions.ConnectionError as ce:
         logger.error(f"[AI] CONNECTION ERROR: {ce}")
     except Exception as e:
@@ -916,14 +916,14 @@ def process_messaging_entries(entries, platform, send_func):
                             break
             image_url = image_url or ''
             if sid and (text or image_url):
-                # 🆕 Multi-Tenant: إيجاد store_id من المحادثة (FB Page ID)
+                # ðŸ†• Multi-Tenant: Ø¥ÙŠØ¬Ø§Ø¯ store_id Ù…Ù† Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© (FB Page ID)
                 store_id = 1
                 try:
                     _old_engine2 = __import__('os').environ.get('DB_ENGINE', '')
                     if not _old_engine2:
                         __import__('os').environ['DB_ENGINE'] = 'sqlite'
                     from database.db import get_store_id_by_platform
-                    # نمرر صفحة FB ID — سنأخذها من أول entry في webhook
+                    # Ù†Ù…Ø±Ø± ØµÙØ­Ø© FB ID â€” Ø³Ù†Ø£Ø®Ø°Ù‡Ø§ Ù…Ù† Ø£ÙˆÙ„ entry ÙÙŠ webhook
                     entry_page_id = entry.get('id', '')
                     if entry_page_id:
                         sid_from_registry = get_store_id_by_platform('messenger' if platform == 'FB' else 'instagram', str(entry_page_id))
@@ -952,14 +952,14 @@ def process_whatsapp_entries(entries):
                 if image_url:
                     logger.info(f"WA msg with image from {sender}: id={image_url[:60]}")
                 if sender and (text or image_url):
-                    # 🆕 Multi-Tenant: إيجاد store_id من WhatsApp Phone Number ID
+                    # ðŸ†• Multi-Tenant: Ø¥ÙŠØ¬Ø§Ø¯ store_id Ù…Ù† WhatsApp Phone Number ID
                     store_id = 1
                     try:
                         _old_engine3 = __import__('os').environ.get('DB_ENGINE', '')
                         if not _old_engine3:
                             __import__('os').environ['DB_ENGINE'] = 'sqlite'
                         from database.db import get_store_id_by_whatsapp_phone
-                        # نحاول نجيب الـ metadata_phone_number_id من الـ webhook payload
+                        # Ù†Ø­Ø§ÙˆÙ„ Ù†Ø¬ÙŠØ¨ Ø§Ù„Ù€ metadata_phone_number_id Ù…Ù† Ø§Ù„Ù€ webhook payload
                         metadata = change.get('value', {}).get('metadata', {})
                         phone_id = metadata.get('phone_number_id', '')
                         if phone_id:
@@ -1165,7 +1165,7 @@ def api_update_status(oid):
     if ok:
         logger.info(f"[OrderDetail] Updated order {oid} status to {ns}")
         # AUTO-WHATSAPP: Send confirmation if enabled and status = confirmed
-        if AUTO_CONFIRM_WA["enabled"] and ns.lower() in ("confirmed", "paid", "confirmé", "confirme"):
+        if AUTO_CONFIRM_WA["enabled"] and ns.lower() in ("confirmed", "paid", "confirmÃ©", "confirme"):
             try:
                 shopify_orders_data = shopify_api("GET", "orders.json", {"status": "any", "limit": 250}, token_type="orders")
                 if shopify_orders_data and "orders" in shopify_orders_data:
@@ -1189,10 +1189,10 @@ def api_products():
 
 
 # ============================================================
-# POS Purchases API (Nouvel achat) — handled in routes/store.py blueprint
+# POS Purchases API (Nouvel achat) â€” handled in routes/store.py blueprint
 # ============================================================
 
-# POS Products API (Liste des articles) — handled in routes/store.py blueprint
+# POS Products API (Liste des articles) â€” handled in routes/store.py blueprint
 # ============================================================
 
 @app.route('/api/clients')
@@ -1214,7 +1214,7 @@ def api_shipments():
 # --- Dashboard Pages ---
 
 def _get_store_context(store_id=None):
-    """استخراج بيانات المتجر من store_id (من URL أو من session)"""
+    """Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…ØªØ¬Ø± Ù…Ù† store_id (Ù…Ù† URL Ø£Ùˆ Ù…Ù† session)"""
     if store_id is None:
         store_id = request.args.get("store_id", 1, type=int)
     try:
@@ -1224,7 +1224,7 @@ def _get_store_context(store_id=None):
             return store
     except Exception:
         pass
-    return {"id": 1, "name": "متجر غير معروف", "slug": "unknown"}
+    return {"id": 1, "name": "Ù…ØªØ¬Ø± ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ", "slug": "unknown"}
 
 
 # Redirect root dashboard to store 1 (Royal Chaussures) for backwards compat
@@ -1288,21 +1288,21 @@ def dashboard_clients_old():
 def dashboard_settings_old():
     settings_data = {
         "zr_express": {
-            "status": "متصل",
+            "status": "Ù…ØªØµÙ„",
             "tenant_id": "d2217f31-20f1-43c6-abd4-c420788a63ed",
-            "last_sync": "منذ دقيقة",
-            "server_status": "نشط"
+            "last_sync": "Ù…Ù†Ø° Ø¯Ù‚ÙŠÙ‚Ø©",
+            "server_status": "Ù†Ø´Ø·"
         },
         "automations": {
-            "status": "نشط",
+            "status": "Ù†Ø´Ø·",
             "items": [
-                {"icon": "💬", "name": "WhatsApp - تأكيد الطلبات", "badge": "تلقائي"},
-                {"icon": "📦", "name": "إشعارات الشحن", "badge": "تلقائي"},
-                {"icon": "📊", "name": "تقرير الصباح اليومي", "badge": "09:00 صباحاً"}
+                {"icon": "ðŸ’¬", "name": "WhatsApp - ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
+                {"icon": "ðŸ“¦", "name": "Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø´Ø­Ù†", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
+                {"icon": "ðŸ“Š", "name": "ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØµØ¨Ø§Ø­ Ø§Ù„ÙŠÙˆÙ…ÙŠ", "badge": "09:00 ØµØ¨Ø§Ø­Ø§Ù‹"}
             ]
         },
         "ai_agent": {
-            "status": "متصل",
+            "status": "Ù…ØªØµÙ„",
             "model": "DeepSeek-V4-Flash",
             "platforms": [
                 {"name": "Messenger", "cls": "bg-blue-500/15 text-blue-400"},
@@ -1311,10 +1311,10 @@ def dashboard_settings_old():
             ]
         },
         "shopify": {
-            "status": "متصل",
+            "status": "Ù…ØªØµÙ„",
             "store": "rwqchh-na.myshopify.com",
-            "auto_sync": "مفعلة",
-            "last_update": "منذ ساعة"
+            "auto_sync": "Ù…ÙØ¹Ù„Ø©",
+            "last_update": "Ù…Ù†Ø° Ø³Ø§Ø¹Ø©"
         }
     }
     return render_template("dashboard_settings.html", active="settings", settings=settings_data)
@@ -1378,12 +1378,12 @@ def terms():
 
 
 # ============================================================
-# 🧠 AI Prompts Management API (Multi-Tenant)
+# ðŸ§  AI Prompts Management API (Multi-Tenant)
 # ============================================================
 
 @app.route('/api/store/prompts', methods=['GET'])
 def api_get_prompts():
-    """قراءة جميع الـ Prompts للمتجر"""
+    """Ù‚Ø±Ø§Ø¡Ø© Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù€ Prompts Ù„Ù„Ù…ØªØ¬Ø±"""
     try:
         from database.db import get_all_store_prompts
         store_id = request.args.get('store_id', 1, type=int)
@@ -1395,7 +1395,7 @@ def api_get_prompts():
 
 @app.route('/api/store/prompts', methods=['POST'])
 def api_set_prompt():
-    """تحديث System Prompt لمتجر"""
+    """ØªØ­Ø¯ÙŠØ« System Prompt Ù„Ù…ØªØ¬Ø±"""
     try:
         from database.db import set_store_prompt
         data = request.get_json()
@@ -1414,7 +1414,7 @@ def api_set_prompt():
 
 @app.route('/api/store/prompt/default', methods=['GET'])
 def api_get_default_prompt():
-    """استعراض محتوى prompt.txt (الـ fallback) مع إمكانية نسخه لمتجر جديد"""
+    """Ø§Ø³ØªØ¹Ø±Ø§Ø¶ Ù…Ø­ØªÙˆÙ‰ prompt.txt (Ø§Ù„Ù€ fallback) Ù…Ø¹ Ø¥Ù…ÙƒØ§Ù†ÙŠØ© Ù†Ø³Ø®Ù‡ Ù„Ù…ØªØ¬Ø± Ø¬Ø¯ÙŠØ¯"""
     _prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompt.txt")
     try:
         with open(_prompt_path, "r", encoding="utf-8") as f:
@@ -1425,12 +1425,12 @@ def api_get_default_prompt():
 
 
 # ============================================================
-# 🔗 Store Webhook Registry API (Multi-Tenant Routing)
+# ðŸ”— Store Webhook Registry API (Multi-Tenant Routing)
 # ============================================================
 
 @app.route('/api/webhooks/register', methods=['POST'])
 def api_register_webhook():
-    """تسجيل platform لمتجر معين لربط Webhooks بـ store_id"""
+    """ØªØ³Ø¬ÙŠÙ„ platform Ù„Ù…ØªØ¬Ø± Ù…Ø¹ÙŠÙ† Ù„Ø±Ø¨Ø· Webhooks Ø¨Ù€ store_id"""
     try:
         from database.db import register_webhook
         data = request.get_json()
@@ -1450,7 +1450,7 @@ def api_register_webhook():
 
 @app.route('/api/webhooks/lookup', methods=['GET'])
 def api_lookup_webhook():
-    """إيجاد store_id من platform_account_id"""
+    """Ø¥ÙŠØ¬Ø§Ø¯ store_id Ù…Ù† platform_account_id"""
     try:
         from database.db import get_store_id_by_platform
         platform = request.args.get('platform', '')
@@ -1477,7 +1477,7 @@ def api_store_info(store_id):
 
 @app.route('/api/webhooks/registered', methods=['GET'])
 def api_list_webhooks():
-    """عرض جميع التسجيلات"""
+    """Ø¹Ø±Ø¶ Ø¬Ù…ÙŠØ¹ Ø§Ù„ØªØ³Ø¬ÙŠÙ„Ø§Øª"""
     try:
         from database.db import get_all_registered_webhooks
         hooks = get_all_registered_webhooks()
@@ -1487,22 +1487,22 @@ def api_list_webhooks():
 
 
 # ============================================================
-# 👑 Tenant Onboarding — تسجيل تاجر جديد كامل
+# ðŸ‘‘ Tenant Onboarding â€” ØªØ³Ø¬ÙŠÙ„ ØªØ§Ø¬Ø± Ø¬Ø¯ÙŠØ¯ ÙƒØ§Ù…Ù„
 # ============================================================
 
 @app.route('/api/tenant/onboard', methods=['POST'])
 def api_tenant_onboard():
     """
-    تسجيل تاجر جديد كامل مع:
-    - إنشاء المتجر (store)
-    - إنشاء مدير الحساب (user)
-    - توفير AI Prompts افتراضية
-    - تسجيل Agent Configs
-    - تسجيل Webhooks (اختياري)
+    ØªØ³Ø¬ÙŠÙ„ ØªØ§Ø¬Ø± Ø¬Ø¯ÙŠØ¯ ÙƒØ§Ù…Ù„ Ù…Ø¹:
+    - Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ù…ØªØ¬Ø± (store)
+    - Ø¥Ù†Ø´Ø§Ø¡ Ù…Ø¯ÙŠØ± Ø§Ù„Ø­Ø³Ø§Ø¨ (user)
+    - ØªÙˆÙÙŠØ± AI Prompts Ø§ÙØªØ±Ø§Ø¶ÙŠØ©
+    - ØªØ³Ø¬ÙŠÙ„ Agent Configs
+    - ØªØ³Ø¬ÙŠÙ„ Webhooks (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
     
     JSON Body:
     {
-        "store_name": "متجر الأزياء",
+        "store_name": "Ù…ØªØ¬Ø± Ø§Ù„Ø£Ø²ÙŠØ§Ø¡",
         "email": "store@example.com",
         "phone": "+213xxxxxxxx",
         "username": "admin123",
@@ -1529,7 +1529,7 @@ def api_tenant_onboard():
         if not store_name or not username or not password:
             return json_utf8({"error": "store_name, username, password are required"}, 400)
 
-        # 1. توليد slug وحيد من اسم المتجر
+        # 1. ØªÙˆÙ„ÙŠØ¯ slug ÙˆØ­ÙŠØ¯ Ù…Ù† Ø§Ø³Ù… Ø§Ù„Ù…ØªØ¬Ø±
         import re, time, secrets, string as _str_mod
         slug = store_name.lower().replace(" ", "-")
         slug = re.sub(r"[^a-z0-9-]", "", slug)
@@ -1541,14 +1541,14 @@ def api_tenant_onboard():
         if existing:
             slug = f"{slug}-{int(time.time())}"
 
-        # 2. إنشاء store + مستخدم مدير
+        # 2. Ø¥Ù†Ø´Ø§Ø¡ store + Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø¯ÙŠØ±
         store_id = 2  # Default (1 = Royal Chaussures)
         from database.db import create_store
         store_row = create_store({"name": store_name, "slug": slug, "email": email, "phone": phone})
         if store_row and isinstance(store_row, dict):
             store_id = store_row.get("id", 2)
         
-        # إنشاء مستخدم admin
+        # Ø¥Ù†Ø´Ø§Ø¡ Ù…Ø³ØªØ®Ø¯Ù… admin
         from database.db import get_db
         import hashlib
         hashed = hashlib.sha256(password.encode()).hexdigest()
@@ -1566,7 +1566,7 @@ def api_tenant_onboard():
             except:
                 pass
 
-        # 3. AI Prompts افتراضية لكل متجر
+        # 3. AI Prompts Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ù„ÙƒÙ„ Ù…ØªØ¬Ø±
         from database.db import set_store_prompt
         set_store_prompt(store_id, "customer_support",
             f"[1. STORE IDENTITY]\nYou are the AI Customer Support Agent for {store_name}. "
@@ -1578,7 +1578,7 @@ def api_tenant_onboard():
         set_store_prompt(store_id, "inventory_agent",
             f"[INVENTORY AGENT]\nYou manage stock queries for {store_name}.")
 
-        # 4. Webhooks إن وجدت (اختياري)
+        # 4. Webhooks Ø¥Ù† ÙˆØ¬Ø¯Øª (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
         from database.db import register_webhook
         for platform, account_id in webhooks.items():
             if account_id:
@@ -1601,7 +1601,7 @@ def api_tenant_onboard():
             "username": username,
             "subdomain": store_subdomain,
             "dashboard_url": dashboard_url,
-            "message": f"متجر {store_name} جاهز! تم تفعيل 4 وكلاء AI واستقبال الطلبات."
+            "message": f"Ù…ØªØ¬Ø± {store_name} Ø¬Ø§Ù‡Ø²! ØªÙ… ØªÙØ¹ÙŠÙ„ 4 ÙˆÙƒÙ„Ø§Ø¡ AI ÙˆØ§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª."
         })
 
     except Exception as e:
@@ -1614,7 +1614,7 @@ def api_tenant_onboard():
 @app.route('/api/tenant/login', methods=['POST'])
 def api_tenant_login():
     """
-    تسجيل دخول التاجر والحصول على store_id مع session token
+    ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„ Ø§Ù„ØªØ§Ø¬Ø± ÙˆØ§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ store_id Ù…Ø¹ session token
     JSON Body: {"username": "...", "password": "..."}
     """
     try:
@@ -1678,20 +1678,20 @@ def health():
 
 @app.route('/onboard')
 def onboard_page():
-    """صفحة تسجيل التاجر الجديد (Frontend Onboarding)"""
+    """ØµÙØ­Ø© ØªØ³Ø¬ÙŠÙ„ Ø§Ù„ØªØ§Ø¬Ø± Ø§Ù„Ø¬Ø¯ÙŠØ¯ (Frontend Onboarding)"""
     return render_template("onboard.html")
 
 
 @app.route('/api/sync/notion', methods=['POST'])
 def api_sync_notion():
-    """نقطة تشغيل مزامنة Notion عبر API (دون Auth للحالة)"""
+    """Ù†Ù‚Ø·Ø© ØªØ´ØºÙŠÙ„ Ù…Ø²Ø§Ù…Ù†Ø© Notion Ø¹Ø¨Ø± API (Ø¯ÙˆÙ† Auth Ù„Ù„Ø­Ø§Ù„Ø©)"""
     try:
         from services.notion_sync import sync_roadmap_to_notion
         success = sync_roadmap_to_notion()
         if success:
-            return json_utf8({"success": True, "message": "✅ ROADMAP → Notion synced!"})
+            return json_utf8({"success": True, "message": "âœ… ROADMAP â†’ Notion synced!"})
         else:
-            return json_utf8({"success": False, "message": "❌ Sync failed (check NOTION_TOKEN config)"}, 500)
+            return json_utf8({"success": False, "message": "âŒ Sync failed (check NOTION_TOKEN config)"}, 500)
     except Exception as e:
         logger.error(f"[NOTION SYNC] Failed: {_safe_str(e)}")
         return json_utf8({"error": _safe_str(e)}, 500)
@@ -1699,7 +1699,7 @@ def api_sync_notion():
 
 @app.route('/dashboard/login')
 def dashboard_login_page():
-    """صفحة تسجيل الدخول للمتاجر"""
+    """ØµÙØ­Ø© ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù„Ù„Ù…ØªØ§Ø¬Ø±"""
     return render_template("dashboard_login.html")
 
 
@@ -1858,17 +1858,17 @@ def send_confirmation_whatsapp(order):
             logger.warning(f"[WA Confirm] No phone for order {order.get('name')}")
             return {"success": False, "error": "No phone number"}
         customer = order.get("customer") or {}
-        name = (f"{customer.get('first_name','') or ''} {customer.get('last_name','') or ''}").replace("None", "").strip() or "عميلنا العزيز"
+        name = (f"{customer.get('first_name','') or ''} {customer.get('last_name','') or ''}").replace("None", "").strip() or "Ø¹Ù…ÙŠÙ„Ù†Ø§ Ø§Ù„Ø¹Ø²ÙŠØ²"
         items_summary = ", ".join([i.get("title","")[:30] for i in order.get("line_items", [])[:3]])
         message = (
-            f"❤️ *Royal Chaussures* - تأكيد الطلب\n\n"
-            f"مرحباً {name}،\n"
-            f"✅ تم تأكيد طلبك *{order.get('name','')}*\n"
-            f"📦 المنتجات: {items_summary}\n"
-            f"💰 المبلغ: {order.get('total_price','0')} DZD\n"
-            f"🚚 سيتم شحنه قريباً عبر ZR Express\n\n"
-            f"شكراً لثقتك! 👠✨\n"
-            f"📍 الإمامة، تلمسان | 📞 0659832426"
+            f"â¤ï¸ *Royal Chaussures* - ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨\n\n"
+            f"Ù…Ø±Ø­Ø¨Ø§Ù‹ {name}ØŒ\n"
+            f"âœ… ØªÙ… ØªØ£ÙƒÙŠØ¯ Ø·Ù„Ø¨Ùƒ *{order.get('name','')}*\n"
+            f"ðŸ“¦ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª: {items_summary}\n"
+            f"ðŸ’° Ø§Ù„Ù…Ø¨Ù„Øº: {order.get('total_price','0')} DZD\n"
+            f"ðŸšš Ø³ÙŠØªÙ… Ø´Ø­Ù†Ù‡ Ù‚Ø±ÙŠØ¨Ø§Ù‹ Ø¹Ø¨Ø± ZR Express\n\n"
+            f"Ø´ÙƒØ±Ø§Ù‹ Ù„Ø«Ù‚ØªÙƒ! ðŸ‘ âœ¨\n"
+            f"ðŸ“ Ø§Ù„Ø¥Ù…Ø§Ù…Ø©ØŒ ØªÙ„Ù…Ø³Ø§Ù† | ðŸ“ž 0659832426"
         )
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
             logger.warning(f"[WA Confirm] WA not configured (token={'set' if WHATSAPP_ACCESS_TOKEN else 'empty'}, id={'set' if WHATSAPP_PHONE_NUMBER_ID else 'empty'})")
@@ -1961,7 +1961,7 @@ def api_wa_confirm_send():
                         "customer": {"first_name": cname or "", "last_name": ""},
                         "shipping_address": {"phone": cphone or ""} if cphone else {},
                         "billing_address": {},
-                        "line_items": [{"title": prod or "منتجات"}],
+                        "line_items": [{"title": prod or "Ù…Ù†ØªØ¬Ø§Øª"}],
                         "total_price": str(price or "0")
                     }
                     logger.info(f"[WA Confirm] Built fallback order from local DB for {order_id}")
@@ -2061,3 +2061,4 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 10000))
     logger.info(f"Starting Royal Chaussures Server on port {port}")
     app.run(host='0.0.0.0', port=port)
+

@@ -1,7 +1,7 @@
-"""
-RC Agents — SaaS Core Backend (Multi-Tenant)
+﻿"""
+RC Agents â€” SaaS Core Backend (Multi-Tenant)
 Flask application entry point
-Uses relative imports only — clean, works from any context
+Uses relative imports only â€” clean, works from any context
 """
 
 import os
@@ -31,7 +31,7 @@ from .api.conversations import conversations_bp
 from .api.zr_express import zr_bp
 from .api.stats import stats_bp
 
-# ─── Logging ──────────────────────────────────────────────────
+# â”€â”€â”€ Logging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 logging.basicConfig(
     level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
@@ -40,12 +40,12 @@ logging.basicConfig(
 logger = logging.getLogger("saas-core")
 
 
-# ─── App Factory ──────────────────────────────────────────────
+# â”€â”€â”€ App Factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def create_app():
     app = Flask(__name__, static_folder="frontend", static_url_path="")
 
-    # CORS — allow all origins during development
+    # CORS â€” allow all origins during development
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # Register blueprints
@@ -63,17 +63,17 @@ def create_app():
         app.jinja_loader = __import__("jinja2").FileSystemLoader(_template_dir)
         app.logger.info(f"Using template folder: {_template_dir}")
     
-    # ─── Init Database ────────────────────────────────────────
+    # â”€â”€â”€ Init Database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     with app.app_context():
         try:
             engine = init_db()
-            logger.info("✅ Database initialized successfully")
+            logger.info("âœ… Database initialized successfully")
             # Seed default AI settings for store=1 (legacy compatibility)
             # Use raw SQL to avoid global session singleton mismatch
             try:
                 from sqlalchemy import text as _sql_text
                 from datetime import datetime as _dt
-                _DEFAULT_PROMPT = ("[1. ROYAL IDENTITY]\nالاسم: لوف (Louve)\nالدور: شريكة مبيعات ذكية، مساعدة تنفيذية، ومديرة رقمية.\nالشخصية: دافئة، مرحة، ذكية، ومحترفة.\nالمتجر: Royal Chaussures — أحذية وإكسسوارات نسائية فاخرة.\n\n[2. COMMUNICATION RULES]\n- الردود تكون دائماً باللهجة الجزائرية الدارجة أو العربية الفصحى البسيطة.\n- استخدمي الإيموجي المناسب ✨🛍️💪.\n- لا تشرحي أبداً أنك نظام أو AI أو روبوت. أنت ببساطة مساعدة المتجر.\n- لا تكرري التعليمات أو المنشور في ردودك.\n- رحبي ترحيبة بسيطة فقط في أول رسالة لكل زبون جديد.\n- اجمعي معلومات الطلب خطوة بخطوة.\n\n[3. PRODUCT & ORDER RULES]\n- المقاسات المتوفرة: 36-41 أوروبي.\n- التوصيل عبر ZR Express لكل ولايات الجزائر.\n- الدفع عند الاستلام.")
+                _DEFAULT_PROMPT = ("[1. ROYAL IDENTITY]\nØ§Ù„Ø§Ø³Ù…: Ù„ÙˆÙ (Louve)\nØ§Ù„Ø¯ÙˆØ±: Ø´Ø±ÙŠÙƒØ© Ù…Ø¨ÙŠØ¹Ø§Øª Ø°ÙƒÙŠØ©ØŒ Ù…Ø³Ø§Ø¹Ø¯Ø© ØªÙ†ÙÙŠØ°ÙŠØ©ØŒ ÙˆÙ…Ø¯ÙŠØ±Ø© Ø±Ù‚Ù…ÙŠØ©.\nØ§Ù„Ø´Ø®ØµÙŠØ©: Ø¯Ø§ÙØ¦Ø©ØŒ Ù…Ø±Ø­Ø©ØŒ Ø°ÙƒÙŠØ©ØŒ ÙˆÙ…Ø­ØªØ±ÙØ©.\nØ§Ù„Ù…ØªØ¬Ø±: Royal Chaussures â€” Ø£Ø­Ø°ÙŠØ© ÙˆØ¥ÙƒØ³Ø³ÙˆØ§Ø±Ø§Øª Ù†Ø³Ø§Ø¦ÙŠØ© ÙØ§Ø®Ø±Ø©.\n\n[2. COMMUNICATION RULES]\n- Ø§Ù„Ø±Ø¯ÙˆØ¯ ØªÙƒÙˆÙ† Ø¯Ø§Ø¦Ù…Ø§Ù‹ Ø¨Ø§Ù„Ù„Ù‡Ø¬Ø© Ø§Ù„Ø¬Ø²Ø§Ø¦Ø±ÙŠØ© Ø§Ù„Ø¯Ø§Ø±Ø¬Ø© Ø£Ùˆ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© Ø§Ù„ÙØµØ­Ù‰ Ø§Ù„Ø¨Ø³ÙŠØ·Ø©.\n- Ø§Ø³ØªØ®Ø¯Ù…ÙŠ Ø§Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ Ø§Ù„Ù…Ù†Ø§Ø³Ø¨ âœ¨ðŸ›ï¸ðŸ’ª.\n- Ù„Ø§ ØªØ´Ø±Ø­ÙŠ Ø£Ø¨Ø¯Ø§Ù‹ Ø£Ù†Ùƒ Ù†Ø¸Ø§Ù… Ø£Ùˆ AI Ø£Ùˆ Ø±ÙˆØ¨ÙˆØª. Ø£Ù†Øª Ø¨Ø¨Ø³Ø§Ø·Ø© Ù…Ø³Ø§Ø¹Ø¯Ø© Ø§Ù„Ù…ØªØ¬Ø±.\n- Ù„Ø§ ØªÙƒØ±Ø±ÙŠ Ø§Ù„ØªØ¹Ù„ÙŠÙ…Ø§Øª Ø£Ùˆ Ø§Ù„Ù…Ù†Ø´ÙˆØ± ÙÙŠ Ø±Ø¯ÙˆØ¯Ùƒ.\n- Ø±Ø­Ø¨ÙŠ ØªØ±Ø­ÙŠØ¨Ø© Ø¨Ø³ÙŠØ·Ø© ÙÙ‚Ø· ÙÙŠ Ø£ÙˆÙ„ Ø±Ø³Ø§Ù„Ø© Ù„ÙƒÙ„ Ø²Ø¨ÙˆÙ† Ø¬Ø¯ÙŠØ¯.\n- Ø§Ø¬Ù…Ø¹ÙŠ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø·Ù„Ø¨ Ø®Ø·ÙˆØ© Ø¨Ø®Ø·ÙˆØ©.\n\n[3. PRODUCT & ORDER RULES]\n- Ø§Ù„Ù…Ù‚Ø§Ø³Ø§Øª Ø§Ù„Ù…ØªÙˆÙØ±Ø©: 36-41 Ø£ÙˆØ±ÙˆØ¨ÙŠ.\n- Ø§Ù„ØªÙˆØµÙŠÙ„ Ø¹Ø¨Ø± ZR Express Ù„ÙƒÙ„ ÙˆÙ„Ø§ÙŠØ§Øª Ø§Ù„Ø¬Ø²Ø§Ø¦Ø±.\n- Ø§Ù„Ø¯ÙØ¹ Ø¹Ù†Ø¯ Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù….")
                 with engine.connect() as _conn:
                     # Check if ai_settings for store=1 exists and has no model
                     _existing = _conn.execute(_sql_text("SELECT id, ai_model, system_prompt FROM ai_settings WHERE store_id = '1'")).fetchone()
@@ -81,30 +81,30 @@ def create_app():
                         _needs_update = not _existing[1] or not _existing[2]
                         if _needs_update:
                             _conn.execute(
-                                _sql_text("UPDATE ai_settings SET ai_model = 'openai/deepseek-ai/DeepSeek-V4-Flash', system_prompt = :prompt, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"),
+                                _sql_text("UPDATE ai_settings SET ai_model = 'Qwen/Qwen3-VL-30B-A3B-Instruct', system_prompt = :prompt, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"),
                                 {"prompt": _DEFAULT_PROMPT, "now": _dt.utcnow()}
                             )
                             _conn.commit()
-                            logger.info("✅ AI settings updated for store 1 (model + prompt)")
+                            logger.info("âœ… AI settings updated for store 1 (model + prompt)")
                         else:
-                            logger.info("✅ AI settings for store 1 already configured")
+                            logger.info("âœ… AI settings for store 1 already configured")
                     else:
                         _conn.execute(
-                            _sql_text("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (gen_random_uuid()::text, '1', 'openai/deepseek-ai/DeepSeek-V4-Flash', :prompt, 'ar', 0.7, 2048, TRUE)"),
+                            _sql_text("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (gen_random_uuid()::text, '1', 'Qwen/Qwen3-VL-30B-A3B-Instruct', :prompt, 'ar', 0.7, 2048, TRUE)"),
                             {"prompt": _DEFAULT_PROMPT}
                         )
                         _conn.commit()
-                        logger.info("✅ AI settings created for store 1")
+                        logger.info("âœ… AI settings created for store 1")
             except Exception as ai_e:
-                logger.warning(f"⚠️ AI settings seed (non-critical): {ai_e}")
+                logger.warning(f"âš ï¸ AI settings seed (non-critical): {ai_e}")
         except Exception as e:
-            logger.warning(f"⚠️ DB init (will retry on first request): {e}")
+            logger.warning(f"âš ï¸ DB init (will retry on first request): {e}")
 
-    # ─── Routes ──────────────────────────────────────────────
+    # â”€â”€â”€ Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @app.route("/")
     def index():
-        """Landing Page — the main entrance to RC Agents"""
+        """Landing Page â€” the main entrance to RC Agents"""
         try:
             return render_template("landing.html")
         except Exception:
@@ -112,7 +112,7 @@ def create_app():
 
     @app.route("/dashboard")
     def dashboard():
-        """Dark Neon Cyberpunk Dashboard — full with AI Brain + Charts + Live Chat"""
+        """Dark Neon Cyberpunk Dashboard â€” full with AI Brain + Charts + Live Chat"""
         try:
             return render_template("dashboard.html")
         except Exception:
@@ -139,7 +139,7 @@ def create_app():
 
     @app.route("/privacy")
     def privacy():
-        """Privacy Policy — required for Meta App Review"""
+        """Privacy Policy â€” required for Meta App Review"""
         try:
             return render_template("privacy.html")
         except Exception:
@@ -147,7 +147,7 @@ def create_app():
 
     @app.route("/terms")
     def terms():
-        """Terms of Service — required for Meta App Review"""
+        """Terms of Service â€” required for Meta App Review"""
         try:
             return render_template("terms.html")
         except Exception:
@@ -201,7 +201,7 @@ def create_app():
     def dashboard_marketing():
         return send_from_directory(app.static_folder, "dashboard.html")
 
-    # ─── Webhook Endpoint (Messenger & Instagram) ────────────
+    # â”€â”€â”€ Webhook Endpoint (Messenger & Instagram) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     FB_VERIFY_TOKEN = os.getenv("FB_VERIFY_TOKEN", "ROYAL-ROYAL-CH2026")
 
@@ -228,7 +228,7 @@ def create_app():
         obj = data.get("object", "")
         logger.info(f"Webhook object={obj}")
 
-        # TEMP: Legacy flow — import from server.py
+        # TEMP: Legacy flow â€” import from server.py
         if obj == "page":
             process_messaging_entries(data.get("entry", []), "FB", send_fb_reply)
         elif obj == "instagram":
@@ -260,7 +260,7 @@ def create_app():
             _process_whatsapp_multi(data.get("entry", []))
         return jsonify({"status": "ok"})
 
-    # ─── Import webhook handlers from root server.py ────────
+    # â”€â”€â”€ Import webhook handlers from root server.py â”€â”€â”€â”€â”€â”€â”€â”€
     import importlib.util
     _server_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server.py")
     _spec = importlib.util.spec_from_file_location("webhook_server", _server_path)
@@ -272,7 +272,7 @@ def create_app():
     send_ig_reply = _mod.send_ig_reply
     send_whatsapp_reply = _mod.send_whatsapp_reply
 
-    # ─── Multi-Tenant Webhook Processors ─────────────────────
+    # â”€â”€â”€ Multi-Tenant Webhook Processors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     from .database.crud import get_store_id_by_platform as _saas_get_store_id, get_store_id_by_whatsapp_phone as _saas_get_store_wa, get_or_create_conversation, save_message, get_or_create_ai_settings
     import importlib as _imp2
@@ -380,14 +380,14 @@ def create_app():
             "status": "ok",
             "service": "rc-agents-saas-core",
             "version": "2.0.1",
-            "ai_model": os.getenv("AI_MODEL", "openai/deepseek-ai/DeepSeek-V4-Flash"),
+            "ai_model": os.getenv("AI_MODEL", "Qwen/Qwen3-VL-30B-A3B-Instruct"),
         })
 
     @app.route("/api/plans")
     def list_plans():
         return jsonify(Config.PLANS)
 
-    # ─── API: Tenant Onboard (Multi-Store Registration) ─────
+    # â”€â”€â”€ API: Tenant Onboard (Multi-Store Registration) â”€â”€â”€â”€â”€
 
     @app.route("/api/tenant/onboard", methods=["POST"])
     def tenant_onboard():
@@ -423,7 +423,7 @@ def create_app():
             }
             app._tenant_registry = _tenant_registry
 
-            logger.info(f"✅ New tenant registered: {store_name} (ID: {store_id})")
+            logger.info(f"âœ… New tenant registered: {store_name} (ID: {store_id})")
 
             return jsonify({
                 "success": True,
@@ -437,7 +437,7 @@ def create_app():
             logger.error(f"Tenant onboard error: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
-    # ─── Error Handlers ──────────────────────────────────────
+    # â”€â”€â”€ Error Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @app.errorhandler(404)
     def not_found(e):
@@ -465,30 +465,30 @@ def create_app():
             inspector = __import__("sqlalchemy").inspect(engine)
             tables = inspector.get_table_names()
 
-            # 🧠 Seed AI settings for store=1 (always runs)
+            # ðŸ§  Seed AI settings for store=1 (always runs)
             try:
                 _ai_prompt = "[1. ROYAL IDENTITY]\nName: Louve\nRole: Sales assistant\nStore: Royal Chaussures\n\n[2. RULES]\n- Reply in Algerian Arabic\n- Use emojis\n- Never say you are AI\n\n[3. PRODUCTS]\n- Sizes: 36-41 EU\n- Delivery: ZR Express all Algeria\n- Payment: Cash on delivery"
                 with engine.connect() as _conn:
                     _existing = _conn.execute(_txt("SELECT id FROM ai_settings WHERE store_id = '1'")).fetchone()
                     if _existing:
-                        _conn.execute(_txt("UPDATE ai_settings SET ai_model = 'openai/deepseek-ai/DeepSeek-V4-Flash', system_prompt = :p, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"), {"p": _ai_prompt, "now": _dt.utcnow()})
+                        _conn.execute(_txt("UPDATE ai_settings SET ai_model = 'Qwen/Qwen3-VL-30B-A3B-Instruct', system_prompt = :p, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"), {"p": _ai_prompt, "now": _dt.utcnow()})
                         _seed_result = "updated"
                     else:
-                        _conn.execute(_txt("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (:id, '1', 'openai/deepseek-ai/DeepSeek-V4-Flash', :p, 'ar', 0.7, 2048, TRUE)"), {"id": str(uuid.uuid4()), "p": _ai_prompt})
+                        _conn.execute(_txt("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (:id, '1', 'Qwen/Qwen3-VL-30B-A3B-Instruct', :p, 'ar', 0.7, 2048, TRUE)"), {"id": str(uuid.uuid4()), "p": _ai_prompt})
                         _seed_result = "created"
                     _conn.commit()
             except Exception as _se:
                 _seed_result = f"error: {_se}"
 
             engine.dispose()
-            return jsonify({"status": "ok", "tables": tables, "ai_seed": _seed_result, "model": "openai/deepseek-ai/DeepSeek-V4-Flash"})
+            return jsonify({"status": "ok", "tables": tables, "ai_seed": _seed_result, "model": "Qwen/Qwen3-VL-30B-A3B-Instruct"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
     return app
 
 
-# ─── Entry Point ──────────────────────────────────────────────
+# â”€â”€â”€ Entry Point â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 if __name__ == "__main__":
     app = create_app()

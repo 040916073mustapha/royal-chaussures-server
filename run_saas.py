@@ -1,5 +1,5 @@
-"""
-RC Agents — SaaS Core Entry Point (UNIVERSAL)
+﻿"""
+RC Agents â€” SaaS Core Entry Point (UNIVERSAL)
 Works from any context: gunicorn, python run_saas.py, python -m run_saas
 No assumptions about sys.path or PYTHONPATH needed.
 """
@@ -11,10 +11,10 @@ import importlib.util
 
 __all__ = ["app"]
 
-# ─── Force AI_MODEL default before anything loads ────────────
-os.environ.setdefault("AI_MODEL", "openai/deepseek-ai/DeepSeek-V4-Flash")
+# â”€â”€â”€ Force AI_MODEL default before anything loads â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+os.environ.setdefault("AI_MODEL", "Qwen/Qwen3-VL-30B-A3B-Instruct")
 
-# ─── Force-load the package without relying on sys.path ────────
+# â”€â”€â”€ Force-load the package without relying on sys.path â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _bootstrap_package():
     """
@@ -68,7 +68,7 @@ def _bootstrap_package():
     return sys.modules[pkg_name]
 
 
-# ─── Bootstrap and create the Flask app ───────────────────────
+# â”€â”€â”€ Bootstrap and create the Flask app â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _pkg = _bootstrap_package()
 app = _pkg.create_app()
@@ -78,5 +78,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     port = int(os.getenv("PORT", "5050"))
     logger = logging.getLogger("saas-core")
-    logger.info(f"🚀 RC Agents SaaS Core starting on port {port}")
+    logger.info(f"ðŸš€ RC Agents SaaS Core starting on port {port}")
     app.run(host="0.0.0.0", port=port, debug=True)
