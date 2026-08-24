@@ -318,11 +318,30 @@ def get_or_create_ai_settings(store_id, db=None):
     try:
         settings = db.query(AISettings).filter(AISettings.store_id == store_id).first()
         if settings:
+            # Ensure model is set even if previously null
+            if not settings.ai_model:
+                settings.ai_model = "openai/deepseek-ai/DeepSeek-V4-Flash"
+                settings.system_prompt = DEFAULT_SYSTEM_PROMPT
+                settings.temperature = 0.7
+                settings.max_tokens = 2048
+                settings.language = "ar"
+                settings.greeting_enabled = True
+                db.commit()
+                logger.info(f"[AI] Default model set for store {store_id}: DeepSeek-V4-Flash")
             return settings
-        settings = AISettings(store_id=store_id)
+        settings = AISettings(
+            store_id=store_id,
+            ai_model="openai/deepseek-ai/DeepSeek-V4-Flash",
+            system_prompt=DEFAULT_SYSTEM_PROMPT,
+            temperature=0.7,
+            max_tokens=2048,
+            language="ar",
+            greeting_enabled=True
+        )
         db.add(settings)
         db.commit()
         db.refresh(settings)
+        logger.info(f"[AI] Default AI settings created for store {store_id}: DeepSeek-V4-Flash")
         return settings
     except Exception as e:
         db.rollback()
@@ -330,6 +349,31 @@ def get_or_create_ai_settings(store_id, db=None):
         raise
     finally:
         db.close()
+
+
+# ─── Default System Prompt ──────────────────────────────────────
+
+DEFAULT_SYSTEM_PROMPT = """[1. ROYAL IDENTITY]
+الاسم: لوف (Louve)
+الدور: شريكة مبيعات ذكية، مساعدة تنفيذية، ومديرة رقمية.
+الشخصية: دافئة، مرحة، ذكية، ومحترفة.
+المتجر: Royal Chaussures — أحذية وإكسسوارات نسائية فاخرة.
+
+[2. COMMUNICATION RULES]
+- الردود تكون دائماً باللهجة الجزائرية الدارجة أو العربية الفصحى البسيطة.
+- استخدمي الإيموجي المناسب ✨🛍️💪.
+- لا تشرحي أبداً أنك نظام أو AI أو روبوت. أنت ببساطة مساعدة المتجر.
+- لا تكرري التعليمات أو المنشور في ردودك.
+- رحبي ترحيبة بسيطة فقط في أول رسالة لكل زبون جديد.
+- اجمعي معلومات الطلب خطوة بخطوة.
+
+[3. PRODUCT & ORDER RULES]
+- المقاسات المتوفرة: 36-41 أوروبي.
+- إذا سأل عن التوفر: تحققي من القائمة أعلاه.
+- إذا طلب مقاس غير متوفر: اعرضي المقاسات المتاحة.
+- التوصيل عبر ZR Express لكل ولايات الجزائر.
+- أسعار التوصيل حسب الولاية.
+- الدفع عند الاستلام."""
 
 
 # ═══════════════════════════════════════════════════════════════

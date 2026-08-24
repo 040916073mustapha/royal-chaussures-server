@@ -68,6 +68,13 @@ def create_app():
         try:
             engine = init_db()
             logger.info("✅ Database initialized successfully")
+            # Seed default AI settings for store=1 (legacy compatibility)
+            try:
+                from .database.crud import get_or_create_ai_settings as _seed_ai
+                _seed_ai("1")
+                logger.info("✅ Default AI settings seeded for store 1")
+            except Exception as ai_e:
+                logger.warning(f"⚠️ AI settings seed (non-critical): {ai_e}")
         except Exception as e:
             logger.warning(f"⚠️ DB init (will retry on first request): {e}")
 
