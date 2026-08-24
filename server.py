@@ -651,9 +651,18 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
             with _engine.connect() as _conn:
                 _row = _conn.execute(_sa_txt("SELECT ai_model, system_prompt FROM ai_settings WHERE store_id = :sid"), {"sid": str(store_id)}).fetchone()
                 if _row:
-                    if _row[0]:
+                    # 🎯 Force the correct model — if DB has outdated value, override and update
+                    _CORRECT_MODEL = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
+                    if _row[0] and _row[0] != _CORRECT_MODEL:
+                        logger.warning(f"[AI] DB has outdated model '{_row[0]}', forcing update to {_CORRECT_MODEL}")
+                        _conn.execute(_sa_txt("UPDATE ai_settings SET ai_model = :m, updated_at = NOW() WHERE store_id = :sid"), {"m": _CORRECT_MODEL, "sid": str(store_id)})
+                        _conn.commit()
+                        _model = _CORRECT_MODEL
+                    elif _row[0]:
                         _model = _row[0]
                         logger.info(f"[AI] Loaded model from DB for store {store_id}: {_model}")
+                    else:
+                        _model = _CORRECT_MODEL
                     if _row[1]:
                         system_prompt = _row[1]
                         logger.info(f"[AI] Loaded system prompt from DB for store {store_id} ({len(system_prompt)} chars)")
