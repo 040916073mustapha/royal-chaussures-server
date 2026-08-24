@@ -11,6 +11,9 @@ import importlib.util
 
 __all__ = ["app"]
 
+# ─── Force AI_MODEL default before anything loads ────────────
+os.environ.setdefault("AI_MODEL", "openai/deepseek-ai/DeepSeek-V4-Flash")
+
 # ─── Force-load the package without relying on sys.path ────────
 
 def _bootstrap_package():
