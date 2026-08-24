@@ -641,36 +641,28 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
     
     # ðŸ†• Multi-Tenant: Ù‚Ø±Ø§Ø¡Ø© AI Model Ùˆ System Prompt Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø¨ÙŠØ§Ù†Ø§Øª SaaS Core
-    _model = AI_MODEL  # default from env
+    # Multi-Tenant: read system prompt from PostgreSQL via subprocess psql
+    _model = AI_MODEL  # ALWAYS from env (forced in code)
     system_prompt = ""
     try:
-        from sqlalchemy import create_engine as _sa_eng, text as _sa_txt
+        import subprocess as _sp
         _db_url = os.getenv("SAAS_DATABASE_URL") or os.getenv("DATABASE_URL") or ""
         if _db_url and _db_url.startswith("postgres"):
-            _engine = _sa_eng(_db_url, pool_pre_ping=True, pool_size=2, max_overflow=5)
-            with _engine.connect() as _conn:
-                _row = _conn.execute(_sa_txt("SELECT ai_model, system_prompt FROM ai_settings WHERE store_id = :sid"), {"sid": str(store_id)}).fetchone()
-                if _row:
-                    # 🎯 Force the correct model — if DB has outdated value, override and update
-                    _CORRECT_MODEL = "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
-                    if _row[0] and _row[0] != _CORRECT_MODEL:
-                        logger.warning(f"[AI] DB has outdated model '{_row[0]}', forcing update to {_CORRECT_MODEL}")
-                        _conn.execute(_sa_txt("UPDATE ai_settings SET ai_model = :m, updated_at = NOW() WHERE store_id = :sid"), {"m": _CORRECT_MODEL, "sid": str(store_id)})
-                        _conn.commit()
-                        _model = _CORRECT_MODEL
-                    elif _row[0]:
-                        _model = _row[0]
-                        logger.info(f"[AI] Loaded model from DB for store {store_id}: {_model}")
-                    else:
-                        _model = _CORRECT_MODEL
-                    if _row[1]:
-                        system_prompt = _row[1]
-                        logger.info(f"[AI] Loaded system prompt from DB for store {store_id} ({len(system_prompt)} chars)")
-            _engine.dispose()
+            _parts = _db_url.split("://")[1].split("@")
+            _up = _parts[0].split(":")
+            _hd = _parts[1].split("/")
+            _hp = _hd[0].split(":")
+            _env = os.environ.copy()
+            _env["PGPASSWORD"] = _up[1] if len(_up) > 1 else ""
+            _dbn = _hd[1].split("?")[0] if len(_hd) > 1 else "rcagents"
+            _c = f'psql -h {_hp[0]} -p {int(_hp[1]) if len(_hp) > 1 else 5432} -U {_up[0]} -d {_dbn} -t -A -c "SELECT system_prompt FROM ai_settings WHERE store_id = \'{store_id}\'"'
+            _r = _sp.run(_c, shell=True, capture_output=True, text=True, timeout=10, env=_env)
+            if _r.returncode == 0 and _r.stdout.strip():
+                system_prompt = _r.stdout.strip()
+                logger.info(f"[AI] Loaded system prompt from DB for store {store_id} ({len(system_prompt)} chars)")
     except Exception as _e:
-        logger.warning(f"[AI] SaaS DB model read failed, using env default: {_safe_str(_e)}")
-    
-    # ðŸ†• Multi-Tenant: Ù‚Ø±Ø§Ø¡Ø© System Prompt Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø­Ø³Ø¨ store_id (legacy SQLite fallback)
+        logger.warning(f"[AI] DB read skipped (non-critical), using env: {_safe_str(_e)}")
+
     if not system_prompt:
         try:
             _old_engine = os.environ.get('DB_ENGINE', '')
@@ -2070,5 +2062,6 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 10000))
     logger.info(f"Starting Royal Chaussures Server on port {port}")
     app.run(host='0.0.0.0', port=port)
+
 
 
