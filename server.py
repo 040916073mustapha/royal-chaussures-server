@@ -58,7 +58,10 @@ logger = logging.getLogger("royal-server")
 
 AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_API_URL = os.getenv("AI_API_URL", "https://api.deepinfra.com/v1/openai/chat/completions")
-AI_MODEL = os.getenv("AI_MODEL", "openai/deepseek-ai/DeepSeek-V4-Flash")
+# Force AI_MODEL — set in os.environ so all downstream readers see it
+if "AI_MODEL" not in os.environ:
+    os.environ["AI_MODEL"] = "openai/deepseek-ai/DeepSeek-V4-Flash"
+AI_MODEL = os.environ["AI_MODEL"]
 
 # Shopify API config
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "")
