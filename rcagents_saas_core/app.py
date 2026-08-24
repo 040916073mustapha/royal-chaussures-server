@@ -463,27 +463,25 @@ def create_app():
             Base.metadata.create_all(engine)
             inspector = __import__("sqlalchemy").inspect(engine)
             tables = inspector.get_table_names()
-            logger.info(f"Migration complete: {', '.join(tables)}")
-            # Seed AI settings for store 1
+
+            # 🧠 Seed AI settings for store=1 (always runs)
             try:
-                _DEFAULT_PROMPT = "[1. ROYAL IDENTITY]\nالاسم: لوف (Louve)\nالدور: شريكة مبيعات ذكية\nالمتجر: Royal Chaussures — أحذية وإكسسوارات نسائية فاخرة.\n\n[2. COMMUNICATION RULES]\n- الردود دائماً باللهجة الجزائرية الدارجة.\n- استخدمي الإيموجي المناسب.\n- لا تشرحي أبداً أنك نظام أو AI.\n\n[3. PRODUCT RULES]\n- المقاسات المتوفرة: 36-41.\n- التوصيل عبر ZR Express لكل الولايات.\n- الدفع عند الاستلام."
+                _ai_prompt = "[1. ROYAL IDENTITY]\nName: Louve\nRole: Sales assistant\nStore: Royal Chaussures\n\n[2. RULES]\n- Reply in Algerian Arabic\n- Use emojis\n- Never say you are AI\n\n[3. PRODUCTS]\n- Sizes: 36-41 EU\n- Delivery: ZR Express all Algeria\n- Payment: Cash on delivery"
                 with engine.connect() as _conn:
-                    existing = _conn.execute(_txt("SELECT id FROM ai_settings WHERE store_id = '1'")).fetchone()
-                    if existing:
-                        _conn.execute(_txt("UPDATE ai_settings SET ai_model = 'openai/deepseek-ai/DeepSeek-V4-Flash', system_prompt = :p, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"), {"p": _DEFAULT_PROMPT, "now": _dt.utcnow()})
+                    _existing = _conn.execute(_txt("SELECT id FROM ai_settings WHERE store_id = '1'")).fetchone()
+                    if _existing:
+                        _conn.execute(_txt("UPDATE ai_settings SET ai_model = 'openai/deepseek-ai/DeepSeek-V4-Flash', system_prompt = :p, language = 'ar', temperature = 0.7, max_tokens = 2048, greeting_enabled = TRUE, updated_at = :now WHERE store_id = '1'"), {"p": _ai_prompt, "now": _dt.utcnow()})
                         _seed_result = "updated"
                     else:
-                        _conn.execute(_txt("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (:id, '1', 'openai/deepseek-ai/DeepSeek-V4-Flash', :p, 'ar', 0.7, 2048, TRUE)"), {"id": str(uuid.uuid4()), "p": _DEFAULT_PROMPT})
+                        _conn.execute(_txt("INSERT INTO ai_settings (id, store_id, ai_model, system_prompt, language, temperature, max_tokens, greeting_enabled) VALUES (:id, '1', 'openai/deepseek-ai/DeepSeek-V4-Flash', :p, 'ar', 0.7, 2048, TRUE)"), {"id": str(uuid.uuid4()), "p": _ai_prompt})
                         _seed_result = "created"
                     _conn.commit()
-                logger.info(f"AI settings {_seed_result} for store 1")
             except Exception as _se:
                 _seed_result = f"error: {_se}"
-                logger.warning(f"AI seed: {_seed_result}")
+
             engine.dispose()
             return jsonify({"status": "ok", "tables": tables, "ai_seed": _seed_result, "model": "openai/deepseek-ai/DeepSeek-V4-Flash"})
         except Exception as e:
-            logger.error(f"Migration error: {e}")
             return jsonify({"error": str(e)}), 500
 
     return app
