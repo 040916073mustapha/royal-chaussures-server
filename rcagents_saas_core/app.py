@@ -379,7 +379,8 @@ def create_app():
         return jsonify({
             "status": "ok",
             "service": "rc-agents-saas-core",
-            "version": "2.0.0",
+            "version": "2.0.1",
+            "ai_model": os.getenv("AI_MODEL", "openai/deepseek-ai/DeepSeek-V4-Flash"),
         })
 
     @app.route("/api/plans")
