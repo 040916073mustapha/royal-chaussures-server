@@ -58,7 +58,7 @@ logger = logging.getLogger("royal-server")
 
 AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_API_URL = os.getenv("AI_API_URL", "https://api.deepinfra.com/v1/openai/chat/completions")
-AI_MODEL = os.getenv("AI_MODEL", "deepseek-ai/DeepSeek-V4-Flash")
+AI_MODEL = os.getenv("AI_MODEL", "openai/deepseek-ai/DeepSeek-V4-Flash")
 
 # Shopify API config
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "")
@@ -637,20 +637,40 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
     
-    # 🆕 Multi-Tenant: قراءة System Prompt من قاعدة البيانات حسب store_id
+    # 🆕 Multi-Tenant: قراءة AI Model و System Prompt من قاعدة بيانات SaaS Core
+    _model = AI_MODEL  # default from env
     system_prompt = ""
     try:
-        # Force SQLite engine to avoid PostgreSQL dependency issues
-        _old_engine = os.environ.get('DB_ENGINE', '')
-        if not _old_engine:
-            os.environ['DB_ENGINE'] = 'sqlite'
-        from database.db import get_store_prompt
-        db_prompt = get_store_prompt(store_id, "customer_support")
-        if db_prompt:
-            system_prompt = db_prompt
-            logger.info(f"[PROMPT] Loaded store prompt for store_id={store_id} ({len(system_prompt)} chars)")
-    except Exception as prompt_err:
-        logger.warning(f"[PROMPT] DB prompt failed, falling back to file: {_safe_str(prompt_err)}")
+        from sqlalchemy import create_engine as _sa_eng, text as _sa_txt
+        _db_url = os.getenv("SAAS_DATABASE_URL") or os.getenv("DATABASE_URL") or ""
+        if _db_url and _db_url.startswith("postgres"):
+            _engine = _sa_eng(_db_url, pool_pre_ping=True, pool_size=2, max_overflow=5)
+            with _engine.connect() as _conn:
+                _row = _conn.execute(_sa_txt("SELECT ai_model, system_prompt FROM ai_settings WHERE store_id = :sid"), {"sid": str(store_id)}).fetchone()
+                if _row:
+                    if _row[0]:
+                        _model = _row[0]
+                        logger.info(f"[AI] Loaded model from DB for store {store_id}: {_model}")
+                    if _row[1]:
+                        system_prompt = _row[1]
+                        logger.info(f"[AI] Loaded system prompt from DB for store {store_id} ({len(system_prompt)} chars)")
+            _engine.dispose()
+    except Exception as _e:
+        logger.warning(f"[AI] SaaS DB model read failed, using env default: {_safe_str(_e)}")
+    
+    # 🆕 Multi-Tenant: قراءة System Prompt من قاعدة البيانات حسب store_id (legacy SQLite fallback)
+    if not system_prompt:
+        try:
+            _old_engine = os.environ.get('DB_ENGINE', '')
+            if not _old_engine:
+                os.environ['DB_ENGINE'] = 'sqlite'
+            from database.db import get_store_prompt
+            _db_prompt = get_store_prompt(store_id, "customer_support")
+            if _db_prompt:
+                system_prompt = _db_prompt
+                logger.info(f"[PROMPT] Loaded store prompt for store_id={store_id} ({len(system_prompt)} chars)")
+        except Exception as _prompt_err:
+            logger.warning(f"[PROMPT] DB prompt failed, falling back to file: {_safe_str(_prompt_err)}")
     
     # Fallback: ملف prompt.txt إذا ماكانش prompt في DB
     if not system_prompt:
@@ -723,9 +743,9 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         user_content_type = type(user_content).__name__
         user_content_preview = str(user_content)[:200] if isinstance(user_content, list) else str(user_content)[:100]
         logger.info(f"[AI] user_content type={user_content_type} preview={user_content_preview}")
-        logger.info(f"[AI] Sending to {AI_API_URL} model={AI_MODEL}")
+        logger.info(f"[AI] Sending to {AI_API_URL} model={_model}")
         payload = {
-            "model": AI_MODEL,
+            "model": _model,
             "messages": messages,
             "max_tokens": 500,
             "temperature": 0.7
@@ -744,7 +764,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         else:
             logger.error("AI API error: " + str(resp.status_code) + " " + resp.text[:2000])
     except requests.exceptions.Timeout:
-        logger.error(f"[AI] TIMEOUT after 40s — model={AI_MODEL}")
+        logger.error(f"[AI] TIMEOUT after 40s — model={_model}")
     except requests.exceptions.ConnectionError as ce:
         logger.error(f"[AI] CONNECTION ERROR: {ce}")
     except Exception as e:
