@@ -13,6 +13,7 @@ __all__ = ["app"]
 
 # â”€â”€â”€ Force AI_MODEL default before anything loads â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 os.environ.setdefault("AI_MODEL", "Qwen/Qwen3-VL-30B-A3B-Instruct")
+os.environ["AI_MODEL"] = "Qwen/Qwen3-VL-30B-A3B-Instruct"
 
 # â”€â”€â”€ Force-load the package without relying on sys.path â”€â”€â”€â”€â”€â”€â”€â”€
 
