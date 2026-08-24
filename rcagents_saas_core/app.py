@@ -465,7 +465,7 @@ def create_app():
             logger.error(f"Migration error: {e}")
             return jsonify({"error": str(e)}), 500
 
-    @app.route("/api/admin/seed-ai")
+    @app.route("/api/admin/seed-ai", methods=["GET", "POST"])
     def api_seed_ai():
         """Seed AI settings for store_id=1 with DeepSeek V4"""
         try:
