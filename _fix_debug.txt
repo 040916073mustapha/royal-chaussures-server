@@ -1,0 +1,10 @@
+re_id"]
+    except Exception:
+        pass
+    return 1
+    finally:
+        db.close()
+
+
+def get_all_registered_webhooks():
+    """جلب جميع 

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Agents — Multi-Store AI Automation Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+        header {
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        header .container {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .logo { font-size: 24px; font-weight: 800; color: #fff; }
+        .logo span { color: #a78bfa; }
+        nav a {
+            color: #999; text-decoration: none; margin-left: 32px; font-size: 14px; transition: color 0.2s;
+        }
+        nav a:hover { color: #a78bfa; }
+
+        .hero {
+            padding: 100px 0 80px;
+            text-align: center;
+            background: radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.08) 0%, transparent 60%);
+        }
+        .hero-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 100px;
+            background: rgba(167,139,250,0.15);
+            color: #a78bfa;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            border: 1px solid rgba(167,139,250,0.2);
+        }
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.15;
+            margin-bottom: 20px;
+        }
+        .hero h1 span { color: #a78bfa; }
+        .hero p {
+            font-size: 18px;
+            color: #888;
+            max-width: 680px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+        .hero-actions {
+            display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+        }
+        .btn {
+            padding: 14px 36px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(167,139,250,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(167,139,250,0.4); }
+        .btn-outline {
+            background: transparent;
+            color: #ccc;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .btn-outline:hover { border-color: #a78bfa; color: #a78bfa; }
+
+        .features {
+            padding: 80px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .features h2 {
+            text-align: center; font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 60px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 28px;
+        }
+        .feature-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            border-color: rgba(167,139,250,0.3);
+            background: rgba(167,139,250,0.05);
+            transform: translateY(-4px);
+        }
+        .feature-icon { font-size: 36px; margin-bottom: 16px; }
+        .feature-card h3 { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+        .feature-card p { font-size: 14px; color: #888; line-height: 1.7; }
+
+        /* ── SaaS pitch ── */
+        .saas-section {
+            padding: 80px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .saas-section h2 {
+            text-align: center; font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 12px;
+        }
+        .saas-section .subtitle {
+            text-align: center; color: #888; font-size: 16px; margin-bottom: 60px;
+        }
+        .saas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 28px;
+        }
+        .saas-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 32px;
+        }
+        .saas-card h3 { color: #a78bfa; font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+        .saas-card p { font-size: 14px; color: #888; line-height: 1.7; }
+
+        footer {
+            margin-top: auto;
+            padding: 40px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            text-align: center;
+            color: #555;
+            font-size: 13px;
+        }
+        footer a { color: #777; text-decoration: none; }
+        footer a:hover { color: #a78bfa; }
+
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 32px; }
+            .hero p { font-size: 16px; }
+            .btn { width: 100%; text-align: center; }
+            nav a { margin-left: 16px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">RC <span>Agents</span></div>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge">🚀 Multi-Store AI Automation Platform</div>
+            <h1>5 AI Agents for <span>Every Store</span></h1>
+            <p>
+                A complete SaaS platform that powers your e-commerce business with intelligent agents
+                for Sales, Support, Inventory, Shipping, and Marketing. One dashboard. All channels.
+                <strong>Your store is Tenant #1.</strong>
+            </p>
+            <div class="hero-actions">
+                <a href="#" class="btn btn-primary">Start Free Trial</a>
+                <a href="https://royalchaussures.com" class="btn btn-outline">See It Live →</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="container">
+            <h2>🤖 The 5 AI Agents</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🛒</div>
+                    <h3>Sales Agent</h3>
+                    <p>Answers product questions, recommends sizes, shares catalogs, and closes sales across Messenger, WhatsApp, and Instagram.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🆘</div>
+                    <h3>Support Agent</h3>
+                    <p>Handles returns, exchanges, order issues, and customer inquiries with speed, empathy, and escalation when needed.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Inventory Agent</h3>
+                    <p>Real-time stock tracking from Shopify, low-stock alerts, and automatic sync between your physical store and online shop.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚚</div>
+                    <h3>Shipping Agent</h3>
+                    <p>ZR Express integration — auto-generates shipping labels, tracks deliveries, and coordinates across 58 wilayas.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📢</div>
+                    <h3>Marketing Agent</h3>
+                    <p>Automates campaigns, abandoned cart recovery, promotions, and analyzes ad performance to boost ROI.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="saas-section">
+        <div class="container">
+            <h2>🌐 Built for Multi-Tenant Scale</h2>
+            <p class="subtitle">One platform, infinite stores. Each tenant gets isolated data.</p>
+            <div class="saas-grid">
+                <div class="saas-card">
+                    <h3>🔐 Tenant Isolation</h3>
+                    <p>Every store's data is scoped by <code>store_id</code> — orders, customers, products, and conversations never leak between tenants.</p>
+                </div>
+                <div class="saas-card">
+                    <h3>⚡ Instant Onboarding</h3>
+                    <p>New tenant = new slug. Connect Shopify, configure Meta/WhatsApp channels, and the 5 agents activate in minutes.</p>
+                </div>
+                <div class="saas-card">
+                    <h3>📊 Central Dashboard</h3>
+                    <p>Dark-theme analytics dashboard with real-time revenue, order tracking, agent activity, and sales-by-channel insights.</p>
+                </div>
+                <div class="saas-card">
+                    <h3>🔌 Webhook Ready</h3>
+                    <p>Pre-configured webhooks for Meta, WhatsApp Cloud API, and Shopify with HMAC-SHA256 signature verification built-in.</p>
+                </div>
+                <div class="saas-card">
+                    <h3>🧠 AI-Powered</h3>
+                    <p>DeepSeek-V4-Flash (or any OpenAI-compatible model) powers all 5 agents. Custom system prompts per tenant.</p>
+                </div>
+                <div class="saas-card">
+                    <h3>🇩🇿 Algeria-Optimized</h3>
+                    <p>ZR Express shipping, DZD currency, Arabic/Darija support, and local hosting on Railway for low-latency performance.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>© 2026 <a href="https://rcagent.space">RC Agents</a> — A Royal Chaussures Technology</p>
+            <p style="margin-top: 8px;">
+                <a href="/privacy">Privacy Policy</a> &middot;
+                <a href="/terms">Terms of Service</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

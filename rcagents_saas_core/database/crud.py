@@ -318,16 +318,20 @@ def get_or_create_ai_settings(store_id, db=None):
     try:
         settings = db.query(AISettings).filter(AISettings.store_id == store_id).first()
         if settings:
-            # Ensure model is set even if previously null
+            # Ensure model is set even if previously null/empty
+            _changed = False
             if not settings.ai_model:
                 settings.ai_model = "openai/deepseek-ai/DeepSeek-V4-Flash"
+                _changed = True
+            if not settings.system_prompt:
                 settings.system_prompt = DEFAULT_SYSTEM_PROMPT
-                settings.temperature = 0.7
-                settings.max_tokens = 2048
+                _changed = True
+            if not settings.language:
                 settings.language = "ar"
-                settings.greeting_enabled = True
+                _changed = True
+            if _changed:
                 db.commit()
-                logger.info(f"[AI] Default model set for store {store_id}: DeepSeek-V4-Flash")
+                logger.info(f"[AI] Default AI settings seeded for store {store_id}: DeepSeek-V4-Flash")
             return settings
         settings = AISettings(
             store_id=store_id,
