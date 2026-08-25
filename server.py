@@ -530,7 +530,7 @@ DASHBOARD_PASS = os.getenv("DASHBOARD_PASS", "").strip()
 _DASHBOARD_AUTH_ENABLED = bool(DASHBOARD_USER and DASHBOARD_PASS)
 
 # Paths that should NEVER require auth (webhooks, public APIs)
-_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/sitemap.xml", "/privacy", "/terms", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/messages", "/api/profile", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases")
+_AUTH_SAFE_PATHS = ("/health", "/webhook", "/whatsapp/webhook", "/", "/sitemap.xml", "/privacy", "/terms", "/onboard", "/dashboard", "/dashboard/", "/dashboard/login", "/api/chatbot", "/api/v1", "/pos", "/api/tenant/onboard", "/api/tenant/login", "/api/sync/notion", "/api/stats", "/api/orders", "/api/products", "/api/clients", "/api/store", "/api/messages", "/api/profile", "/api/v1/store/onboard", "/api/v1/store/pos/purchases", "/api/v1/store/pos/products", "/api/v1/store/pos/products/barcode", "/api/v1/store/pos/sales", "/api/v1/store/products", "/api/v1/store/products/barcode", "/api/v1/store/sales", "/api/v1/store/purchases", "/dashboard/orders", "/dashboard/products", "/dashboard/clients", "/dashboard/settings", "/dashboard/chat", "/dashboard/agents", "/dashboard/analytics", "/dashboard/marketing", "/dashboard/inventory", "/dashboard/auto-ship", "/dashboard/tracking", "/api/agents", "/api/campaigns", "/api/analytics", "/api/engagement")
 
 
 @app.before_request
@@ -1257,19 +1257,15 @@ def _get_store_context(store_id=None):
     return {"id": 1, "name": "Ù…ØªØ¬Ø± ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ", "slug": "unknown"}
 
 
-# Redirect root dashboard to store 1 (Royal Chaussures) for backwards compat
-@app.route('/dashboard')
-def dashboard():
-    store_id = request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="dashboard", store_id=store_id)
-
-@app.route('/dashboard/<int:store_id>')
-def dashboard_store(store_id):
-    return render_template("store_dashboard.html", store_id=store_id)
+# ============================================================
+# DASHBOARD PAGES — Unified Routing (Phase 2 fixed)
+# All dashboard sub-pages are explicit routes to avoid fallback
+# to landing page on subdomain
+# ============================================================
 
 @app.route('/dashboard')
-def dashboard_subdomain():
-    """Public dashboard accessed via subdomain (e.g., puma.rcagents.space/dashboard)"""
+def dashboard_root():
+    """Main dashboard: subdomain detection or default store 1"""
     _host = request.headers.get("Host", "")
     _slug = _host.split(".")[0] if _host.count(".") >= 2 else ""
     if _slug:
@@ -1279,43 +1275,70 @@ def dashboard_subdomain():
             return render_template("store_dashboard.html", store_id=store["id"])
     return render_template("dashboard.html", active="dashboard", store_id=1)
 
+
 @app.route('/dashboard/')
-def dashboard_subdomain_slash():
-    return dashboard_subdomain()
+def dashboard_root_slash():
+    return dashboard_root()
+
+
+@app.route('/dashboard/orders')
+def dashboard_orders():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("orders.html", active="orders", store_id=store_id)
+
+
+@app.route('/dashboard/products')
+def dashboard_products():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("products.html", active="products", store_id=store_id)
+
+
+@app.route('/dashboard/clients')
+def dashboard_clients():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("clients.html", active="clients", store_id=store_id)
+
+
+@app.route('/dashboard/<int:store_id>')
+def dashboard_store(store_id):
+    return render_template("store_dashboard.html", store_id=store_id)
+
 
 @app.route('/dashboard/<int:store_id>/orders')
 def dashboard_store_orders(store_id):
     return render_template("orders.html", active="orders", store_id=store_id)
 
+
 @app.route('/dashboard/<int:store_id>/products')
 def dashboard_store_products(store_id):
     return render_template("products.html", active="products", store_id=store_id)
+
 
 @app.route('/dashboard/<int:store_id>/clients')
 def dashboard_store_clients(store_id):
     return render_template("clients.html", active="clients", store_id=store_id)
 
+
 @app.route('/dashboard/<int:store_id>/settings')
 def dashboard_store_settings(store_id):
     return render_template("settings.html", active="settings", store_id=store_id)
 
-@app.route('/dashboard/orders')
-def dashboard_orders_old():
-    store_id = request.args.get("store_id", 1, type=int)
-    return render_template("orders.html", active="orders", store_id=store_id)
 
-@app.route('/dashboard/products')
-def dashboard_products_old():
-    store_id = request.args.get("store_id", 1, type=int)
-    return render_template("products.html", active="products", store_id=store_id)
+@app.route('/dashboard/<int:store_id>/chat')
+def dashboard_store_chat(store_id):
+    return render_template("chat_console.html", active="chat", store_id=store_id)
 
-@app.route('/dashboard/clients')
-def dashboard_clients_old():
-    store_id = request.args.get("store_id", 1, type=int)
-    return render_template("clients.html", active="clients", store_id=store_id)
+
+@app.route('/dashboard/<int:store_id>/agents')
+def dashboard_store_agents(store_id):
+    return render_template("agents_dashboard.html", active="agents", store_id=store_id)
+
 
 @app.route('/dashboard/settings')
-def dashboard_settings_old():
+def dashboard_settings():
     settings_data = {
         "zr_express": {
             "status": "Ù…ØªØµÙ„",
@@ -2008,6 +2031,41 @@ def api_wa_confirm_send():
 
 
 # ---- LIVE CHAT CONSOLE ----
+
+@app.route('/dashboard/analytics')
+def dashboard_analytics():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="analytics", store_id=store_id)
+
+
+@app.route('/dashboard/marketing')
+def dashboard_marketing():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="marketing", store_id=store_id)
+
+
+@app.route('/dashboard/inventory')
+def dashboard_inventory():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="inventory", store_id=store_id)
+
+
+@app.route('/dashboard/auto-ship')
+def dashboard_auto_ship():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="auto-ship", store_id=store_id)
+
+
+@app.route('/dashboard/tracking')
+def dashboard_tracking():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("tracking.html", store_id=store_id)
+
 
 @app.route('/dashboard/chat')
 def dashboard_chat():
