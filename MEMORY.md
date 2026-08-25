@@ -1,6 +1,6 @@
 # 🧠 Long-Term Memory — Royal Chaussures System
 
-> آخر تحديث: 17 أغسطس 2026
+> آخر تحديث: 25 أغسطس 2026
 
 ## 🏆 CODEBASE AUDIT — Step 1 & 2 (17 August 2026)
 
@@ -61,6 +61,34 @@ git config core.hooksPath .githooks
 - **🔐 Webhook Security**: ✅ X-Hub-Signature-256 verification
 
 ---
+
+## 🏆 GOLDEN RELEASE v2.3 — 5-Agent System (25 August 2026)
+
+| العنصر | القيمة |
+|--------|--------|
+| **Tag** | `v2.3-five-agents-system` |
+| **Commit** | `921aa28` |
+| **التاريخ** | 25 أغسطس 2026 |
+| **الحالة** | ✅ Production — 6 AI Agents + API endpoints |
+
+### 🆕 الوكلاء الخمسة الجدد
+| الوكيل | الوظيفة | الملف |
+|--------|---------|------|
+| 💰 **Sales Agent** | مبيعات مباشرة، إقناع، إلحاح ناعم | `agents/sales_agent.py` |
+| 🎯 **Campaign Agent** | عروض، تخفيضات، حملات موسمية | `agents/campaign_agent.py` |
+| 💕 **Engagement Agent** | ولاء، تقييمات، متابعة ما بعد البيع | `agents/engagement_agent.py` |
+| 📊 **Analytics Agent** | تقارير، تحليلات، KPIs | `agents/analytics_agent.py` |
+| 🤝 **Customer Support** | خدمات عامة (موجود مسبقاً) | `agents/customer_support.py` |
+| 📦 **Shipping Tracking** | متابعة شحنات (موجود مسبقاً) | `agents/shipping_tracking.py` |
+
+### 🧠 التوجيه الذكي (Smart Routing)
+- نظام Priority Detection: 6 مستويات أولوية
+- Negative keywords لمنع التداخل بين الوكلاء
+- API endpoints: `/api/agents/*`, `/api/campaigns/*`, `/api/analytics/*`, `/api/engagement/*`
+- الحملات النشطة حالياً: التصفية الشتوية ☃️، وصل حديثاً 🌟، فلاش سيل ⚡
+
+### ✅ اختبار التكامل
+- 6/6 اختبارات نجحت
 
 ## 🏆 GOLDEN RELEASE v2 — RC Agent v1.2 (Omnichannel Production Ready)
 
