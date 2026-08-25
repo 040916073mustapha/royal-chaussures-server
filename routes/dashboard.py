@@ -12,7 +12,13 @@ import logging
 
 logger = logging.getLogger("royal-server")
 
-dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
+dashboard_bp = Blueprint(
+    "dashboard",
+    __name__,
+    url_prefix="/dashboard",
+    template_folder="../templates",  # Explicit: load from repo root templates/
+    static_folder="../static"
+)
 
 
 def _get_store_id():
@@ -108,7 +114,7 @@ def settings():
         }
     }
     return render_template(
-        "settings.html", active="settings", store_id=store_id, **settings_data
+        "dashboard_settings.html", active="settings", store_id=store_id, **settings_data
     )
 
 
