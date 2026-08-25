@@ -1338,7 +1338,8 @@ def dashboard_settings_old():
                 {"name": "Messenger", "cls": "bg-blue-500/15 text-blue-400"},
                 {"name": "WhatsApp", "cls": "bg-green-500/15 text-green-400"},
                 {"name": "Instagram", "cls": "bg-pink-500/15 text-pink-400"}
-            ]
+            ],
+            "agents_link": "/dashboard/agents"
         },
         "shopify": {
             "status": "Ù…ØªØµÙ„",
@@ -2015,6 +2016,16 @@ def dashboard_chat():
         return render_template("chat_console.html")
     except Exception as e:
         _log_safe(logger.error, "Chat console template error", e)
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/dashboard/agents')
+def dashboard_agents():
+    """AI Agents Management Dashboard page"""
+    try:
+        return render_template("agents_dashboard.html")
+    except Exception as e:
+        _log_safe(logger.error, "Agents dashboard template error", e)
         return json_utf8({"error": _safe_str(e)}, 500)
 
 
