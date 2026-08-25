@@ -640,6 +640,19 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         logger.warning("[AI] AI_API_KEY not set - token is empty. Bot cannot generate AI replies.")
         return "Merhaba, Royal Chaussures'a hos geldiniz! Nasil yardimci olabiliriz?"
     
+    # ===== PHASE 2: SMART AGENT ROUTING =====
+    # Detect the best agent for this message using keyword-based intent detection
+    _detected_agent = "customer_support"
+    _agent_name = "Customer Support"
+    try:
+        from agents.router import route_by_intent
+        _routing = route_by_intent(user_message or "", "auto", sender_id, image_url, store_id)
+        _detected_agent = _routing.get("agent_id", "customer_support")
+        _agent_name = _routing.get("agent_name", "Customer Support")
+        logger.info(f"[AI ROUTER] Detected agent: {_detected_agent} ({_agent_name}) for message: {(user_message or '')[ :60]}...")
+    except Exception as _re:
+        logger.warning(f"[AI ROUTER] Detection failed (non-critical): {_safe_str(_re)}")
+    
     # ðŸ†• Multi-Tenant: Ù‚Ø±Ø§Ø¡Ø© AI Model Ùˆ System Prompt Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø¨ÙŠØ§Ù†Ø§Øª SaaS Core
     # Multi-Tenant: read system prompt from PostgreSQL via subprocess psql
     _model = AI_MODEL  # ALWAYS from env (forced in code)
@@ -663,16 +676,32 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
     except Exception as _e:
         logger.warning(f"[AI] DB read skipped (non-critical), using env: {_safe_str(_e)}")
 
+    # Try loading agent-specific prompt from DB
+    _prompt_type = _detected_agent  # e.g. "sales_agent", "campaign_agent", etc.
     if not system_prompt:
         try:
             _old_engine = os.environ.get('DB_ENGINE', '')
             if not _old_engine:
                 os.environ['DB_ENGINE'] = 'sqlite'
             from database.db import get_store_prompt
-            _db_prompt = get_store_prompt(store_id, "customer_support")
+            _db_prompt = get_store_prompt(store_id, _prompt_type)
             if _db_prompt:
                 system_prompt = _db_prompt
-                logger.info(f"[PROMPT] Loaded store prompt for store_id={store_id} ({len(system_prompt)} chars)")
+                logger.info(f"[PROMPT] Loaded {_prompt_type} prompt for store_id={store_id} ({len(system_prompt)} chars)")
+            else:
+                # Fallback to the agent's built-in system prompt
+                try:
+                    from agents.router import get_agent_config
+                    _cfg = get_agent_config(_prompt_type)
+                    if _cfg and _cfg.get("system_prompt"):
+                        system_prompt = _cfg["system_prompt"]
+                        logger.info(f"[PROMPT] Using built-in {_prompt_type} prompt from config ({len(system_prompt)} chars)")
+                except Exception as _cfg_err:
+                    logger.warning(f"[PROMPT] Agent config fallback failed: {_safe_str(_cfg_err)}")
+                    # Ultimate fallback: get customer_support prompt
+                    _db_cs = get_store_prompt(store_id, "customer_support")
+                    if _db_cs:
+                        system_prompt = _db_cs
         except Exception as _prompt_err:
             logger.warning(f"[PROMPT] DB prompt failed, falling back to file: {_safe_str(_prompt_err)}")
     
@@ -746,7 +775,7 @@ def generate_ai_reply(user_message, sender_id, image_url='', store_id=1):
         # Log the content type being sent (str for text, list for vision)
         user_content_type = type(user_content).__name__
         user_content_preview = str(user_content)[:200] if isinstance(user_content, list) else str(user_content)[:100]
-        logger.info(f"[AI] user_content type={user_content_type} preview={user_content_preview}")
+        logger.info(f"[AI] Agent={_detected_agent} user_content type={user_content_type} preview={user_content_preview}")
         logger.info(f"[AI] Sending to {AI_API_URL} model={_model}")
         payload = {
             "model": _model,
