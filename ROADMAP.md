@@ -1,7 +1,7 @@
 # 🗺️ RC Agents — خارطة الطريق الشاملة
 
-> **آخر تحديث:** 19 أغسطس 2026  
-> **الإصدار:** v2.5 (Multi-Tenant SaaS + Subdomains)  
+> **آخر تحديث:** 25 أغسطس 2026  
+> **الإصدار:** v2.3 (Five Agents System)  
 > **الحالة:** 🟢 تشغيلية على rcagents.space + Render + Neon PostgreSQL
 
 ---
@@ -85,7 +85,23 @@
 | **Store Switcher (للمدير الرئيسي)** | 🔲 مفتوح | 🟡 متوسطة |
 | حماية Dashboard بالـ Session Token | 🔲 مفتوح | 🟡 متوسطة |
 
-### Phase 3: ⏳ AI Agents Configuration & Live Messaging
+### Phase 3: ✅ 5-Agent System Launch (مكتملة)
+
+| المهمة | الحالة |
+|--------|--------|
+| **Sales Agent** (وكيل مبيعات + إقناع + إتمام صفقات) | ✅ مكتمل |
+| **Campaign Agent** (عروض + تخفيضات + حملات موسمية) | ✅ مكتمل |
+| **Engagement Agent** (ولاء + تقييمات + متابعة ما بعد البيع) | ✅ مكتمل |
+| **Analytics Agent** (تقارير + تحليلات + KPIs) | ✅ مكتمل |
+| توجيه ذكي بين 6 وكلاء (Priority detection) | ✅ مكتمل |
+| API endpoints للوكلاء: `/api/agents/*` | ✅ مكتمل |
+| API للحملات: `/api/campaigns/*` | ✅ مكتمل |
+| API للتحليلات: `/api/analytics/*` | ✅ مكتمل |
+| API للتفاعل: `/api/engagement/*` | ✅ مكتمل |
+| اختبار تكامل 6 وكلاء (100% نجاح) | ✅ مكتمل |
+| Git Tag `v2.3-five-agents-system` | ✅ مكتمل |
+
+### Phase 4: 🚀 AI Agents Configuration & Live Messaging
 
 | المهمة | الحالة |
 |--------|--------|
@@ -95,7 +111,7 @@
 | إحصائيات المحادثات لكل متجر | 🔲 مفتوح |
 | إشعارات عند تسجيل تاجر جديد | 🔲 مفتوح |
 
-### Phase 4: 🚀 SaaS Domain & Production Launch
+### Phase 5: 🚀 SaaS Domain & Production Launch
 
 | المهمة | الحالة |
 |--------|--------|
@@ -124,11 +140,13 @@
 - [x] Subdomain Auth Bypass (4 طرق: safe paths, store_id param, Host check, regex)
 - [x] `_get_store_id_from_subdomain()` لكل الـ APIs (stats, orders, clients, messages)
 - [x] `/api/messages` + `/api/profile` في safe paths
+- [x] **Phase 2 Complete: 5-Agent System** (Sales, Campaign, Engagement, Analytics)
 
 ### 🔄 In Progress (قيد التنفيذ الآن)
 
+- [ ] تفعيل الـ 5 وكلاء في generate_ai_reply (ربط router مع server.py)
 - [ ] Store Switcher Dropdown للمدير الرئيسي (مصطفى)
-- [ ] حماية Dashboard بالـ Session Token
+- [ ] Dashboard Agents Page لعرض الوكلاء
 
 ### ⏳ Backlog (المهام القادمة)
 
