@@ -2056,6 +2056,173 @@ def api_profile():
         return json_utf8({"success": True, "name": sender_id[:20], "sender_id": sender_id})
 
 
+# ============================================================
+# PHASE 2: AI AGENTS MANAGEMENT API (5 Agents System)
+# ============================================================
+# يدير الوكلاء الخمسة: Sales, Campaign, Engagement, Analytics + Customer Support + Shipping
+
+@app.route('/api/agents/config', methods=['GET'])
+def api_agents_config():
+    """إرجاع إعدادات جميع الوكلاء"""
+    try:
+        from agents.router import get_route_stats
+        stats = get_route_stats()
+        return json_utf8(stats)
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e), "agents": []}, 500)
+
+
+@app.route('/api/agents/switch', methods=['POST'])
+def api_agents_switch():
+    """تغيير الوكيل النشط"""
+    try:
+        from agents.router import set_active_agent, get_active_agent
+        data = request.get_json() or {}
+        agent_id = data.get("agent_id", "")
+        if not agent_id:
+            return json_utf8({"error": "agent_id required"}, 400)
+        if set_active_agent(agent_id):
+            current_id, current_config = get_active_agent()
+            logger.info(f"[AGENTS] Switched to {agent_id} ({current_config['name']})")
+            return json_utf8({"success": True, "active_agent": current_id, "agent": current_config})
+        return json_utf8({"error": f"Unknown agent: {agent_id}"}, 400)
+    except Exception as e:
+        return json_utf8({"success": False, "error": _safe_str(e)}, 500)
+
+
+@app.route('/api/agents/detect', methods=['POST'])
+def api_agents_detect():
+    """كشف الوكيل المناسب لرسالة معينة"""
+    try:
+        from agents.router import route_by_intent
+        data = request.get_json() or {}
+        message = data.get("message", "")
+        platform = data.get("platform", "messenger")
+        uid = data.get("uid", "unknown")
+        if not message:
+            return json_utf8({"error": "message required"}, 400)
+        result = route_by_intent(message, platform, uid)
+        return json_utf8(result)
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/api/agents/<agent_id>/info', methods=['GET'])
+def api_agent_info(agent_id):
+    """معلومات وكيل معين"""
+    try:
+        from agents.router import get_agent_config
+        config = get_agent_config(agent_id)
+        if config:
+            return json_utf8(config)
+        return json_utf8({"error": f"Agent {agent_id} not found"}, 404)
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+# ============================================================
+# CAMPAIGN AGENT API (العروض والحملات التسويقية)
+# ============================================================
+
+@app.route('/api/campaigns/active', methods=['GET'])
+def api_campaigns_active():
+    """إرجاع الحملات النشطة حالياً"""
+    try:
+        from agents.campaign_agent import get_active_campaigns, format_campaign_reply
+        campaigns = get_active_campaigns()
+        return json_utf8({
+            "active_campaigns": campaigns,
+            "count": len(campaigns),
+            "formatted": format_campaign_reply(campaigns)
+        })
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e), "active_campaigns": []}, 500)
+
+
+@app.route('/api/campaigns/register', methods=['POST'])
+def api_campaigns_register():
+    """تسجيل حملة جديدة (في الذاكرة فقط حالياً)"""
+    # TODO: تخزين الحملات في قاعدة البيانات
+    return json_utf8({"success": True, "message": "Campaign registration API ready. DB storage coming soon."})
+
+
+# ============================================================
+# ANALYTICS AGENT API (التقارير والتحليلات)
+# ============================================================
+
+@app.route('/api/analytics/sales-summary', methods=['GET'])
+def api_analytics_sales_summary():
+    """تقرير مبيعات مختصر"""
+    try:
+        _sd = _get_store_id_from_subdomain()
+        store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+        period = request.args.get("period", "daily")  # daily, weekly, monthly
+        
+        conn = _open_orders_db()
+        c = conn.cursor()
+        
+        if period == "daily":
+            c.execute("SELECT COUNT(*), COALESCE(SUM(total_price),0) FROM orders WHERE store_id=? AND date(created_at)=date('now')", [store_id])
+            today = c.fetchone()
+            c.execute("SELECT COUNT(*), COALESCE(SUM(total_price),0) FROM orders WHERE store_id=? AND date(created_at)=date('now','-1 day')", [store_id])
+            yesterday = c.fetchone()
+        elif period == "weekly":
+            c.execute("SELECT COUNT(*), COALESCE(SUM(total_price),0) FROM orders WHERE store_id=? AND created_at >= datetime('now', '-7 days')", [store_id])
+            today = c.fetchone()
+            c.execute("SELECT COUNT(*), COALESCE(SUM(total_price),0) FROM orders WHERE store_id=? AND created_at >= datetime('now', '-14 days') AND created_at < datetime('now', '-7 days')", [store_id])
+            yesterday = c.fetchone()
+        else:  # monthly
+            c.execute("SELECT COUNT(*), COALESCE(SUM(total_price),0) FROM orders WHERE store_id=? AND strftime('%Y-%m', created_at)=strftime('%Y-%m', 'now')", [store_id])
+            today = c.fetchone()
+            c.execute("SELECT COUNT(*), COALESCE(SUM(total_price),0) FROM orders WHERE store_id=? AND strftime('%Y-%m', created_at)=strftime('%Y-%m', 'now', '-1 month')", [store_id])
+            yesterday = c.fetchone()
+        
+        # Top products
+        c.execute("SELECT product, COUNT(*) as cnt, SUM(total_price) as rev FROM orders WHERE store_id=? GROUP BY product ORDER BY cnt DESC LIMIT 5", [store_id])
+        top_products = [{"name": r[0], "count": r[1], "revenue": r[2]} for r in c.fetchall()]
+        
+        conn.close()
+        
+        return json_utf8({
+            "period": period,
+            "current_period": {"orders": today[0], "revenue": today[1]},
+            "previous_period": {"orders": yesterday[0], "revenue": yesterday[1]},
+            "top_products": top_products,
+            "store_id": store_id
+        })
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+# ============================================================
+# ENGAGEMENT AGENT API (التفاعل والولاء)
+# ============================================================
+
+@app.route('/api/engagement/loyalty-status', methods=['GET'])
+def api_engagement_loyalty():
+    """حالة برنامج الولاء (جاهزية API)"""
+    return json_utf8({
+        "status": "ready",
+        "features": ["post_purchase_followup", "review_collection", "loyalty_points", "birthday_greetings", "satisfaction_survey"],
+        "note": "Engagement API ready. Full loyalty program DB storage coming soon."
+    })
+
+
+@app.route('/api/engagement/followup', methods=['POST'])
+def api_engagement_followup():
+    """إرسال متابعة لزبون بعد الشراء"""
+    try:
+        from agents.engagement_agent import format_followup_reply
+        data = request.get_json() or {}
+        customer_name = data.get("customer_name", "عميلتنا")
+        days_since = data.get("days_since_purchase", 3)
+        product_name = data.get("product_name", "منتج")
+        reply = format_followup_reply(customer_name, days_since, product_name)
+        return json_utf8({"success": True, "message": reply})
+    except Exception as e:
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
 # ????????? Main ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 if __name__ == '__main__':
