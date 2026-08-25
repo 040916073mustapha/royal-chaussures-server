@@ -1264,9 +1264,8 @@ def _get_store_context(store_id=None):
 
 
 # ============================================================
-# DASHBOARD PAGES — Unified Routing (Phase 2 fixed)
-# All dashboard sub-pages are explicit routes to avoid fallback
-# to landing page on subdomain
+# DASHBOARD PAGES — MUST come after all /dashboard/XXX routes
+# for Flask matching priority (specific routes before <store_id>)
 # ============================================================
 
 @app.route('/dashboard')
@@ -1308,6 +1307,116 @@ def dashboard_clients():
     return render_template("clients.html", active="clients", store_id=store_id)
 
 
+@app.route('/dashboard/settings')
+def dashboard_settings():
+    settings_data = {
+        "zr_express": {
+            "status": "Ù…ØªØµÙ„",
+            "tenant_id": "d2217f31-20f1-43c6-abd4-c420788a63ed",
+            "last_sync": "Ù…Ù†Ø° Ø¯Ù‚ÙŠÙ‚Ø©",
+            "server_status": "Ù†Ø´Ø·"
+        },
+        "automations": {
+            "status": "Ù†Ø´Ø·",
+            "items": [
+                {"icon": "ðŸ’¬", "name": "WhatsApp - ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
+                {"icon": "ðŸ“¦", "name": "Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø´Ø­Ù†", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
+                {"icon": "ðŸ“Š", "name": "ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØµØ¨Ø§Ø­ Ø§Ù„ÙŠÙˆÙ…ÙŠ", "badge": "09:00 ØµØ¨Ø§Ø­Ø§Ù‹"}
+            ]
+        },
+        "ai_agent": {
+            "status": "Ù…ØªØµÙ„",
+            "model": "DeepSeek-V4-Flash",
+            "platforms": [
+                {"name": "Messenger", "cls": "bg-blue-500/15 text-blue-400"},
+                {"name": "WhatsApp", "cls": "bg-green-500/15 text-green-400"},
+                {"name": "Instagram", "cls": "bg-pink-500/15 text-pink-400"}
+            ],
+            "agents_link": "/dashboard/agents"
+        },
+        "shopify": {
+            "status": "Ù…ØªØµÙ„",
+            "store": "rwqchh-na.myshopify.com",
+            "auto_sync": "Ù…ÙØ¹Ù„Ø©",
+            "last_sync": "Ù…Ù†Ø° Ø¯Ù‚ÙŠÙ‚Ø©",
+            "products": 47
+        },
+        "store": get_store_or_default(1)
+    }
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("settings.html", active="settings", store_id=store_id, **settings_data)
+
+
+@app.route('/dashboard/chat')
+def dashboard_chat():
+    """Live Chat Console page"""
+    try:
+        return render_template("chat_console.html")
+    except Exception as e:
+        _log_safe(logger.error, "Chat console template error", e)
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/dashboard/agents')
+def dashboard_agents():
+    """AI Agents Management Dashboard page"""
+    try:
+        return render_template("agents_dashboard.html")
+    except Exception as e:
+        _log_safe(logger.error, "Agents dashboard template error", e)
+        return json_utf8({"error": _safe_str(e)}, 500)
+
+
+@app.route('/dashboard/analytics')
+def dashboard_analytics():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="analytics", store_id=store_id)
+
+
+@app.route('/dashboard/marketing')
+def dashboard_marketing():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="marketing", store_id=store_id)
+
+
+@app.route('/dashboard/inventory')
+def dashboard_inventory():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="inventory", store_id=store_id)
+
+
+@app.route('/dashboard/auto-ship')
+def dashboard_auto_ship():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="auto-ship", store_id=store_id)
+
+
+@app.route('/dashboard/tracking')
+def dashboard_tracking():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("tracking.html", store_id=store_id)
+
+
+@app.route('/dashboard/shipments')
+def dashboard_shipments():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="shipping", store_id=store_id)
+
+
+@app.route('/dashboard/constellation')
+def dashboard_constellation():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="integrations", store_id=store_id)
+
+
 @app.route('/dashboard/<int:store_id>')
 def dashboard_store(store_id):
     return render_template("store_dashboard.html", store_id=store_id)
@@ -1342,42 +1451,6 @@ def dashboard_store_chat(store_id):
 def dashboard_store_agents(store_id):
     return render_template("agents_dashboard.html", active="agents", store_id=store_id)
 
-
-@app.route('/dashboard/settings')
-def dashboard_settings():
-    settings_data = {
-        "zr_express": {
-            "status": "Ù…ØªØµÙ„",
-            "tenant_id": "d2217f31-20f1-43c6-abd4-c420788a63ed",
-            "last_sync": "Ù…Ù†Ø° Ø¯Ù‚ÙŠÙ‚Ø©",
-            "server_status": "Ù†Ø´Ø·"
-        },
-        "automations": {
-            "status": "Ù†Ø´Ø·",
-            "items": [
-                {"icon": "ðŸ’¬", "name": "WhatsApp - ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
-                {"icon": "ðŸ“¦", "name": "Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø´Ø­Ù†", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
-                {"icon": "ðŸ“Š", "name": "ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØµØ¨Ø§Ø­ Ø§Ù„ÙŠÙˆÙ…ÙŠ", "badge": "09:00 ØµØ¨Ø§Ø­Ø§Ù‹"}
-            ]
-        },
-        "ai_agent": {
-            "status": "Ù…ØªØµÙ„",
-            "model": "DeepSeek-V4-Flash",
-            "platforms": [
-                {"name": "Messenger", "cls": "bg-blue-500/15 text-blue-400"},
-                {"name": "WhatsApp", "cls": "bg-green-500/15 text-green-400"},
-                {"name": "Instagram", "cls": "bg-pink-500/15 text-pink-400"}
-            ],
-            "agents_link": "/dashboard/agents"
-        },
-        "shopify": {
-            "status": "Ù…ØªØµÙ„",
-            "store": "rwqchh-na.myshopify.com",
-            "auto_sync": "Ù…ÙØ¹Ù„Ø©",
-            "last_update": "Ù…Ù†Ø° Ø³Ø§Ø¹Ø©"
-        }
-    }
-    return render_template("dashboard_settings.html", active="settings", settings=settings_data)
 
 @app.route('/')
 def index():
@@ -2037,74 +2110,6 @@ def api_wa_confirm_send():
 
 
 # ---- LIVE CHAT CONSOLE ----
-
-@app.route('/dashboard/analytics')
-def dashboard_analytics():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="analytics", store_id=store_id)
-
-
-@app.route('/dashboard/marketing')
-def dashboard_marketing():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="marketing", store_id=store_id)
-
-
-@app.route('/dashboard/inventory')
-def dashboard_inventory():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="inventory", store_id=store_id)
-
-
-@app.route('/dashboard/auto-ship')
-def dashboard_auto_ship():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="auto-ship", store_id=store_id)
-
-
-@app.route('/dashboard/shipments')
-def dashboard_shipments():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="shipping", store_id=store_id)
-
-
-@app.route('/dashboard/constellation')
-def dashboard_constellation():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="integrations", store_id=store_id)
-
-
-@app.route('/dashboard/tracking')
-def dashboard_tracking():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("tracking.html", store_id=store_id)
-
-
-@app.route('/dashboard/chat')
-def dashboard_chat():
-    """Live Chat Console page"""
-    try:
-        return render_template("chat_console.html")
-    except Exception as e:
-        _log_safe(logger.error, "Chat console template error", e)
-        return json_utf8({"error": _safe_str(e)}, 500)
-
-
-@app.route('/dashboard/agents')
-def dashboard_agents():
-    """AI Agents Management Dashboard page"""
-    try:
-        return render_template("agents_dashboard.html")
-    except Exception as e:
-        _log_safe(logger.error, "Agents dashboard template error", e)
-        return json_utf8({"error": _safe_str(e)}, 500)
 
 
 @app.route('/api/messages')
