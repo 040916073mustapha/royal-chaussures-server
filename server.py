@@ -1272,6 +1272,8 @@ def _get_store_context(store_id=None):
 def dashboard_root():
     """Main dashboard: subdomain detection or default store 1"""
     _host = request.headers.get("Host", "")
+    _path = request.path
+    logger.info(f"[DASHBOARD ROUTE] /dashboard called. Host={_host}, Path={_path}, Full={request.full_path[:100]}")
     _slug = _host.split(".")[0] if _host.count(".") >= 2 else ""
     if _slug:
         from database.db import get_store_by_slug
@@ -1290,6 +1292,7 @@ def dashboard_root_slash():
 def dashboard_orders():
     _sd = _get_store_id_from_subdomain()
     store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    logger.info(f"[DASHBOARD ROUTE] /dashboard/orders called. store_id={store_id}")
     return render_template("orders.html", active="orders", store_id=store_id)
 
 
@@ -1297,6 +1300,7 @@ def dashboard_orders():
 def dashboard_products():
     _sd = _get_store_id_from_subdomain()
     store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    logger.info(f"[DASHBOARD ROUTE] /dashboard/products called. store_id={store_id}")
     return render_template("products.html", active="products", store_id=store_id)
 
 
@@ -1304,6 +1308,7 @@ def dashboard_products():
 def dashboard_clients():
     _sd = _get_store_id_from_subdomain()
     store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    logger.info(f"[DASHBOARD ROUTE] /dashboard/clients called. store_id={store_id}")
     return render_template("clients.html", active="clients", store_id=store_id)
 
 
@@ -1362,7 +1367,11 @@ def dashboard_chat():
 def dashboard_agents():
     """AI Agents Management Dashboard page"""
     try:
-        return render_template("agents_dashboard.html")
+        _rendered = render_template("agents_dashboard.html")
+        logger.info(f"[DASHBOARD] agents_dashboard.html rendered: {len(_rendered)} bytes")
+        if len(_rendered) < 5000:
+            logger.warning(f"[DASHBOARD] agents_dashboard.html too small! First 200: {_rendered[:200]}")
+        return _rendered
     except Exception as e:
         _log_safe(logger.error, "Agents dashboard template error", e)
         return json_utf8({"error": _safe_str(e)}, 500)
@@ -1379,6 +1388,7 @@ def dashboard_analytics():
 def dashboard_marketing():
     _sd = _get_store_id_from_subdomain()
     store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    logger.info(f"[DASHBOARD ROUTE] /dashboard/marketing called. store_id={store_id}")
     return render_template("dashboard.html", active="marketing", store_id=store_id)
 
 
@@ -1386,6 +1396,7 @@ def dashboard_marketing():
 def dashboard_inventory():
     _sd = _get_store_id_from_subdomain()
     store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    logger.info(f"[DASHBOARD ROUTE] /dashboard/inventory called. store_id={store_id}")
     return render_template("dashboard.html", active="inventory", store_id=store_id)
 
 
