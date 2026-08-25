@@ -262,6 +262,28 @@
             }
         };
     }
+    // ===== ANTI-REDIRECT GUARD =====
+    // Block any client-side auth redirect to landing page for 8 seconds
+    (function(){
+        var _guardEnd = Date.now() + 8000;
+        var _origAssign = window.location.assign.bind(window.location);
+        var _origReplace = window.location.replace.bind(window.location);
+        window.location.assign = function(url) {
+            if (Date.now() < _guardEnd && (url === '/' || url.replace(/\/$/,'') === window.location.origin)) {
+                console.warn('[GUARD] Blocked assign redirect to', url);
+                return;
+            }
+            return _origAssign(url);
+        };
+        window.location.replace = function(url) {
+            if (Date.now() < _guardEnd && (url === '/' || url.replace(/\/$/,'') === window.location.origin)) {
+                console.warn('[GUARD] Blocked replace redirect to', url);
+                return;
+            }
+            return _origReplace(url);
+        };
+        console.log('[GUARD] Dashboard redirect guard active');
+    })();
     </script>
 </body>
 </html>

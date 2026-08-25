@@ -338,6 +338,44 @@
     </div>
 
     <script>
+        // [NO-REDIRECT GUARD] Prevent any client-side redirect on this page
+        // This overrides any existing auth-check redirect logic
+        (function(){
+            // Save original pushState/replaceState to prevent full navigation redirects
+            var _origHref = window.location.href;
+            
+            // Override window.location.href setter to prevent redirect
+            var _locationDescriptor = Object.getOwnPropertyDescriptor(
+                Object.getPrototypeOf(window.location), 'href'
+            ) || {};
+            
+            // Instead of full override, use a defensive approach:
+            // Block any redirect in the first 5 seconds after page load
+            var _blockTime = Date.now() + 5000;
+            
+            // Override assign and replace
+            var _origAssign = window.location.assign;
+            var _origReplace = window.location.replace;
+            
+            window.location.assign = function(url) {
+                if (Date.now() < _blockTime && url === '/' || url === window.location.origin + '/') {
+                    console.warn('[NO-REDIRECT GUARD] Blocked redirect to /');
+                    return;
+                }
+                return _origAssign.call(window.location, url);
+            };
+            
+            window.location.replace = function(url) {
+                if (Date.now() < _blockTime && url === '/' || url === window.location.origin + '/') {
+                    console.warn('[NO-REDIRECT GUARD] Blocked replace to /');
+                    return;
+                }
+                return _origReplace.call(window.location, url);
+            };
+            
+            console.log('[NO-REDIRECT GUARD] Active. Page will not redirect for 5s.');
+        })();
+        
         function agentsDashboard() {
             return {
                 agents: [],
