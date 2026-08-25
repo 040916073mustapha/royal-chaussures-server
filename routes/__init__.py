@@ -1,1 +1,1 @@
-# routes package
+# routes/__init__.py

@@ -33,6 +33,7 @@ import threading
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, render_template_string, Response
+from routes.dashboard import dashboard_bp
 
 
 def _safe_str(val):
@@ -452,6 +453,9 @@ if _db_init_ok:
     except Exception as e:
         import traceback as _tb
         logger.error(f"[Store POS] Store blueprint FAILED: {e}\n{_tb.format_exc()}")
+
+# ===== DASHBOARD BLUEPRINT (Clean Rebuild v2) =====
+app.register_blueprint(dashboard_bp)
 
 # ========== Register Admin Blueprint ==========
 if _db_init_ok:
@@ -1264,205 +1268,6 @@ def _get_store_context(store_id=None):
 
 
 # ============================================================
-# DASHBOARD PAGES — MUST come after all /dashboard/XXX routes
-# for Flask matching priority (specific routes before <store_id>)
-# ============================================================
-
-@app.route('/dashboard')
-def dashboard_root():
-    """Main dashboard: subdomain detection or default store 1"""
-    _host = request.headers.get("Host", "")
-    _path = request.path
-    logger.info(f"[DASHBOARD ROUTE] /dashboard called. Host={_host}, Path={_path}, Full={request.full_path[:100]}")
-    _slug = _host.split(".")[0] if _host.count(".") >= 2 else ""
-    if _slug:
-        from database.db import get_store_by_slug
-        store = get_store_by_slug(_slug)
-        if store:
-            return render_template("store_dashboard.html", store_id=store["id"])
-    return render_template("dashboard.html", active="dashboard", store_id=1)
-
-
-@app.route('/dashboard/')
-def dashboard_root_slash():
-    return dashboard_root()
-
-
-@app.route('/dashboard/orders')
-def dashboard_orders():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    logger.info(f"[DASHBOARD ROUTE] /dashboard/orders called. store_id={store_id}")
-    return render_template("orders.html", active="orders", store_id=store_id)
-
-
-@app.route('/dashboard/products')
-def dashboard_products():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    logger.info(f"[DASHBOARD ROUTE] /dashboard/products called. store_id={store_id}")
-    return render_template("products.html", active="products", store_id=store_id)
-
-
-@app.route('/dashboard/clients')
-def dashboard_clients():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    logger.info(f"[DASHBOARD ROUTE] /dashboard/clients called. store_id={store_id}")
-    return render_template("clients.html", active="clients", store_id=store_id)
-
-
-@app.route('/dashboard/settings')
-def dashboard_settings():
-    settings_data = {
-        "zr_express": {
-            "status": "Ù…ØªØµÙ„",
-            "tenant_id": "d2217f31-20f1-43c6-abd4-c420788a63ed",
-            "last_sync": "Ù…Ù†Ø° Ø¯Ù‚ÙŠÙ‚Ø©",
-            "server_status": "Ù†Ø´Ø·"
-        },
-        "automations": {
-            "status": "Ù†Ø´Ø·",
-            "items": [
-                {"icon": "ðŸ’¬", "name": "WhatsApp - ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
-                {"icon": "ðŸ“¦", "name": "Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø´Ø­Ù†", "badge": "ØªÙ„Ù‚Ø§Ø¦ÙŠ"},
-                {"icon": "ðŸ“Š", "name": "ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØµØ¨Ø§Ø­ Ø§Ù„ÙŠÙˆÙ…ÙŠ", "badge": "09:00 ØµØ¨Ø§Ø­Ø§Ù‹"}
-            ]
-        },
-        "ai_agent": {
-            "status": "Ù…ØªØµÙ„",
-            "model": "DeepSeek-V4-Flash",
-            "platforms": [
-                {"name": "Messenger", "cls": "bg-blue-500/15 text-blue-400"},
-                {"name": "WhatsApp", "cls": "bg-green-500/15 text-green-400"},
-                {"name": "Instagram", "cls": "bg-pink-500/15 text-pink-400"}
-            ],
-            "agents_link": "/dashboard/agents"
-        },
-        "shopify": {
-            "status": "Ù…ØªØµÙ„",
-            "store": "rwqchh-na.myshopify.com",
-            "auto_sync": "Ù…ÙØ¹Ù„Ø©",
-            "last_sync": "Ù…Ù†Ø° Ø¯Ù‚ÙŠÙ‚Ø©",
-            "products": 47
-        },
-        "store": get_store_or_default(1)
-    }
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("settings.html", active="settings", store_id=store_id, **settings_data)
-
-
-@app.route('/dashboard/chat')
-def dashboard_chat():
-    """Live Chat Console page"""
-    try:
-        return render_template("chat_console.html")
-    except Exception as e:
-        _log_safe(logger.error, "Chat console template error", e)
-        return json_utf8({"error": _safe_str(e)}, 500)
-
-
-@app.route('/dashboard/agents')
-def dashboard_agents():
-    """AI Agents Management Dashboard page"""
-    try:
-        _rendered = render_template("agents_dashboard.html")
-        logger.info(f"[DASHBOARD] agents_dashboard.html rendered: {len(_rendered)} bytes")
-        if len(_rendered) < 5000:
-            logger.warning(f"[DASHBOARD] agents_dashboard.html too small! First 200: {_rendered[:200]}")
-        return _rendered
-    except Exception as e:
-        _log_safe(logger.error, "Agents dashboard template error", e)
-        return json_utf8({"error": _safe_str(e)}, 500)
-
-
-@app.route('/dashboard/analytics')
-def dashboard_analytics():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="analytics", store_id=store_id)
-
-
-@app.route('/dashboard/marketing')
-def dashboard_marketing():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    logger.info(f"[DASHBOARD ROUTE] /dashboard/marketing called. store_id={store_id}")
-    return render_template("dashboard.html", active="marketing", store_id=store_id)
-
-
-@app.route('/dashboard/inventory')
-def dashboard_inventory():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    logger.info(f"[DASHBOARD ROUTE] /dashboard/inventory called. store_id={store_id}")
-    return render_template("dashboard.html", active="inventory", store_id=store_id)
-
-
-@app.route('/dashboard/auto-ship')
-def dashboard_auto_ship():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="auto-ship", store_id=store_id)
-
-
-@app.route('/dashboard/tracking')
-def dashboard_tracking():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("tracking.html", store_id=store_id)
-
-
-@app.route('/dashboard/shipments')
-def dashboard_shipments():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="shipping", store_id=store_id)
-
-
-@app.route('/dashboard/constellation')
-def dashboard_constellation():
-    _sd = _get_store_id_from_subdomain()
-    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
-    return render_template("dashboard.html", active="integrations", store_id=store_id)
-
-
-@app.route('/dashboard/<int:store_id>')
-def dashboard_store(store_id):
-    return render_template("store_dashboard.html", store_id=store_id)
-
-
-@app.route('/dashboard/<int:store_id>/orders')
-def dashboard_store_orders(store_id):
-    return render_template("orders.html", active="orders", store_id=store_id)
-
-
-@app.route('/dashboard/<int:store_id>/products')
-def dashboard_store_products(store_id):
-    return render_template("products.html", active="products", store_id=store_id)
-
-
-@app.route('/dashboard/<int:store_id>/clients')
-def dashboard_store_clients(store_id):
-    return render_template("clients.html", active="clients", store_id=store_id)
-
-
-@app.route('/dashboard/<int:store_id>/settings')
-def dashboard_store_settings(store_id):
-    return render_template("settings.html", active="settings", store_id=store_id)
-
-
-@app.route('/dashboard/<int:store_id>/chat')
-def dashboard_store_chat(store_id):
-    return render_template("chat_console.html", active="chat", store_id=store_id)
-
-
-@app.route('/dashboard/<int:store_id>/agents')
-def dashboard_store_agents(store_id):
-    return render_template("agents_dashboard.html", active="agents", store_id=store_id)
-
-
 @app.route('/')
 def index():
     return render_template("landing.html")
