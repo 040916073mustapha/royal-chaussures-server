@@ -550,6 +550,12 @@ def require_auth_for_dashboard():
     for safe in _AUTH_SAFE_PATHS:
         if path == safe or path.startswith(safe + "/"):
             return
+    # Additionally allow ALL /dashboard/* paths explicitly (they render templates)
+    if path.startswith("/dashboard/"):
+        return
+    # Also allow ALL /api/agents*, /api/campaigns*, /api/analytics*, /api/engagement*
+    if any(path.startswith(p) for p in ["/api/agents", "/api/campaigns", "/api/analytics", "/api/engagement"]):
+        return
     # The new multi-tenant dashboard is public (no auth for subdomain paths)
     # Check if this is a /dashboard/<store_id> or /dashboard path (public access)
     # Also check if host has a subdomain (e.g., puma.rcagents.space)
@@ -2058,6 +2064,20 @@ def dashboard_auto_ship():
     _sd = _get_store_id_from_subdomain()
     store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
     return render_template("dashboard.html", active="auto-ship", store_id=store_id)
+
+
+@app.route('/dashboard/shipments')
+def dashboard_shipments():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="shipping", store_id=store_id)
+
+
+@app.route('/dashboard/constellation')
+def dashboard_constellation():
+    _sd = _get_store_id_from_subdomain()
+    store_id = _sd if _sd else request.args.get("store_id", 1, type=int)
+    return render_template("dashboard.html", active="integrations", store_id=store_id)
 
 
 @app.route('/dashboard/tracking')
