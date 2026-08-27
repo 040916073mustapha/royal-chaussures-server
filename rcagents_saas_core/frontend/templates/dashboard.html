@@ -1,11 +1,15 @@
 {% extends "dashboard_base.html" %}
 {% block content %}
-<div x-data="{ stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0 }" 
-     x-init="Promise.all([
-        fetch('/api/stats').then(r=>r.json()).then(d=>stats=d).catch(()=>{}),
-        fetch('/api/orders').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}),
-        fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
-     ]).finally(()=>loading=false)">
+<div x-data="{ view: 'overview', stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0 }" 
+     x-init="
+        const params = new URLSearchParams(window.location.search);
+        const v = params.get('view');
+        if(v) view = v;
+        Promise.all([
+           fetch('/api/stats').then(r=>r.json()).then(d=>stats=d).catch(()=>{}),
+           fetch('/api/orders').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}),
+           fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
+        ]).finally(()=>loading=false)"
 
     <!-- Welcome + Date Range -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
@@ -35,6 +39,8 @@
 
     <template x-if="!loading">
         <div>
+            <!-- ===== SECTION: OVERVIEW ===== -->
+            <div x-show="view === 'overview'">
             <!-- KPI CARDS -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <!-- Revenue -->
@@ -236,6 +242,115 @@
                             <p class="text-xs font-medium text-gray-300">New Campaign</p>
                         </a>
                     </div>
+                </div>
+            </div>
+            <!-- ===== END OVERVIEW ===== -->
+
+            <!-- ===== SECTION: ORDERS ===== -->
+            <div x-show="view === 'orders'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-box-archive text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Orders Management</h2>
+                    <p class="text-sm text-gray-400 mt-2">Order management interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: CUSTOMERS ===== -->
+            <div x-show="view === 'clients'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-users text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Customer Management</h2>
+                    <p class="text-sm text-gray-400 mt-2">Customer data and insights coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: PRODUCTS ===== -->
+            <div x-show="view === 'products'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-tag text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Product Catalog</h2>
+                    <p class="text-sm text-gray-400 mt-2">Product management interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: AI AGENTS ===== -->
+            <div x-show="view === 'agents'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-network-wired text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">AI Agents</h2>
+                    <p class="text-sm text-gray-400 mt-2">Agent constellation interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: LIVE CHAT ===== -->
+            <div x-show="view === 'chat'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-comments text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Live Chat</h2>
+                    <p class="text-sm text-gray-400 mt-2">Live chat inbox interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: ANALYTICS ===== -->
+            <div x-show="view === 'analytics'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-chart-line text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Analytics</h2>
+                    <p class="text-sm text-gray-400 mt-2">Analytics and reporting interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: MARKETING ===== -->
+            <div x-show="view === 'marketing'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-bullhorn text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Marketing</h2>
+                    <p class="text-sm text-gray-400 mt-2">Campaign management interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: INVENTORY ===== -->
+            <div x-show="view === 'inventory'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-warehouse text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Inventory</h2>
+                    <p class="text-sm text-gray-400 mt-2">Stock management interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: SHIPPING ===== -->
+            <div x-show="view === 'shipments'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-truck text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Shipping & Tracking</h2>
+                    <p class="text-sm text-gray-400 mt-2">Shipping management interface coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: AUTOMATIONS ===== -->
+            <div x-show="view === 'auto-ship'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-robot text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Automations</h2>
+                    <p class="text-sm text-gray-400 mt-2">Auto-shipment and workflow automation coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: INTEGRATIONS ===== -->
+            <div x-show="view === 'constellation'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-plug text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Integrations</h2>
+                    <p class="text-sm text-gray-400 mt-2">Platform integrations and API connections coming soon.</p>
+                </div>
+            </div>
+
+            <!-- ===== SECTION: SETTINGS ===== -->
+            <div x-show="view === 'settings'">
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                    <i class="fa-solid fa-sliders text-4xl text-gray-600 mb-4"></i>
+                    <h2 class="text-lg font-semibold text-white">Settings</h2>
+                    <p class="text-sm text-gray-400 mt-2">System configuration and preferences coming soon.</p>
                 </div>
             </div>
         </div>
