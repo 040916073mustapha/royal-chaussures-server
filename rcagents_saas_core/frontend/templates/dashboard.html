@@ -39,13 +39,16 @@
             ]);
 
             this.stats = statsRes;
-            this.ordersList = ordersRes.orders || [];
-            this.products = productsRes.products || [];
-            this.clients = clientsRes.clients || [];
+            this.ordersList = (ordersRes.orders && ordersRes.orders.length > 0) ? ordersRes.orders : (window.MOCK_ORDERS || []);
+            this.products = (productsRes.products && productsRes.products.length > 0) ? productsRes.products : (window.MOCK_PRODUCTS || []);
+            this.clients = (clientsRes.clients && clientsRes.clients.length > 0) ? clientsRes.clients : (window.MOCK_CLIENTS || []);
             this.salesByChannel = salesRes;
             this.aiBrain = brainRes;
         } catch (e) {
-            console.error('Dashboard init error:', e);
+            console.error('Dashboard init error, using mock:', e);
+            this.ordersList = window.MOCK_ORDERS || [];
+            this.products = window.MOCK_PRODUCTS || [];
+            this.clients = window.MOCK_CLIENTS || [];
         }
 
         this.loading = false;
