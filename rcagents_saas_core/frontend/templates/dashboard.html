@@ -31,7 +31,7 @@
         try {
             const [statsRes, ordersRes, productsRes, clientsRes, salesRes, brainRes] = await Promise.all([
                 fetch(`/api/stats?store_id=${sid}`).then(r => r.json()).catch(() => ({})),
-                fetch(`/api/orders?store_id=${sid}&limit=20`).then(r => r.json()).catch(() => ({orders: []})),
+                fetch(`/api/orders?store_id=${sid}&limit=100`).then(r => r.json()).catch(() => ({orders: []})),
                 fetch(`/api/products?store_id=${sid}`).then(r => r.json()).catch(() => ({products: [], total: 0})),
                 fetch(`/api/clients?store_id=${sid}`).then(r => r.json()).catch(() => ({clients: [], total: 0})),
                 fetch(`/api/stats/sales-by-channel?store_id=${sid}`).then(r => r.json()).catch(() => ({channels: []})),
@@ -462,47 +462,170 @@ x-init="init()">
                 </div>
             </div>
             <!-- ====== END CUSTOMERS ====== -->
-\n            <!-- ====== PRODUCTS ====== -->
-            <div x-show="view === 'products'">
-                <div class="flex items-center justify-between mb-6">
+            <!-- ====== CLIENTS ====== -->
+            <div x-show="view === 'clients'" x-data="{ clientSearch: '' }">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
                     <div>
-                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-tag text-neon-purple"></i> Product Catalog</h2>
-                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="products.length + ' products'"></p>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-users text-neon-purple"></i> Clients</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="clients.length + ' clients | DZD ' + Number(clients.reduce((a,b)=>a+(b.spent||0),0)).toLocaleString() + ' total revenue'"></p>
+                    </div>
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                        <input type="text" x-model="clientSearch" placeholder="Search by name, phone, wilaya..." class="w-full bg-rc-bg border border-rc-border/50 rounded-lg pl-9 pr-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:outline-none focus:border-neon-purple/50 transition-colors">
                     </div>
                 </div>
-                <template x-if="products.length === 0">
+
+                <!-- Loading -->
+                <div x-show="loading" class="py-10 text-center">
+                    <div class="inline-flex items-center gap-3 text-gray-500">
+                        <i class="fa-solid fa-circle-notch text-neon-purple text-xl animate-spin"></i>
+                        <span class="text-sm font-mono tracking-wider">LOADING CLIENTS...</span>
+                    </div>
+                </div>
+
+                <template x-if="!loading && clients.length === 0">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                        <i class="fa-solid fa-users text-4xl text-gray-600 mb-4"></i>
+                        <h3 class="text-sm font-semibold text-gray-400">No clients yet</h3>
+                        <p class="text-xs text-gray-500 mt-1">Client data will appear once orders start coming in.</p>
+                    </div>
+                </template>
+
+                <template x-if="!loading && clients.length > 0">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="text-gray-500 font-mono text-[10px] border-b border-rc-border/40 bg-rc-card-hover/30">
+                                        <th class="text-left py-3 px-4 font-medium">Client</th>
+                                        <th class="text-left py-3 px-4 font-medium">Phone</th>
+                                        <th class="text-left py-3 px-4 font-medium">Wilaya</th>
+                                        <th class="text-left py-3 px-4 font-medium">Municipality</th>
+                                        <th class="text-center py-3 px-4 font-medium">Orders</th>
+                                        <th class="text-right py-3 px-4 font-medium">Total Spent</th>
+                                        <th class="text-right py-3 px-4 font-medium">Last Order</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="c in clients.filter(x => {
+                                        if (!clientSearch) return true;
+                                        const q = clientSearch.toLowerCase();
+                                        return (x.name||'').toLowerCase().includes(q) ||
+                                               (x.phone||'').toLowerCase().includes(q) ||
+                                               (x.wilaya||'').toLowerCase().includes(q);
+                                    })" :key="c.id">
+                                        <tr class="border-b border-rc-border/20 hover:bg-rc-card-hover/30 transition-colors">
+                                            <td class="py-3.5 px-4">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-purple/10 to-neon-pink/10 border border-neon-purple/20 flex items-center justify-center text-xs font-bold text-neon-purple" x-text="(c.name||'?')[0]"></div>
+                                                    <div>
+                                                        <p class="text-xs font-medium text-gray-200" x-text="c.name || 'Unknown'"></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <span class="text-xs font-mono text-gray-400" x-text="c.phone || '---'"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <span class="text-xs text-gray-400" x-text="c.wilaya || '---'"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <span class="text-xs text-gray-500" x-text="c.municipality || '---'"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-center">
+                                                <span class="text-sm font-bold font-mono text-white" x-text="c.orders || 0"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="text-xs font-bold font-mono text-neon-cyan" x-text="Number(c.spent||0).toLocaleString() + ' DZD'"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="text-[10px] font-mono text-gray-500" x-text="c.last_order ? new Date(c.last_order).toLocaleDateString('fr-DZ', {day:'2-digit', month:'short', year:'numeric'}) : '---'"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+
+\n            <!-- ====== PRODUCTS ====== -->
+            <div x-show="view === 'products'" x-data="{ prodSearch: '' }">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-tag text-neon-purple"></i> Product Catalog</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="products.length + ' products from Shopify'"></p>
+                    </div>
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                        <input type="text" x-model="prodSearch" placeholder="Search products..." class="w-full bg-rc-bg border border-rc-border/50 rounded-lg pl-9 pr-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:outline-none focus:border-neon-purple/50 transition-colors">
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div x-show="loading" class="py-16 text-center">
+                    <div class="inline-flex items-center gap-3 text-gray-500">
+                        <i class="fa-solid fa-circle-notch text-neon-purple text-xl animate-spin"></i>
+                        <span class="text-sm font-mono tracking-wider">LOADING PRODUCTS...</span>
+                    </div>
+                </div>
+
+                <template x-if="!loading && products.length === 0">
                     <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
                         <i class="fa-solid fa-box-open text-4xl text-gray-600 mb-4"></i>
                         <h3 class="text-sm font-semibold text-gray-400">No products in catalog</h3>
                         <p class="text-xs text-gray-500 mt-1">Sync your Shopify store to see products here.</p>
                     </div>
                 </template>
-                <div x-show="products.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    <template x-for="p in products" :key="p.id">
-                        <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow group transition-all duration-300">
-                            <div class="aspect-square bg-rc-card-hover/50 flex items-center justify-center overflow-hidden">
-                                <img x-show="p.images && p.images[0]" :src="p.images[0].src || p.images[0]" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                <div x-show="!p.images || !p.images[0]" class="text-gray-600 text-3xl"><i class="fa-solid fa-shoe-prints"></i></div>
-                            </div>
-                            <div class="p-4">
-                                <h3 class="text-sm font-semibold text-white truncate" x-text="p.title || p.name || 'Product'"></h3>
-                                <p class="text-[10px] font-mono text-gray-500 mt-1 truncate" x-text="(p.product_type || p.type || '')"></p>
-                                <div class="flex items-center justify-between mt-3">
-                                    <span class="text-sm font-bold text-neon-cyan font-mono" x-text="'$' + ((p.variants && p.variants[0] && p.variants[0].price) || p.price || '0.00')"></span>
-                                    <span class="text-[10px] font-mono" :class="(p.variants && p.variants[0] && parseInt(p.variants[0].inventory_quantity) > 0) ? 'text-emerald-400' : 'text-rose-400'" x-text="(p.variants && p.variants[0] && parseInt(p.variants[0].inventory_quantity) > 0) ? 'In Stock' : 'Out of Stock'"></span>
+
+                <template x-if="!loading && products.length > 0">
+                    <div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <template x-for="p in products.filter(x => !prodSearch || x.title.toLowerCase().includes(prodSearch.toLowerCase()))" :key="p.id">
+                                <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow group transition-all duration-300">
+                                    <div class="aspect-square bg-rc-card-hover/50 flex items-center justify-center overflow-hidden relative">
+                                        <img x-show="p.image" :src="p.image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <div x-show="!p.image" class="text-gray-600 text-4xl"><i class="fa-solid fa-shoe-prints"></i></div>
+                                        <!-- Stock badge -->
+                                        <div class="absolute top-2 right-2">
+                                            <span class="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full" 
+                                                  :class="p.stock > 0 ? 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30' : 'bg-rose-400/20 text-rose-300 border border-rose-400/30'"
+                                                  x-text="p.stock > 0 ? p.stock + ' in stock' : 'Out of stock'"></span>
+                                        </div>
+                                    </div>
+                                    <div class="p-4">
+                                        <h3 class="text-sm font-semibold text-white truncate" x-text="p.title || 'Product'"></h3>
+                                        <p class="text-[10px] font-mono text-gray-500 mt-1">
+                                            <span class="text-xs" x-text="p.variants + ' variants'"></span>
+                                            <span class="mx-1">·</span>
+                                            <span class="text-neon-cyan font-bold" x-text="Number(p.price_min).toLocaleString() + ' DZD'"></span>
+                                            <template x-if="p.price_max !== p.price_min">
+                                                <span class="text-gray-500" x-text="' - ' + Number(p.price_max).toLocaleString() + ' DZD'"></span>
+                                            </template>
+                                        </p>
+                                        <div class="mt-3 flex flex-wrap gap-1.5">
+                                            <!-- Size badges: simulate from variants count or sizes -->
+                                            <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30">36</span>
+                                            <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30">37</span>
+                                            <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30">38</span>
+                                            <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30">39</span>
+                                            <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30">40</span>
+                                            <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30">41</span>
+                                        </div>
+                                        <div class="mt-3 pt-3 border-t border-rc-border/30 flex items-center justify-between">
+                                            <span class="text-[9px] font-mono text-gray-500" x-text="p.status || 'active'"></span>
+                                            <a :href="'https://rwqchh-na.myshopify.com/admin/products/' + p.id" target="_blank" class="text-[9px] font-mono text-neon-cyan hover:underline">
+                                                View on Shopify <i class="fa-solid fa-external-link text-[8px]"></i>
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="mt-2 flex flex-wrap gap-1">
-                                    <template x-for="v in (p.variants || []).slice(0,3)" :key="v.id">
-                                        <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30" x-text="v.title || ''"></span>
-                                    </template>
-                                    <template x-if="p.variants && p.variants.length > 3">
-                                        <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rc-card-hover/50 text-gray-500" x-text="'+' + (p.variants.length - 3)"></span>
-                                    </template>
-                                </div>
-                            </div>
+                            </template>
                         </div>
-                    </template>
-                </div>
+                    </div>
+                </template>
             </div>
             <!-- ====== END PRODUCTS ====== -->
 
@@ -734,18 +857,108 @@ x-init="init()">
             <!-- ====== END MARKETING ====== -->
 
             <!-- ====== INVENTORY ====== -->
-            <div x-show="view === 'inventory'">
-                <div class="flex items-center justify-between mb-6">
+            <div x-show="view === 'inventory'" x-data="{ invSearch: '' }">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
                     <div>
                         <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-warehouse text-amber-400"></i> Inventory</h2>
-                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="products.length + ' products tracked'"></p>
+                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="products.length + ' products · ' + products.reduce((a,b)=>a+(b.stock||0),0) + ' total units'"></p>
+                    </div>
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                        <input type="text" x-model="invSearch" placeholder="Search inventory..." class="w-full bg-rc-bg border border-rc-border/50 rounded-lg pl-9 pr-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:outline-none focus:border-neon-purple/50 transition-colors">
                     </div>
                 </div>
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-warehouse text-4xl text-gray-600 mb-4"></i>
-                    <h3 class="text-sm font-semibold text-gray-400">Inventory management coming soon</h3>
-                    <p class="text-xs text-gray-500 mt-1">Real-time stock tracking and low-stock alerts will appear here.</p>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4">
+                        <p class="text-[10px] font-mono text-gray-500">Total Products</p>
+                        <p class="text-xl font-bold text-white font-mono mt-1" x-text="products.length"></p>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4">
+                        <p class="text-[10px] font-mono text-gray-500">Total Units</p>
+                        <p class="text-xl font-bold text-white font-mono mt-1" x-text="products.reduce((a,b)=>a+(b.stock||0),0)"></p>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4">
+                        <p class="text-[10px] font-mono text-gray-500">Low Stock Items (&lt;10)</p>
+                        <p class="text-xl font-bold text-rose-400 font-mono mt-1" x-text="products.filter(p=>p.stock>0 && p.stock<10).length"></p>
+                    </div>
                 </div>
+
+                <!-- Loading -->
+                <div x-show="loading" class="py-10 text-center">
+                    <div class="inline-flex items-center gap-3 text-gray-500">
+                        <i class="fa-solid fa-circle-notch text-neon-purple text-xl animate-spin"></i>
+                        <span class="text-sm font-mono tracking-wider">LOADING INVENTORY...</span>
+                    </div>
+                </div>
+
+                <template x-if="!loading && products.length > 0">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="text-gray-500 font-mono text-[10px] border-b border-rc-border/40 bg-rc-card-hover/30">
+                                        <th class="text-left py-3 px-4 font-medium">Product</th>
+                                        <th class="text-left py-3 px-4 font-medium">ID</th>
+                                        <th class="text-center py-3 px-4 font-medium">Variants</th>
+                                        <th class="text-right py-3 px-4 font-medium">Total Stock</th>
+                                        <th class="text-right py-3 px-4 font-medium">Min Price</th>
+                                        <th class="text-right py-3 px-4 font-medium">Max Price</th>
+                                        <th class="text-center py-3 px-4 font-medium">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="p in products.filter(x => !invSearch || x.title.toLowerCase().includes(invSearch.toLowerCase()))" :key="p.id">
+                                        <tr class="border-b border-rc-border/20 hover:bg-rc-card-hover/30 transition-colors">
+                                            <td class="py-3.5 px-4">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-9 h-9 rounded-lg bg-rc-card-hover/60 overflow-hidden flex-shrink-0">
+                                                        <img x-show="p.image" :src="p.image" class="w-full h-full object-cover" />
+                                                        <div x-show="!p.image" class="w-full h-full flex items-center justify-center text-gray-600"><i class="fa-solid fa-shoe-prints text-xs"></i></div>
+                                                    </div>
+                                                    <p class="text-xs font-medium text-gray-200 truncate max-w-[200px]" x-text="p.title"></p>
+                                                </div>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <span class="text-[10px] font-mono text-gray-500" x-text="'SF-'+String(p.id).slice(-6)"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-center">
+                                                <span class="text-xs font-mono text-gray-400" x-text="p.variants"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="text-sm font-bold font-mono" :class="p.stock === 0 ? 'text-rose-400' : p.stock < 10 ? 'text-amber-400' : 'text-emerald-400'" x-text="p.stock"></span>
+                                                <!-- Progress bar -->
+                                                <div class="mt-1 h-1.5 bg-rc-bg rounded-full overflow-hidden w-20 ml-auto">
+                                                    <div class="h-full rounded-full" :class="p.stock === 0 ? 'bg-rose-400' : p.stock < 10 ? 'bg-amber-400' : 'bg-emerald-400'" :style="'width:' + Math.min(100, (p.stock/50)*100) + '%'"></div>
+                                                </div>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="text-xs font-mono text-gray-400" x-text="Number(p.price_min).toLocaleString()"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="text-xs font-mono text-gray-400" x-text="Number(p.price_max).toLocaleString()"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-center">
+                                                <span class="text-[10px] font-mono px-2 py-1 rounded-full border" 
+                                                      :class="p.status === 'active' ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/30' : 'bg-gray-400/10 text-gray-400 border-gray-400/30'"
+                                                      x-text="p.status"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="!loading && products.length === 0">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                        <i class="fa-solid fa-warehouse text-4xl text-gray-600 mb-4"></i>
+                        <h3 class="text-sm font-semibold text-gray-400">No inventory data</h3>
+                        <p class="text-xs text-gray-500 mt-1">Sync your Shopify store to see inventory.</p>
+                    </div>
+                </template>
             </div>
             <!-- ====== END INVENTORY ====== -->
 
