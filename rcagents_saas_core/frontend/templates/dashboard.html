@@ -1,26 +1,144 @@
 {% extends "dashboard_base.html" %}
 {% block content %}
-<div x-data="{ view: 'overview', stats: {}, orders: [], msgs: [], loading: true, convCount: 0, msgCount: 0 }" 
-     x-init="
+<div x-data="{
+    view: 'overview',
+    loading: true,
+    storeId: '1',
+
+    // API data buckets
+    stats: {},
+    ordersList: [],
+    products: [],
+    clients: [],
+    salesByChannel: {},
+    aiBrain: {},
+    conversations: [],
+    convMessages: [],
+
+    // UI state
+    selectedConvId: null,
+    searchQuery: '',
+    orderSearch: '',
+    orderStatusFilter: '',
+
+    async init() {
         const params = new URLSearchParams(window.location.search);
         const v = params.get('view');
-        if(v) view = v;
-        Promise.all([
-           fetch('/api/stats').then(r=>r.json()).then(d=>stats=d).catch(()=>{}),
-           fetch('/api/orders').then(r=>r.json()).then(d=>orders=d.orders||[]).catch(()=>{}),
-           fetch('/api/messages?limit=200').then(r=>r.json()).then(d=>{ if(d.success){ msgs=d.messages; msgCount=d.count; let s=new Set(); d.messages.forEach(m=>s.add(m.sender_id+'|'+m.platform)); convCount=s.size } }).catch(()=>{})
-        ]).finally(()=>loading=false)"
+        if (v) this.view = v;
+
+        const sid = this.storeId;
+
+        try {
+            const [statsRes, ordersRes, productsRes, clientsRes, salesRes, brainRes] = await Promise.all([
+                fetch(`/api/stats?store_id=${sid}`).then(r => r.json()).catch(() => ({})),
+                fetch(`/api/orders?store_id=${sid}&limit=20`).then(r => r.json()).catch(() => ({orders: []})),
+                fetch(`/api/products?store_id=${sid}`).then(r => r.json()).catch(() => ({products: [], total: 0})),
+                fetch(`/api/clients?store_id=${sid}`).then(r => r.json()).catch(() => ({clients: [], total: 0})),
+                fetch(`/api/stats/sales-by-channel?store_id=${sid}`).then(r => r.json()).catch(() => ({channels: []})),
+                fetch(`/api/stats/ai-brain?store_id=${sid}`).then(r => r.json()).catch(() => ({configured: false}))
+            ]);
+
+            this.stats = statsRes;
+            this.ordersList = ordersRes.orders || [];
+            this.products = productsRes.products || [];
+            this.clients = clientsRes.clients || [];
+            this.salesByChannel = salesRes;
+            this.aiBrain = brainRes;
+        } catch (e) {
+            console.error('Dashboard init error:', e);
+        }
+
+        this.loading = false;
+    },
+
+    async loadConversations() {
+        try {
+            const res = await fetch(`/api/conversations/${this.storeId}?limit=50`);
+            const data = await res.json();
+            this.conversations = data.conversations || [];
+        } catch (e) {
+            console.error('Load conversations error:', e);
+            this.conversations = [];
+        }
+    },
+
+    async loadConversationMessages(convId) {
+        this.selectedConvId = convId;
+        try {
+            const res = await fetch(`/api/conversations/${this.storeId}/${convId}/messages`);
+            const data = await res.json();
+            this.convMessages = data.messages || [];
+        } catch (e) {
+            console.error('Load messages error:', e);
+            this.convMessages = [];
+        }
+    },
+
+    filteredOrders() {
+        let items = this.ordersList;
+        if (this.orderStatusFilter) {
+            items = items.filter(o => o.status === this.orderStatusFilter);
+        }
+        if (this.orderSearch) {
+            const q = this.orderSearch.toLowerCase();
+            items = items.filter(o =>
+                (o.customer||'').toLowerCase().includes(q) ||
+                (o.phone||'').toLowerCase().includes(q) ||
+                (o.product||'').toLowerCase().includes(q)
+            );
+        }
+        return items;
+    },
+    get channelColors() {
+        return {
+            messenger: { bg: 'from-blue-500/10 to-blue-600/5', text: 'text-blue-400', border: 'border-blue-500/20', icon: 'fab fa-facebook-messenger' },
+            instagram: { bg: 'from-pink-500/10 to-purple-600/5', text: 'text-pink-400', border: 'border-pink-500/20', icon: 'fab fa-instagram' },
+            whatsapp: { bg: 'from-emerald-500/10 to-green-600/5', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: 'fab fa-whatsapp' }
+        };
+    },
+
+    channelStyle(ch) {
+        return this.channelColors[ch] || { bg: 'from-gray-500/10 to-gray-600/5', text: 'text-gray-400', border: 'border-gray-500/20', icon: 'fa-solid fa-comment' };
+    },
+
+    formatDate(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return d.toLocaleDateString('fr-DZ', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    },
+
+    statusBadge(status) {
+        const s = (status || '').toLowerCase();
+        if (s === 'paid' || s === 'confirme' || s === 'livre' || s === 'delivered') return 'bg-emerald-400/10 text-emerald-400 border-emerald-400/30';
+        if (s === 'pending' || s === 'nouveau') return 'bg-yellow-400/10 text-yellow-400 border-yellow-400/30';
+        if (s === 'annule' || s === 'cancelled' || s === 'failed') return 'bg-rose-400/10 text-rose-400 border-rose-400/30';
+        if (s === 'processing' || s === 'shipped') return 'bg-sky-400/10 text-sky-400 border-sky-400/30';
+        return 'bg-gray-500/10 text-gray-400 border-gray-500/30';
+    },
+
+    truncate(str, len = 60) {
+        if (!str) return '—';
+        return str.length > len ? str.slice(0, len) + '...' : str;
+    }
+}"
+
+x-init="init()">
 
     <!-- Welcome + Date Range -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-3">
         <div>
-            <h1 class="text-xl font-bold text-white tracking-tight">Welcome back, Mustapha <span class="inline-block animate-pulse">👋</span></h1>
-            <p class="text-xs text-gray-500 mt-1 font-mono">Your AI-powered dashboard is synced and ready.</p>
+            <h1 class="text-xl font-bold text-white tracking-tight">Welcome Back, Mustapha <span class="inline-block animate-pulse">👋</span></h1>
+            <p class="text-xs text-gray-500 mt-1 font-mono">
+                <template x-if="stats.store_name">
+                    <span x-text="stats.store_name + ' — '"></span>
+                </template>
+                <span>Real‑time dashboard synced with live APIs</span>
+            </p>
         </div>
         <div class="flex items-center gap-3">
             <div class="bg-rc-card border border-rc-border/60 rounded-lg px-3 py-1.5 text-[10px] font-mono text-gray-400 flex items-center gap-2">
                 <i class="fa-regular fa-calendar text-neon-purple"></i>
-                <span>Last 30 days</span>
+                <span>Live Data</span>
             </div>
             <div class="bg-rc-card border border-rc-border/60 rounded-lg px-2.5 py-1.5 text-[10px] text-gray-500 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -33,326 +151,680 @@
     <div x-show="loading" class="py-20 text-center">
         <div class="inline-flex items-center gap-3 text-gray-500">
             <i class="fa-solid fa-circle-notch text-neon-purple text-xl animate-spin"></i>
-            <span class="text-sm font-mono tracking-wider">LOADING NEURAL INTERFACE</span>
+            <span class="text-sm font-mono tracking-wider">LOADING DASHBOARD DATA</span>
         </div>
     </div>
 
     <template x-if="!loading">
         <div>
-            <!-- ===== SECTION: OVERVIEW ===== -->
+
+            <!-- ═══════════════════ OVERVIEW ═══════════════════ -->
             <div x-show="view === 'overview'">
-            <!-- KPI CARDS -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <!-- Revenue -->
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow transition-all duration-300 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-neon-purple/5 to-transparent rounded-bl-full"></div>
-                    <div class="relative">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Total Revenue</span>
-                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-purple/10 to-neon-cyan/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple group-hover:shadow-[0_0_12px_-4px_rgba(168,85,247,0.3)] transition-shadow">
-                                <i class="fa-solid fa-coins text-sm"></i>
+                <!-- KPI CARDS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <!-- Conversations -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-neon-purple/5 to-transparent rounded-bl-full"></div>
+                        <div class="relative">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Conversations</span>
+                                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-purple/10 to-neon-cyan/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple"><i class="fa-solid fa-comments text-sm"></i></div>
+                            </div>
+                            <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="(stats.total_conversations || 0).toLocaleString()"></p>
+                            <div class="mt-2 flex items-center gap-1.5">
+                                <span class="text-[10px] font-mono text-neon-cyan bg-neon-cyan/10 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i class="fa-solid fa-circle text-[6px]"></i> <span x-text="(stats.active_conversations || 0) + ' active'"></span></span>
                             </div>
                         </div>
-                        <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="(stats.revenue||0).toLocaleString() + ' DZD'"></p>
+                    </div>
+                    <!-- Messages -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow group">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Messages</span>
+                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-cyan/10 to-neon-purple/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan"><i class="fa-solid fa-message text-sm"></i></div>
+                        </div>
+                        <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="(stats.total_messages || 0).toLocaleString()"></p>
                         <div class="mt-2 flex items-center gap-1.5">
-                            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i class="fa-solid fa-arrow-up text-[9px]"></i> 18.6%</span>
-                            <span class="text-[10px] text-gray-500">vs last 30d</span>
+                            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i class="fa-solid fa-arrow-up text-[9px]"></i> <span x-text="(stats.messages_today || 0) + ' today'"></span></span>
                         </div>
-                        <svg class="mt-2 w-full h-6" viewBox="0 0 100 20">
-                            <path d="M0,15 Q5,12 10,14 Q15,10 20,11 Q25,8 30,9 Q35,5 40,7 Q45,3 50,4 Q55,6 60,3 Q65,1 70,2 Q75,4 80,2 Q85,3 90,1 Q95,2 100,1" fill="none" stroke="#A855F7" stroke-width="1.5" opacity="0.5"/>
-                        </svg>
+                    </div>
+                    <!-- AI Brain -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow group">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">AI Brain</span>
+                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-pink/10 to-neon-purple/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink"><i class="fa-solid fa-brain text-sm"></i></div>
+                        </div>
+                        <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="aiBrain.configured ? 'Online' : 'Offline'"></p>
+                        <div class="mt-2 flex items-center gap-1.5">
+                            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded flex items-center gap-0.5" x-show="aiBrain.configured"><span x-text="aiBrain.model ? aiBrain.model.split('/').pop() : '—'"></span></span>
+                            <span class="text-[10px] font-mono text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded" x-show="!aiBrain.configured">Not configured</span>
+                        </div>
+                    </div>
+                    <!-- Revenue -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow group">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Revenue (USD)</span>
+                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400/10 to-neon-purple/10 border border-amber-400/20 flex items-center justify-center text-amber-400"><i class="fa-solid fa-coins text-sm"></i></div>
+                        </div>
+                        <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="'$' + (stats.total_revenue_usd || 0).toLocaleString(undefined, {minimumFractionDigits:2})"></p>
+                        <div class="mt-2 flex items-center gap-1.5">
+                            <span class="text-[10px] font-mono text-gray-400 bg-gray-500/10 px-1.5 py-0.5 rounded"><span x-text="(stats.total_invoices || 0) + ' invoices'"></span></span>
+                        </div>
                     </div>
                 </div>
-                <!-- Orders -->
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow transition-all duration-300 group">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Orders</span>
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-cyan/10 to-neon-purple/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan group-hover:shadow-[0_0_12px_-4px_rgba(6,182,212,0.3)] transition-shadow">
-                            <i class="fa-solid fa-bag-shopping text-sm"></i>
+
+                <!-- CHARTS ROW -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+                    <!-- Sales by Channel Donut -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center justify-between mb-4 pb-3 border-b border-rc-border/40">
+                            <div><h3 class="text-sm font-semibold text-white">Sales by Channel</h3></div>
+                        </div>
+                        <div class="flex items-center justify-center h-40">
+                            <canvas x-init="setTimeout(() => {
+                                const chs = salesByChannel.channels || [];
+                                if (chs.length === 0) return;
+                                new Chart($el.getContext('2d'), {
+                                    type: 'doughnut',
+                                    data: {
+                                        labels: chs.map(c => c.label || c.channel),
+                                        datasets: [{
+                                            data: chs.map(c => c.percentage || 0),
+                                            backgroundColor: ['#A855F7','#EC4899','#06B6D4','#22C55E','#FBBF24'],
+                                            borderColor: '#0A0A0F',
+                                            borderWidth: 3
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true, maintainAspectRatio: false, cutout: '62%',
+                                        plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8', font: { size: 9, family: 'JetBrains Mono' }, padding: 10, usePointStyle: true, pointStyle: 'circle' } } }
+                                    }
+                                });
+                            }, 200)"></canvas>
+                        </div>
+                        <template x-if="(salesByChannel.channels || []).length > 0">
+                            <div class="mt-3 grid grid-cols-2 gap-2 text-center">
+                                <template x-for="ch in (salesByChannel.channels || [])" :key="ch.channel">
+                                    <div class="bg-rc-card-hover/50 rounded-lg p-2">
+                                        <p class="text-[10px] font-mono text-gray-500" x-text="ch.label"></p>
+                                        <p class="text-sm font-bold text-neon-purple font-mono" x-text="ch.percentage + '%'"></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="(salesByChannel.channels || []).length === 0">
+                            <div class="text-center py-6 text-gray-500 text-xs font-mono">No channel data</div>
+                        </template>
+                    </div>
+                    <!-- Recent Orders -->
+                    <div class="lg:col-span-2 bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center justify-between mb-4 pb-3 border-b border-rc-border/40">
+                            <div class="flex items-center gap-2"><i class="fa-solid fa-receipt text-neon-purple text-xs"></i><h3 class="text-sm font-semibold text-white">Recent Orders</h3></div>
+                            <a href="/dashboard?view=orders" class="text-[10px] font-mono text-neon-purple hover:text-neon-cyan">View all <i class="fa-solid fa-arrow-right text-[9px]"></i></a>
+                        </div>
+                        <template x-if="ordersList.length === 0">
+                            <div class="text-center py-8 text-gray-500"><i class="fa-solid fa-inbox text-2xl mb-2 opacity-30"></i><p class="text-xs font-mono">No orders yet</p></div>
+                        </template>
+                        <div x-show="ordersList.length > 0" class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead><tr class="text-gray-500 font-mono text-[10px] border-b border-rc-border/40">
+                                    <th class="text-left py-2.5 pr-2 font-medium">Order</th><th class="text-left py-2.5 pr-2 font-medium">Customer</th><th class="text-right py-2.5 pr-2 font-medium">Amount</th><th class="text-right py-2.5 pr-2 font-medium">Status</th><th class="text-right py-2.5 pr-2 font-medium">Date</th>
+                                </tr></thead>
+                                <tbody>
+                                    <template x-for="o in ordersList.slice(0,6)" :key="o.id">
+                                        <tr class="border-b border-rc-border/20 hover:bg-rc-card-hover/30 transition-colors">
+                                            <td class="py-3 pr-2"><span class="text-[11px] font-mono text-gray-400" x-text="'#' + (o.order_number || o.id)"></span></td>
+                                            <td class="py-3 pr-2"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-rc-card-hover to-rc-card border border-rc-border/40 flex items-center justify-center text-[9px] text-gray-500 font-bold" x-text="(o.customer||'?')[0]"></div><p class="text-xs font-medium text-gray-200" x-text="o.customer || 'Guest'"></p></div></td>
+                                            <td class="py-3 pr-2 text-right"><span class="text-xs font-mono font-bold text-white" x-text="'$' + (o.total||0).toFixed(2)"></span></td>
+                                            <td class="py-3 pr-2 text-right"><span class="text-[10px] font-mono font-semibold px-2 py-1 rounded border capitalize" :class="statusBadge(o.status)" x-text="o.status"></span></td>
+                                            <td class="py-3 pr-2 text-right"><span class="text-[10px] font-mono text-gray-500" x-text="formatDate(o.created_at)"></span></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="stats.total_orders || 0"></p>
-                    <div class="mt-2 flex items-center gap-1.5">
-                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i class="fa-solid fa-arrow-up text-[9px]"></i> 12.3%</span>
-                        <span class="text-[10px] text-gray-500">vs last 30d</span>
-                    </div>
-                    <svg class="mt-2 w-full h-6" viewBox="0 0 100 20">
-                        <path d="M0,18 Q5,15 10,16 Q15,12 20,13 Q25,10 30,11 Q35,8 40,9 Q45,6 50,7 Q55,4 60,5 Q65,7 70,4 Q75,2 80,3 Q85,5 90,2 Q95,3 100,2" fill="none" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
-                    </svg>
                 </div>
-                <!-- Customers -->
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow transition-all duration-300 group">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Customers</span>
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neon-pink/10 to-neon-purple/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink group-hover:shadow-[0_0_12px_-4px_rgba(236,72,153,0.3)] transition-shadow">
-                            <i class="fa-solid fa-users text-sm"></i>
+
+                <!-- BOTTOM ROW -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <!-- AI Brain Status -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-2 mb-4 pb-3 border-b border-rc-border/40"><i class="fa-solid fa-microchip text-neon-cyan text-xs"></i><h3 class="text-sm font-semibold text-white">AI Brain Status</h3></div>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between"><span class="text-xs text-gray-300">Configured</span><span class="text-[10px] font-mono" :class="aiBrain.configured ? 'text-emerald-400' : 'text-rose-400'" x-text="aiBrain.configured ? 'Yes' : 'No'"></span></div>
+                            <div class="flex items-center justify-between" x-show="aiBrain.configured"><span class="text-xs text-gray-300">Model</span><span class="text-[10px] font-mono text-neon-cyan" x-text="aiBrain.model || '—'"></span></div>
+                            <div class="flex items-center justify-between" x-show="aiBrain.configured"><span class="text-xs text-gray-300">Language</span><span class="text-[10px] font-mono text-gray-400 uppercase" x-text="aiBrain.language || 'ar'"></span></div>
+                            <div class="flex items-center justify-between" x-show="aiBrain.configured"><span class="text-xs text-gray-300">Messages Handled</span><span class="text-[10px] font-mono text-neon-purple" x-text="(aiBrain.messages_handled || 0).toLocaleString()"></span></div>
+                            <div class="flex items-center justify-between" x-show="aiBrain.configured"><span class="text-xs text-gray-300">Resolution Rate</span><span class="text-[10px] font-mono text-emerald-400" x-text="(aiBrain.resolution_rate || 0) + '%'"></span></div>
+                            <div class="flex items-center justify-between" x-show="aiBrain.configured"><span class="text-xs text-gray-300">Active Conversations</span><span class="text-[10px] font-mono text-gray-400" x-text="aiBrain.active_conversations || 0"></span></div>
+                            <div class="flex items-center justify-between" x-show="aiBrain.configured"><span class="text-xs text-gray-300">Products in Catalog</span><span class="text-[10px] font-mono text-amber-400" x-text="aiBrain.product_count || 0"></span></div>
                         </div>
                     </div>
-                    <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="stats.clients_count || 0"></p>
-                    <div class="mt-2 flex items-center gap-1.5">
-                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i class="fa-solid fa-arrow-up text-[9px]"></i> 8.2%</span>
-                        <span class="text-[10px] text-gray-500">vs last 30d</span>
-                    </div>
-                    <svg class="mt-2 w-full h-6" viewBox="0 0 100 20">
-                        <path d="M0,12 Q5,14 10,11 Q15,13 20,10 Q25,12 30,9 Q35,11 40,8 Q45,10 50,7 Q55,9 60,6 Q65,8 70,5 Q75,7 80,4 Q85,6 90,3 Q95,5 100,3" fill="none" stroke="#EC4899" stroke-width="1.5" opacity="0.5"/>
-                    </svg>
-                </div>
-                <!-- Conversion -->
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow transition-all duration-300 group">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Conversion Rate</span>
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400/10 to-neon-purple/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:shadow-[0_0_12px_-4px_rgba(251,191,36,0.3)] transition-shadow">
-                            <i class="fa-solid fa-arrow-trend-up text-sm"></i>
+                    <!-- Active Channels -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-2 mb-4 pb-3 border-b border-rc-border/40"><i class="fa-solid fa-plug text-emerald-400 text-xs"></i><h3 class="text-sm font-semibold text-white">Active Channels</h3></div>
+                        <div class="space-y-3">
+                            <template x-for="ch in (stats.active_channels || [])" :key="ch.type">
+                                <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-rc-card-hover/30 transition-colors">
+                                    <div class="w-8 h-8 rounded-lg border flex items-center justify-center text-sm shrink-0" :class="channelStyle(ch.type).bg + ' ' + channelStyle(ch.type).text + ' ' + channelStyle(ch.type).border">
+                                        <i :class="channelStyle(ch.type).icon"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs font-medium text-gray-200" x-text="ch.name || ch.type"></span>
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                        </div>
+                                        <p class="text-[10px] font-mono text-gray-500 mt-0.5"><span x-text="(stats.channel_counts || {})[ch.type] || 0"></span> conversations</p>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="(!stats.active_channels || stats.active_channels.length === 0)">
+                                <div class="text-center py-4 text-gray-500 text-xs font-mono">No active channels</div>
+                            </template>
                         </div>
                     </div>
-                    <p class="text-2xl font-bold text-white font-mono tracking-tight" x-text="(stats.delivery_rate||0)+'%'"></p>
-                    <div class="mt-2 flex items-center gap-1.5">
-                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i class="fa-solid fa-arrow-up text-[9px]"></i> 3.1%</span>
-                        <span class="text-[10px] text-gray-500">vs last 30d</span>
+                    <!-- Quick Actions -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-2 mb-4 pb-3 border-b border-rc-border/40"><i class="fa-solid fa-bolt text-neon-purple text-xs"></i><h3 class="text-sm font-semibold text-white">Quick Actions</h3></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <a href="/dashboard?view=products" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-purple/30 transition-all duration-300 group">
+                                <div class="w-10 h-10 rounded-xl bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple mx-auto mb-2"><i class="fa-solid fa-plus text-sm"></i></div>
+                                <p class="text-xs font-medium text-gray-300">Add Product</p>
+                            </a>
+                            <a href="/dashboard?view=orders" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-cyan/30 transition-all duration-300 group">
+                                <div class="w-10 h-10 rounded-xl bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan mx-auto mb-2"><i class="fa-solid fa-file-invoice text-sm"></i></div>
+                                <p class="text-xs font-medium text-gray-300">View Orders</p>
+                            </a>
+                            <a href="/dashboard?view=analytics" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-amber-400/30 transition-all duration-300 group">
+                                <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 mx-auto mb-2"><i class="fa-solid fa-chart-bar text-sm"></i></div>
+                                <p class="text-xs font-medium text-gray-300">Analytics</p>
+                            </a>
+                            <a href="/dashboard?view=marketing" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-pink/30 transition-all duration-300 group">
+                                <div class="w-10 h-10 rounded-xl bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink mx-auto mb-2"><i class="fa-solid fa-megaphone text-sm"></i></div>
+                                <p class="text-xs font-medium text-gray-300">Marketing</p>
+                            </a>
+                        </div>
                     </div>
-                    <svg class="mt-2 w-full h-6" viewBox="0 0 100 20">
-                        <path d="M0,14 Q5,13 10,15 Q15,11 20,12 Q25,10 30,11 Q35,9 40,10 Q45,7 50,8 Q55,6 60,7 Q65,5 70,6 Q75,4 80,5 Q85,4 90,3 Q95,4 100,3" fill="none" stroke="#FBBF24" stroke-width="1.5" opacity="0.5"/>
-                    </svg>
                 </div>
             </div>
+            <!-- ═══════ END OVERVIEW ═══════ -->
 
-            <!-- CHARTS ROW -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-                <!-- Revenue Chart -->
-                <div class="lg:col-span-2 bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-sm font-semibold text-white">Revenue Overview</h3>
-                            <p class="text-[10px] text-gray-500 mt-0.5 font-mono">Monthly performance</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="flex items-center gap-1.5 text-[10px] text-gray-500 font-mono"><span class="w-2 h-2 rounded-full bg-neon-purple"></span> Revenue</span>
-                            <select class="bg-rc-bg border border-rc-border/50 rounded-lg text-[10px] px-2 py-1 text-gray-400 font-mono"><option>This Year</option><option>This Month</option><option>This Week</option></select>
-                        </div>
-                    </div>
-                    <div class="relative h-52">
-                        <canvas x-init="setTimeout(()=>{new Chart($el.getContext('2d'),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],datasets:[{label:'Revenue',data:[28000,35000,42000,38000,51000,47000,62000,58000,73000,69000,85000,stats.revenue||92000],borderColor:'#A855F7',backgroundColor:ctx=>{let g=ctx.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,'rgba(168,85,247,0.25)');g.addColorStop(1,'rgba(168,85,247,0)');return g},fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#A855F7',pointBorderColor:'#0A0A0F',pointBorderWidth:2,borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(30,30,48,0.5)',drawBorder:false},ticks:{color:'#64748B',font:{size:9,family:'JetBrains Mono'}}},y:{grid:{color:'rgba(30,30,48,0.5)',drawBorder:false},ticks:{color:'#64748B',font:{size:9,family:'JetBrains Mono'},callback:v=>v/1000+'k'}}},interaction:{intersect:false,mode:'index'}}});},150)"></canvas>
+            <!-- ═══════════════════ ORDERS ═══════════════════ -->
+            <div x-show="view === 'orders'">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-box-archive text-neon-purple"></i> Orders Management</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="ordersList.length + ' orders'"></p>
                     </div>
                 </div>
 
-                <!-- AI Agents -->
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-rc-border/40">
-                        <div class="flex items-center gap-2"><i class="fa-solid fa-network-wired text-neon-cyan text-xs"></i><h3 class="text-sm font-semibold text-white">AI Agents</h3></div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.4)]"></span><span x-text="convCount>0?convCount+' active':'online'"></span></span>
-                    </div>
-                    <div class="space-y-3">
-                        <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-rc-card-hover/30 transition-colors">
-                            <div class="w-8 h-8 rounded-lg bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple text-sm shrink-0"><i class="fa-solid fa-cart-shopping"></i></div>
-                            <div class="flex-1 min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-gray-200">Sales Agent</span><span class="text-[10px] font-mono text-emerald-400/80">97%</span></div><p class="text-[10px] text-gray-500 font-mono mt-0.5">Active · 142 orders</p><div class="mt-1.5 h-1.5 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-neon-purple to-neon-cyan rounded-full" style="width:97%"></div></div></div>
+                <!-- Filters -->
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4 mb-4">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="flex-1 relative">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                            <input type="text" x-model="orderSearch" placeholder="Search by name, phone, product..." class="w-full bg-rc-bg border border-rc-border/50 rounded-lg pl-9 pr-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:outline-none focus:border-neon-purple/50 transition-colors">
                         </div>
-                        <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-rc-card-hover/30 transition-colors">
-                            <div class="w-8 h-8 rounded-lg bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink text-sm shrink-0"><i class="fa-solid fa-bullhorn"></i></div>
-                            <div class="flex-1 min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-gray-200">Marketing Agent</span><span class="text-[10px] font-mono text-emerald-400/80">84%</span></div><p class="text-[10px] text-gray-500 font-mono mt-0.5">Idle · 12 campaigns</p><div class="mt-1.5 h-1.5 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-neon-pink to-neon-purple rounded-full" style="width:84%"></div></div></div>
-                        </div>
-                        <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-rc-card-hover/30 transition-colors">
-                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-sm shrink-0"><i class="fab fa-facebook-messenger"></i></div>
-                            <div class="flex-1 min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-gray-200">Support Agent</span><span class="text-[10px] font-mono text-emerald-400/80">100%</span></div><p class="text-[10px] text-gray-500 font-mono mt-0.5" x-text="'Active · '+msgCount+' messages'"></p><div class="mt-1.5 h-1.5 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-400 to-neon-cyan rounded-full" style="width:100%"></div></div></div>
-                        </div>
-                        <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-rc-card-hover/30 transition-colors">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm shrink-0"><i class="fa-solid fa-warehouse"></i></div>
-                            <div class="flex-1 min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-gray-200">Inventory Agent</span><span class="text-[10px] font-mono text-emerald-400/80">92%</span></div><p class="text-[10px] text-gray-500 font-mono mt-0.5">Active · Shopify Sync</p><div class="mt-1.5 h-1.5 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-400 to-neon-cyan rounded-full" style="width:92%"></div></div></div>
-                        </div>
-                        <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-rc-card-hover/30 transition-colors">
-                            <div class="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 text-sm shrink-0"><i class="fa-solid fa-truck-fast"></i></div>
-                            <div class="flex-1 min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-gray-200">Shipping Agent</span><span class="text-[10px] font-mono text-emerald-400/80">78%</span></div><p class="text-[10px] text-gray-500 font-mono mt-0.5">Active · ZR Express</p><div class="mt-1.5 h-1.5 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-400 to-neon-purple rounded-full" style="width:78%"></div></div></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- BOTTOM ROW: Sales by Channel + Recent Orders -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-                <!-- Sales by Channel Donut -->
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-rc-border/40">
-                        <div><h3 class="text-sm font-semibold text-white">Sales by Channel</h3></div>
-                    </div>
-                    <div class="flex items-center justify-center h-36">
-                        <canvas x-init="setTimeout(()=>{new Chart($el.getContext('2d'),{type:'doughnut',data:{labels:['Online Store','Instagram','Facebook','WhatsApp'],datasets:[{data:[45,25,18,12],backgroundColor:['#A855F7','#EC4899','#3B82F6','#22C55E'],borderColor:'#0A0A0F',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{color:'#94A3B8',font:{size:9,family:'JetBrains Mono'},padding:10,usePointStyle:true,pointStyle:'circle'}}}}});},200)"></canvas>
-                    </div>
-                    <div class="mt-3 grid grid-cols-2 gap-2 text-center">
-                        <div class="bg-rc-card-hover/50 rounded-lg p-2"><p class="text-[10px] font-mono text-gray-500">Online Store</p><p class="text-sm font-bold text-neon-purple font-mono">45%</p></div>
-                        <div class="bg-rc-card-hover/50 rounded-lg p-2"><p class="text-[10px] font-mono text-gray-500">Social</p><p class="text-sm font-bold text-neon-pink font-mono">55%</p></div>
+                        <select x-model="orderStatusFilter" class="bg-rc-bg border border-rc-border/50 rounded-lg px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none focus:border-neon-purple/50">
+                            <option value="">All Status</option>
+                            <option value="Nouveau">🆕 Nouveau</option>
+                            <option value="Confirme">✅ Confirme</option>
+                            <option value="Livre">📦 Livre</option>
+                            <option value="Annule">❌ Annule</option>
+                        </select>
+                        <button @click="orderSearch=''; orderStatusFilter=''" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-lg px-3 py-2 text-xs text-gray-400 font-mono hover:text-white hover:border-gray-500/50 transition-colors">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Recent Orders -->
-                <div class="lg:col-span-2 bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-rc-border/40">
-                        <div class="flex items-center gap-2"><i class="fa-solid fa-receipt text-neon-purple text-xs"></i><h3 class="text-sm font-semibold text-white">Recent Orders</h3></div>
-                        <a href="/dashboard?view=orders" class="text-[10px] font-mono text-neon-purple hover:text-neon-cyan transition-colors flex items-center gap-1">View all <i class="fa-solid fa-arrow-right text-[9px]"></i></a>
-                    </div>
-                    <template x-if="orders.length === 0">
-                        <div class="text-center py-8 text-gray-500"><i class="fa-solid fa-inbox text-2xl mb-2 opacity-30"></i><p class="text-xs font-mono">No orders yet</p></div>
-                    </template>
-                    <div x-show="orders.length > 0" class="overflow-x-auto">
+                <!-- Orders Table -->
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow">
+                    <div class="overflow-x-auto">
                         <table class="w-full text-xs">
-                            <thead><tr class="text-gray-500 font-mono text-[10px] border-b border-rc-border/40">
-                                <th class="text-left py-2.5 pr-2 font-medium">Customer</th><th class="text-left py-2.5 pr-2 font-medium">Product</th><th class="text-right py-2.5 pr-2 font-medium">Amount</th><th class="text-right py-2.5 pr-2 font-medium">Status</th>
-                            </tr></thead>
+                            <thead>
+                                <tr class="text-gray-500 font-mono text-[10px] border-b border-rc-border/40 bg-rc-card-hover/30">
+                                    <th class="text-left py-3 px-4 font-medium">Order</th>
+                                    <th class="text-left py-3 px-4 font-medium">Customer</th>
+                                    <th class="text-left py-3 px-4 font-medium">Phone</th>
+                                    <th class="text-left py-3 px-4 font-medium">Product</th>
+                                    <th class="text-left py-3 px-4 font-medium">Wilaya</th>
+                                    <th class="text-right py-3 px-4 font-medium">Total</th>
+                                    <th class="text-center py-3 px-4 font-medium">Status</th>
+                                    <th class="text-right py-3 px-4 font-medium">Date</th>
+                                </tr>
+                            </thead>
                             <tbody>
-                                <template x-for="o in orders.slice(0,6)" :key="o.id">
+                                <template x-for="o in filteredOrders()" :key="o.id">
                                     <tr class="border-b border-rc-border/20 hover:bg-rc-card-hover/30 transition-colors">
-                                        <td class="py-3 pr-2"><div class="flex items-center gap-2.5"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-rc-card-hover to-rc-card border border-rc-border/40 flex items-center justify-center text-[9px] text-gray-500 font-bold" x-text="(o.customer||'?')[0]"></div><div><p class="text-xs font-medium text-gray-200" x-text="o.customer||'Guest'"></p><p class="text-[10px] text-gray-500 font-mono" x-text="'#'+o.id"></p></div></div></td>
-                                        <td class="py-3 pr-2"><p class="text-xs text-gray-300 truncate max-w-[150px]" x-text="o.product||'—'"></p></td>
-                                        <td class="py-3 pr-2 text-right"><span class="text-xs font-mono font-bold text-white" x-text="(o.total||0).toLocaleString()+' DZD'"></span></td>
-                                        <td class="py-3 pr-2 text-right"><span class="text-[10px] font-mono font-semibold px-2 py-1 rounded border capitalize whitespace-nowrap" :class="{'bg-emerald-400/10 text-emerald-400 border-emerald-400/30':o.status==='Confirme','bg-yellow-400/10 text-yellow-400 border-yellow-400/30':o.status==='Nouveau'||o.status==='Pending','bg-rose-400/10 text-rose-400 border-rose-400/30':o.status==='Annule'||o.status==='Cancelled','bg-sky-400/10 text-sky-400 border-sky-400/30':o.status==='Livre'||o.status==='Delivered'}" x-text="o.status"></span></td>
+                                        <td class="py-3.5 px-4">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-8 h-8 rounded-lg bg-rc-card-hover/60 border border-rc-border/40 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                                                    <span x-text="'#'+o.id"></span>
+                                                </div>
+                                                <span class="text-[10px] font-mono text-gray-500" x-text="o.shopify_id ? 'SF-'+String(o.shopify_id).slice(-6) : ''"></span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3.5 px-4">
+                                            <div class="flex items-center gap-2.5">
+                                                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-neon-purple/10 to-neon-cyan/10 border border-neon-purple/20 flex items-center justify-center text-[9px] text-neon-purple font-bold" x-text="(o.customer||'?')[0]"></div>
+                                                <div>
+                                                    <p class="text-xs font-medium text-gray-200" x-text="o.customer||'Guest'"></p>
+                                                    <p class="text-[9px] text-gray-600 font-mono" x-text="o.municipality||''"></p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3.5 px-4">
+                                            <span class="text-xs font-mono text-gray-400" x-text="o.phone||'—'"></span>
+                                        </td>
+                                        <td class="py-3.5 px-4">
+                                            <div>
+                                                <p class="text-xs text-gray-300 truncate max-w-[180px]" x-text="o.product||'—'"></p>
+                                                <p class="text-[9px] text-gray-600 font-mono mt-0.5" x-text="o.variant||''"></p>
+                                            </div>
+                                        </td>
+                                        <td class="py-3.5 px-4">
+                                            <span class="text-xs text-gray-400" x-text="o.wilaya||'—'"></span>
+                                        </td>
+                                        <td class="py-3.5 px-4 text-right">
+                                            <span class="text-sm font-bold font-mono text-white" x-text="Number(o.total||0).toLocaleString()+' DZD'"></span>
+                                        </td>
+                                        <td class="py-3.5 px-4 text-center">
+                                            <span class="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap" 
+                                                  :class="{
+                                                    'bg-emerald-400/10 text-emerald-400 border-emerald-400/30': o.status==='Confirme',
+                                                    'bg-yellow-400/10 text-yellow-400 border-yellow-400/30': o.status==='Nouveau' || o.status==='Pending',
+                                                    'bg-rose-400/10 text-rose-400 border-rose-400/30': o.status==='Annule' || o.status==='Cancelled',
+                                                    'bg-sky-400/10 text-sky-400 border-sky-400/30': o.status==='Livre' || o.status==='Delivered',
+                                                    'bg-gray-400/10 text-gray-400 border-gray-400/30': !['Confirme','Nouveau','Pending','Annule','Cancelled','Livre','Delivered'].includes(o.status)
+                                                  }">
+                                                <span class="w-1.5 h-1.5 rounded-full" :class="{
+                                                    'bg-emerald-400': o.status==='Confirme',
+                                                    'bg-yellow-400': o.status==='Nouveau' || o.status==='Pending',
+                                                    'bg-rose-400': o.status==='Annule' || o.status==='Cancelled',
+                                                    'bg-sky-400': o.status==='Livre' || o.status==='Delivered',
+                                                    'bg-gray-400': !['Confirme','Nouveau','Pending','Annule','Cancelled','Livre','Delivered'].includes(o.status)
+                                                }"></span>
+                                                <span x-text="o.status"></span>
+                                            </span>
+                                        </td>
+                                        <td class="py-3.5 px-4 text-right">
+                                            <span class="text-[10px] font-mono text-gray-500" x-text="o.date ? new Date(o.date).toLocaleDateString('fr-DZ', {day:'2-digit', month:'short', year:'numeric'}) : '—'"></span>
+                                        </td>
                                     </tr>
+                                </template>
+                                <template x-if="filteredOrders().length === 0">
+                                    <tr><td colspan="8" class="py-12 text-center"><div class="text-gray-500"><i class="fa-solid fa-inbox text-3xl mb-3 opacity-30"></i><p class="text-xs font-mono">No orders found</p></div></td></tr>
                                 </template>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-
-            <!-- SYSTEM + QUICK ACTIONS -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-                    <div class="flex items-center gap-2 mb-4 pb-3 border-b border-rc-border/40"><i class="fa-solid fa-microchip text-neon-cyan text-xs"></i><h3 class="text-sm font-semibold text-white">System Overview</h3></div>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between"><div class="flex items-center gap-2"><i class="fa-solid fa-brain text-[11px] text-neon-purple"></i><span class="text-xs text-gray-300">AI Brain</span></div><span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">Operational</span></div>
-                        <div class="flex items-center justify-between"><div class="flex items-center gap-2"><i class="fa-solid fa-database text-[11px] text-neon-cyan"></i><span class="text-xs text-gray-300">Databases</span></div><span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">Operational</span></div>
-                        <div class="flex items-center justify-between"><div class="flex items-center gap-2"><i class="fa-solid fa-plug text-[11px] text-emerald-400"></i><span class="text-xs text-gray-300">Integrations</span></div><span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">All Connected</span></div>
-                        <div class="flex items-center justify-between"><div class="flex items-center gap-2"><i class="fa-solid fa-robot text-[11px] text-amber-400"></i><span class="text-xs text-gray-300">Automations</span></div><span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">Running</span></div>
-                    </div>
-                </div>
-                <div class="lg:col-span-2 bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
-                    <div class="flex items-center gap-2 mb-4 pb-3 border-b border-rc-border/40"><i class="fa-solid fa-bolt text-neon-purple text-xs"></i><h3 class="text-sm font-semibold text-white">Quick Actions</h3></div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <a href="/dashboard?view=products" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-purple/30 hover:shadow-[0_0_15px_-4px_rgba(168,85,247,0.15)] transition-all duration-300 group">
-                            <div class="w-10 h-10 rounded-xl bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(168,85,247,0.3)] transition-shadow"><i class="fa-solid fa-plus text-sm"></i></div>
-                            <p class="text-xs font-medium text-gray-300">Add Product</p>
-                        </a>
-                        <a href="/dashboard?view=orders" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-cyan/30 hover:shadow-[0_0_15px_-4px_rgba(6,182,212,0.15)] transition-all duration-300 group">
-                            <div class="w-10 h-10 rounded-xl bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(6,182,212,0.3)] transition-shadow"><i class="fa-solid fa-file-invoice text-sm"></i></div>
-                            <p class="text-xs font-medium text-gray-300">Create Order</p>
-                        </a>
-                        <a href="/dashboard?view=analytics" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-amber-400/30 hover:shadow-[0_0_15px_-4px_rgba(251,191,36,0.15)] transition-all duration-300 group">
-                            <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(251,191,36,0.3)] transition-shadow"><i class="fa-solid fa-chart-bar text-sm"></i></div>
-                            <p class="text-xs font-medium text-gray-300">View Reports</p>
-                        </a>
-                        <a href="/dashboard?view=marketing" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-pink/30 hover:shadow-[0_0_15px_-4px_rgba(236,72,153,0.15)] transition-all duration-300 group">
-                            <div class="w-10 h-10 rounded-xl bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(236,72,153,0.3)] transition-shadow"><i class="fa-solid fa-megaphone text-sm"></i></div>
-                            <p class="text-xs font-medium text-gray-300">New Campaign</p>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <!-- ===== END OVERVIEW ===== -->
-
-            <!-- ===== SECTION: ORDERS ===== -->
-            <div x-show="view === 'orders'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-box-archive text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Orders Management</h2>
-                    <p class="text-sm text-gray-400 mt-2">Order management interface coming soon.</p>
-                </div>
-            </div>
-
-            <!-- ===== SECTION: CUSTOMERS ===== -->
-            <div x-show="view === 'clients'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-users text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Customer Management</h2>
-                    <p class="text-sm text-gray-400 mt-2">Customer data and insights coming soon.</p>
-                </div>
-            </div>
-
-            <!-- ===== SECTION: PRODUCTS ===== -->
+            <!-- ====== END CUSTOMERS ====== -->
+\n            <!-- ====== PRODUCTS ====== -->
             <div x-show="view === 'products'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-tag text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Product Catalog</h2>
-                    <p class="text-sm text-gray-400 mt-2">Product management interface coming soon.</p>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-tag text-neon-purple"></i> Product Catalog</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="products.length + ' products'"></p>
+                    </div>
+                </div>
+                <template x-if="products.length === 0">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
+                        <i class="fa-solid fa-box-open text-4xl text-gray-600 mb-4"></i>
+                        <h3 class="text-sm font-semibold text-gray-400">No products in catalog</h3>
+                        <p class="text-xs text-gray-500 mt-1">Sync your Shopify store to see products here.</p>
+                    </div>
+                </template>
+                <div x-show="products.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <template x-for="p in products" :key="p.id">
+                        <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow group transition-all duration-300">
+                            <div class="aspect-square bg-rc-card-hover/50 flex items-center justify-center overflow-hidden">
+                                <img x-show="p.images && p.images[0]" :src="p.images[0].src || p.images[0]" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                <div x-show="!p.images || !p.images[0]" class="text-gray-600 text-3xl"><i class="fa-solid fa-shoe-prints"></i></div>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="text-sm font-semibold text-white truncate" x-text="p.title || p.name || 'Product'"></h3>
+                                <p class="text-[10px] font-mono text-gray-500 mt-1 truncate" x-text="(p.product_type || p.type || '')"></p>
+                                <div class="flex items-center justify-between mt-3">
+                                    <span class="text-sm font-bold text-neon-cyan font-mono" x-text="'$' + ((p.variants && p.variants[0] && p.variants[0].price) || p.price || '0.00')"></span>
+                                    <span class="text-[10px] font-mono" :class="(p.variants && p.variants[0] && parseInt(p.variants[0].inventory_quantity) > 0) ? 'text-emerald-400' : 'text-rose-400'" x-text="(p.variants && p.variants[0] && parseInt(p.variants[0].inventory_quantity) > 0) ? 'In Stock' : 'Out of Stock'"></span>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    <template x-for="v in (p.variants || []).slice(0,3)" :key="v.id">
+                                        <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rc-card-hover/50 text-gray-400 border border-rc-border/30" x-text="v.title || ''"></span>
+                                    </template>
+                                    <template x-if="p.variants && p.variants.length > 3">
+                                        <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rc-card-hover/50 text-gray-500" x-text="'+' + (p.variants.length - 3)"></span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
+            <!-- ====== END PRODUCTS ====== -->
 
-            <!-- ===== SECTION: AI AGENTS ===== -->
+            <!-- ====== AI AGENTS ====== -->
             <div x-show="view === 'agents'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-network-wired text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">AI Agents</h2>
-                    <p class="text-sm text-gray-400 mt-2">Agent constellation interface coming soon.</p>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-network-wired text-neon-cyan"></i> AI Agents</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1">AI-powered sales and support agents</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple text-xl"><i class="fa-solid fa-cart-shopping"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Sales Agent</h3><p class="text-[10px] font-mono text-gray-500">Product recommendations and sales</p></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Status</span><span class="text-emerald-400 font-mono text-[10px]">Active</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Channels</span><span class="text-gray-300 font-mono text-[10px]">WhatsApp, Messenger, Instagram</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Products</span><span class="text-neon-cyan font-mono text-[10px]" x-text="aiBrain.product_count || 0"></span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Resolution</span><span class="text-emerald-400 font-mono text-[10px]" x-text="(aiBrain.resolution_rate || 0) + '%'"></span></div>
+                        </div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink text-xl"><i class="fa-solid fa-bullhorn"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Campaign Agent</h3><p class="text-[10px] font-mono text-gray-500">Promotions and seasonal offers</p></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Status</span><span class="text-emerald-400 font-mono text-[10px]">Active</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Active Campaigns</span><span class="text-gray-300 font-mono text-[10px]">Winter Sale, Flash Deals</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Channels</span><span class="text-gray-300 font-mono text-[10px]">WhatsApp Broadcast</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl"><i class="fa-solid fa-heart"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Engagement Agent</h3><p class="text-[10px] font-mono text-gray-500">Customer loyalty and follow-ups</p></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Status</span><span class="text-emerald-400 font-mono text-[10px]">Active</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Active Conversations</span><span class="text-gray-300 font-mono text-[10px]" x-text="aiBrain.active_conversations || 0"></span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Handled</span><span class="text-neon-cyan font-mono text-[10px]" x-text="(aiBrain.messages_handled || 0).toLocaleString()"></span></div>
+                        </div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 text-xl"><i class="fa-solid fa-chart-line"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Analytics Agent</h3><p class="text-[10px] font-mono text-gray-500">Reports and KPIs</p></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Status</span><span class="text-emerald-400 font-mono text-[10px]">Active</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Reports</span><span class="text-gray-300 font-mono text-[10px]">Daily, Weekly, Monthly</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Data Sources</span><span class="text-gray-300 font-mono text-[10px]">Shopify, Conversations</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-xl"><i class="fa-solid fa-headset"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Support Agent</h3><p class="text-[10px] font-mono text-gray-500">Customer service</p></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Status</span><span class="text-emerald-400 font-mono text-[10px]">Online</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Channels</span><span class="text-gray-300 font-mono text-[10px]">All Platforms</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Response</span><span class="text-emerald-400 font-mono text-[10px]">AI Instant</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-xl"><i class="fa-solid fa-truck-fast"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Shipping Agent</h3><p class="text-[10px] font-mono text-gray-500">ZR Express tracking</p></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Status</span><span class="text-emerald-400 font-mono text-[10px]">Active</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Coverage</span><span class="text-gray-300 font-mono text-[10px]">58 Wilayas</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">API</span><span class="text-gray-300 font-mono text-[10px]">ZR Express</span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
+            <!-- ====== END AI AGENTS ====== -->
 
-            <!-- ===== SECTION: LIVE CHAT ===== -->
+            <!-- ====== LIVE CHAT ====== -->
             <div x-show="view === 'chat'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-comments text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Live Chat</h2>
-                    <p class="text-sm text-gray-400 mt-2">Live chat inbox interface coming soon.</p>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-comments text-neon-cyan"></i> Live Chat Inbox</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1">Multi-channel conversation inbox</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="lg:col-span-2 bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow">
+                        <div class="p-4 border-b border-rc-border/40">
+                            <input type="text" placeholder="Search conversations..." class="w-full bg-rc-bg border border-rc-border/50 rounded-lg px-3 py-2 text-xs text-gray-300 placeholder-gray-600 focus:outline-none focus:border-neon-purple/40">
+                        </div>
+                        <div class="divide-y divide-rc-border/20">
+                            <template x-for="c in conversations" :key="c.id">
+                                <div class="p-4 hover:bg-rc-card-hover/30 cursor-pointer transition-colors" @click="loadConversationMessages(c.id)">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-rc-card-hover to-rc-card border border-rc-border/40 flex items-center justify-center text-xs font-bold text-gray-400 flex-shrink-0" x-text="(c.customer_name || c.customer_platform_id || '?')[0]"></div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm font-medium text-gray-200 truncate" x-text="c.customer_name || c.customer_platform_id || 'Unknown'"></span>
+                                                <span class="text-[10px] font-mono text-gray-500" x-text="formatDate(c.updated_at)"></span>
+                                            </div>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-full border" :class="channelStyle(c.channel).text + ' ' + channelStyle(c.channel).border">
+                                                    <i :class="channelStyle(c.channel).icon + ' text-[9px]'"></i>
+                                                    <span x-text="c.channel"></span>
+                                                </span>
+                                                <span class="text-[10px] text-gray-500 truncate" x-text="c.last_user_message || 'No messages'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="conversations.length === 0">
+                                <div class="p-8 text-center text-gray-500">
+                                    <i class="fa-solid fa-inbox text-3xl mb-3 opacity-30"></i>
+                                    <p class="text-xs font-mono">No conversations yet</p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-2 mb-4 pb-3 border-b border-rc-border/40">
+                            <i class="fa-solid fa-message text-neon-purple text-xs"></i>
+                            <h3 class="text-sm font-semibold text-white">Messages</h3>
+                        </div>
+                        <template x-if="selectedConvId">
+                            <div class="space-y-3 max-h-96 overflow-y-auto">
+                                <template x-for="m in convMessages" :key="m.id">
+                                    <div class="flex" :class="m.role === 'user' ? 'justify-start' : 'justify-end'">
+                                        <div class="max-w-[80%] rounded-lg px-3 py-2 text-xs" :class="m.role === 'user' ? 'bg-rc-card-hover/50 border border-rc-border/40 text-gray-300' : 'bg-neon-purple/10 border border-neon-purple/20 text-neon-purple'">
+                                            <p x-text="m.content"></p>
+                                            <p class="text-[9px] font-mono text-gray-600 mt-1" x-text="formatDate(m.created_at)"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!selectedConvId">
+                            <div class="text-center py-8 text-gray-500"><i class="fa-solid fa-hand-pointer text-2xl mb-2 opacity-30"></i><p class="text-xs font-mono">Select a conversation</p></div>
+                        </template>
+                    </div>
                 </div>
             </div>
+            <!-- ====== END LIVE CHAT ====== -->
 
-            <!-- ===== SECTION: ANALYTICS ===== -->
+            <!-- ====== ANALYTICS ====== -->
             <div x-show="view === 'analytics'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-chart-line text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Analytics</h2>
-                    <p class="text-sm text-gray-400 mt-2">Analytics and reporting interface coming soon.</p>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-line text-amber-400"></i> Analytics and Reporting</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1">Performance metrics and insights</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4"><p class="text-[10px] font-mono text-gray-500">Total Conversations</p><p class="text-xl font-bold text-white font-mono mt-1" x-text="stats.total_conversations || 0"></p></div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4"><p class="text-[10px] font-mono text-gray-500">Active Conversations</p><p class="text-xl font-bold text-white font-mono mt-1" x-text="stats.active_conversations || 0"></p></div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4"><p class="text-[10px] font-mono text-gray-500">Total Messages</p><p class="text-xl font-bold text-white font-mono mt-1" x-text="stats.total_messages || 0"></p></div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4"><p class="text-[10px] font-mono text-gray-500">Messages Today</p><p class="text-xl font-bold text-white font-mono mt-1" x-text="stats.messages_today || 0"></p></div>
+                </div>
+                <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden card-hover-glow">
+                    <div class="p-4 border-b border-rc-border/40"><h3 class="text-sm font-semibold text-white">Channel Performance</h3></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead><tr class="text-gray-500 font-mono text-[10px] border-b border-rc-border/40 bg-rc-card-hover/30">
+                                <th class="text-left py-3 px-4 font-medium">Channel</th>
+                                <th class="text-right py-3 px-4 font-medium">Conversations</th>
+                                <th class="text-right py-3 px-4 font-medium">Messages (7d)</th>
+                                <th class="text-right py-3 px-4 font-medium">Percentage</th>
+                            </tr></thead>
+                            <tbody>
+                                <template x-for="ch in (salesByChannel.channels || [])" :key="ch.channel">
+                                    <tr class="border-b border-rc-border/20 hover:bg-rc-card-hover/30">
+                                        <td class="py-3.5 px-4"><span class="text-xs text-gray-200" x-text="ch.label || ch.channel"></span></td>
+                                        <td class="py-3.5 px-4 text-right"><span class="text-xs font-mono" x-text="ch.conversations || 0"></span></td>
+                                        <td class="py-3.5 px-4 text-right"><span class="text-xs font-mono" x-text="(stats.messages_by_channel || {})[ch.channel] || 0"></span></td>
+                                        <td class="py-3.5 px-4 text-right"><span class="text-xs font-mono text-neon-purple" x-text="ch.percentage + '%'"></span></td>
+                                    </tr>
+                                </template>
+                                <template x-if="(salesByChannel.channels || []).length === 0">
+                                    <tr><td colspan="4" class="py-8 text-center text-gray-500 text-xs font-mono">No channel data</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+            <!-- ====== END ANALYTICS ====== -->
 
-            <!-- ===== SECTION: MARKETING ===== -->
+            <!-- ====== MARKETING ====== -->
             <div x-show="view === 'marketing'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-bullhorn text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Marketing</h2>
-                    <p class="text-sm text-gray-400 mt-2">Campaign management interface coming soon.</p>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-bullhorn text-neon-pink"></i> Marketing</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1">Campaigns and promotions</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink text-xl"><i class="fa-solid fa-snowflake"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Winter Sale</h3><p class="text-[10px] font-mono text-gray-500">Seasonal discounts</p></div>
+                        </div>
+                        <p class="text-xs text-gray-400">Active - Ends Dec 31</p>
+                        <div class="mt-2 h-2 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-neon-pink to-neon-purple rounded-full" style="width:65%"></div></div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 text-xl"><i class="fa-solid fa-bolt"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Flash Sale</h3><p class="text-[10px] font-mono text-gray-500">24h limited deals</p></div>
+                        </div>
+                        <p class="text-xs text-gray-400">Active - 12h remaining</p>
+                        <div class="mt-2 h-2 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-400 to-rose-400 rounded-full" style="width:40%"></div></div>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl"><i class="fa-solid fa-star"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">New Arrivals</h3><p class="text-[10px] font-mono text-gray-500">Latest collection</p></div>
+                        </div>
+                        <p class="text-xs text-gray-400">Always active</p>
+                        <div class="mt-2 h-2 bg-rc-bg rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-400 to-neon-cyan rounded-full" style="width:100%"></div></div>
+                    </div>
                 </div>
             </div>
+            <!-- ====== END MARKETING ====== -->
 
-            <!-- ===== SECTION: INVENTORY ===== -->
+            <!-- ====== INVENTORY ====== -->
             <div x-show="view === 'inventory'">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-warehouse text-amber-400"></i> Inventory</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1" x-text="products.length + ' products tracked'"></p>
+                    </div>
+                </div>
                 <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
                     <i class="fa-solid fa-warehouse text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Inventory</h2>
-                    <p class="text-sm text-gray-400 mt-2">Stock management interface coming soon.</p>
+                    <h3 class="text-sm font-semibold text-gray-400">Inventory management coming soon</h3>
+                    <p class="text-xs text-gray-500 mt-1">Real-time stock tracking and low-stock alerts will appear here.</p>
                 </div>
             </div>
+            <!-- ====== END INVENTORY ====== -->
 
-            <!-- ===== SECTION: SHIPPING ===== -->
+            <!-- ====== SHIPPING ====== -->
             <div x-show="view === 'shipments'">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-truck text-teal-400"></i> Shipping and Tracking</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1">ZR Express delivery management</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4 text-center"><p class="text-[10px] font-mono text-gray-500">Coverage</p><p class="text-xl font-bold text-white font-mono mt-1">58 Wilayas</p></div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4 text-center"><p class="text-[10px] font-mono text-gray-500">Today's Shipments</p><p class="text-xl font-bold text-white font-mono mt-1">0</p></div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4 text-center"><p class="text-[10px] font-mono text-gray-500">Delivered</p><p class="text-xl font-bold text-white font-mono mt-1">0</p></div>
+                </div>
                 <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-truck text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Shipping & Tracking</h2>
-                    <p class="text-sm text-gray-400 mt-2">Shipping management interface coming soon.</p>
+                    <p class="text-xs text-gray-500 font-mono">ZR Express API integration active</p>
                 </div>
             </div>
+            <!-- ====== END SHIPPING ====== -->
 
-            <!-- ===== SECTION: AUTOMATIONS ===== -->
+            <!-- ====== AUTOMATIONS ====== -->
             <div x-show="view === 'auto-ship'">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-robot text-neon-purple"></i> Automations</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1">Workflow automation and auto-shipment</p>
+                    </div>
+                </div>
                 <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
                     <i class="fa-solid fa-robot text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Automations</h2>
-                    <p class="text-sm text-gray-400 mt-2">Auto-shipment and workflow automation coming soon.</p>
+                    <h3 class="text-sm font-semibold text-gray-400">Automations coming soon</h3>
+                    <p class="text-xs text-gray-500 mt-1">Auto-shipment rules, order processing workflows, and scheduled campaigns.</p>
                 </div>
             </div>
+            <!-- ====== END AUTOMATIONS ====== -->
 
-            <!-- ===== SECTION: INTEGRATIONS ===== -->
+            <!-- ====== INTEGRATIONS ====== -->
             <div x-show="view === 'constellation'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-plug text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Integrations</h2>
-                    <p class="text-sm text-gray-400 mt-2">Platform integrations and API connections coming soon.</p>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-plug text-emerald-400"></i> Integrations</h2>
+                        <p class="text-xs text-gray-500 font-mono mt-1">Platform connections and API status</p>
+                    </div>
                 </div>
-            </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400"><i class="fab fa-shopify text-lg"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Shopify</h3><p class="text-[10px] font-mono text-gray-500">rwqchh-na.myshopify.com</p></div>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">Connected</span>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400"><i class="fab fa-facebook text-lg"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Facebook</h3><p class="text-[10px] font-mono text-gray-500">Messenger API</p></div>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">Connected</span>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400"><i class="fab fa-instagram text-lg"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">Instagram</h3><p class="text-[10px] font-mono text-gray-500">Instagram API</p></div>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">Connected</span>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400"><i class="fab fa-whatsapp text-lg"></i></div>
+                            <div><h3 class="text-sm font-semibold text-white">WhatsApp</h3><p class="text-[10px] font-mono text-gray-500">Business API</p></div>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">Connected</span>
+                    </div>
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400"><i class="fa-solid fa-truck-fast text-lg"></i></div>
 
-            <!-- ===== SECTION: SETTINGS ===== -->
-            <div x-show="view === 'settings'">
-                <div class="bg-rc-card border border-rc-border/60 rounded-xl p-8 text-center">
-                    <i class="fa-solid fa-sliders text-4xl text-gray-600 mb-4"></i>
-                    <h2 class="text-lg font-semibold text-white">Settings</h2>
-                    <p class="text-sm text-gray-400 mt-2">System configuration and preferences coming soon.</p>
-                </div>
-            </div>
         </div>
     </template>
 </div>
