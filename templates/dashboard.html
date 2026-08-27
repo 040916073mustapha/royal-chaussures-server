@@ -262,17 +262,168 @@
 </div>
 
 <!-- ORDERS SECTION -->
-<div x-show="activeNav === 'orders'">
-    <div class="flex items-center justify-between mb-6">
+<div x-show="activeNav === 'orders'"
+     x-data="{ orders: [], loading: true, filterStatus: '', searchQuery: '', currentPage: 1, perPage: 15, totalOrders: 0 }"
+     x-init="fetch('/api/orders?store_id=1').then(r=>r.json()).then(d=>{ orders=d.orders||[]; totalOrders=orders.length }).finally(()=>loading=false)">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div>
             <h1 class="text-xl font-bold text-white">📋 Orders</h1>
             <p class="text-xs text-gray-500 mt-1 font-mono">Track and manage customer orders</p>
         </div>
+        <div class="flex items-center gap-3">
+            <span class="text-[11px] font-mono text-gray-500">Total: <span class="text-white font-bold" x-text="totalOrders"></span></span>
+        </div>
     </div>
-    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-6 text-center py-10">
-        <i class="fa-solid fa-box-archive text-4xl text-rc-border mb-4"></i>
-        <p class="text-gray-400 text-sm">Loading Orders...</p>
+
+    <!-- Filters -->
+    <div class="bg-rc-card border border-rc-border/60 rounded-xl p-4 mb-4">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="flex-1 relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                <input type="text" x-model="searchQuery" @input="currentPage=1" placeholder="Search by customer, phone, or product..." class="w-full bg-rc-bg border border-rc-border/50 rounded-lg pl-9 pr-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:outline-none focus:border-neon-purple/50 transition-colors">
+            </div>
+            <div class="flex gap-2">
+                <select x-model="filterStatus" @change="currentPage=1" class="bg-rc-bg border border-rc-border/50 rounded-lg px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none focus:border-neon-purple/50">
+                    <option value="">All Status</option>
+                    <option value="Nouveau">🆕 Nouveau</option>
+                    <option value="Confirme">✅ Confirme</option>
+                    <option value="Livre">📦 Livre</option>
+                    <option value="Annule">❌ Annule</option>
+                </select>
+                <button @click="currentPage=1; filterStatus=''; searchQuery=''" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-lg px-3 py-2 text-xs text-gray-400 font-mono hover:text-white hover:border-gray-500/50 transition-colors">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+        </div>
     </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="py-20 text-center">
+        <div class="inline-flex items-center gap-3 text-gray-500">
+            <i class="fa-solid fa-circle-notch text-neon-purple text-xl animate-spin"></i>
+            <span class="text-sm font-mono tracking-wider">LOADING ORDERS...</span>
+        </div>
+    </div>
+
+    <template x-if="!loading">
+        <div>
+            <!-- Empty State -->
+            <div x-show="orders.length === 0" class="bg-rc-card border border-rc-border/60 rounded-xl p-10 text-center">
+                <i class="fa-solid fa-box-archive text-5xl text-rc-border mb-4"></i>
+                <p class="text-gray-400 text-sm">No orders found</p>
+                <p class="text-gray-600 text-xs font-mono mt-1">Orders will appear here once customers start ordering.</p>
+            </div>
+
+            <template x-if="orders.length > 0">
+                <div>
+                    <!-- Table -->
+                    <div class="bg-rc-card border border-rc-border/60 rounded-xl overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="bg-rc-card-hover/50 text-gray-400 font-mono text-[10px] uppercase tracking-wider">
+                                        <th class="text-left py-3 px-4 font-medium">#Order</th>
+                                        <th class="text-left py-3 px-4 font-medium">Customer</th>
+                                        <th class="text-left py-3 px-4 font-medium">Phone</th>
+                                        <th class="text-left py-3 px-4 font-medium">Product</th>
+                                        <th class="text-left py-3 px-4 font-medium">Wilaya</th>
+                                        <th class="text-right py-3 px-4 font-medium">Total</th>
+                                        <th class="text-center py-3 px-4 font-medium">Status</th>
+                                        <th class="text-right py-3 px-4 font-medium">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="o in orders.filter(x => {
+                                        if (filterStatus && x.status !== filterStatus) return false;
+                                        if (searchQuery) {
+                                            const q = searchQuery.toLowerCase();
+                                            return (x.customer||'').toLowerCase().includes(q) ||
+                                                   (x.phone||'').toLowerCase().includes(q) ||
+                                                   (x.product||'').toLowerCase().includes(q);
+                                        }
+                                        return true;
+                                    }).slice((currentPage-1)*perPage, currentPage*perPage)" :key="o.id">
+                                        <tr class="border-b border-rc-border/20 hover:bg-rc-card-hover/30 transition-colors">
+                                            <td class="py-3.5 px-4">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-8 h-8 rounded-lg bg-rc-card-hover/60 border border-rc-border/40 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                                                        <span x-text="'#'+o.id"></span>
+                                                    </div>
+                                                    <span class="text-[10px] font-mono text-gray-500" x-text="o.shopify_id ? 'SF-'+String(o.shopify_id).slice(-6) : ''"></span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-neon-purple/10 to-neon-cyan/10 border border-neon-purple/20 flex items-center justify-center text-[9px] text-neon-purple font-bold" x-text="(o.customer||'?')[0]"></div>
+                                                    <div>
+                                                        <p class="text-xs font-medium text-gray-200" x-text="o.customer||'Guest'"></p>
+                                                        <p class="text-[9px] text-gray-600 font-mono" x-text="o.municipality||''"></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <span class="text-xs font-mono text-gray-400" x-text="o.phone||'—'"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <div>
+                                                    <p class="text-xs text-gray-300 truncate max-w-[180px]" x-text="o.product||'—'"></p>
+                                                    <p class="text-[9px] text-gray-600 font-mono mt-0.5" x-text="o.variant||''"></p>
+                                                </div>
+                                            </td>
+                                            <td class="py-3.5 px-4">
+                                                <span class="text-xs text-gray-400" x-text="o.wilaya||'—'"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="text-sm font-bold font-mono text-white" x-text="(o.total||0).toLocaleString()+' DZD'"></span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-center">
+                                                <span class="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap" 
+                                                      :class="{
+                                                        'bg-emerald-400/10 text-emerald-400 border-emerald-400/30': o.status==='Confirme',
+                                                        'bg-yellow-400/10 text-yellow-400 border-yellow-400/30': o.status==='Nouveau' || o.status==='Pending',
+                                                        'bg-rose-400/10 text-rose-400 border-rose-400/30': o.status==='Annule' || o.status==='Cancelled',
+                                                        'bg-sky-400/10 text-sky-400 border-sky-400/30': o.status==='Livre' || o.status==='Delivered',
+                                                        'bg-gray-400/10 text-gray-400 border-gray-400/30': !['Confirme','Nouveau','Pending','Annule','Cancelled','Livre','Delivered'].includes(o.status)
+                                                      }">
+                                                    <span class="w-1.5 h-1.5 rounded-full" :class="{
+                                                        'bg-emerald-400': o.status==='Confirme',
+                                                        'bg-yellow-400': o.status==='Nouveau' || o.status==='Pending',
+                                                        'bg-rose-400': o.status==='Annule' || o.status==='Cancelled',
+                                                        'bg-sky-400': o.status==='Livre' || o.status==='Delivered',
+                                                        'bg-gray-400': !['Confirme','Nouveau','Pending','Annule','Cancelled','Livre','Delivered'].includes(o.status)
+                                                    }"></span>
+                                                    <span x-text="o.status"></span>
+                                                </span>
+                                            </td>
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="text-[10px] font-mono text-gray-500" x-text="o.date ? new Date(o.date).toLocaleDateString('fr-DZ', {day:'2-digit', month:'short', year:'numeric'}) : '—'"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="mt-4 flex items-center justify-between">
+                        <p class="text-[10px] font-mono text-gray-500" x-text="'Showing ' + Math.min((currentPage-1)*perPage+1, orders.length) + ' to ' + Math.min(currentPage*perPage, orders.length) + ' of ' + orders.length + ' orders'"></p>
+                        <div class="flex items-center gap-2">
+                            <button @click="currentPage = Math.max(1, currentPage-1)" :disabled="currentPage === 1" class="px-3 py-1.5 rounded-lg border border-rc-border/40 text-xs font-mono text-gray-400 hover:bg-rc-card-hover/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                <i class="fa-solid fa-chevron-left"></i> Prev
+                            </button>
+                            <span class="text-xs font-mono text-gray-500 px-2" x-text="'Page ' + currentPage"></span>
+                            <button @click="currentPage++" :disabled="currentPage * perPage >= orders.length" class="px-3 py-1.5 rounded-lg border border-rc-border/40 text-xs font-mono text-gray-400 hover:bg-rc-card-hover/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                Next <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </template>
 </div>
 
 <!-- CHAT SECTION -->
