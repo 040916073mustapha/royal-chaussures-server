@@ -1188,8 +1188,33 @@ def api_orders():
         s = f"%{q}%"; params += [s, s, s]
     sql += " ORDER BY created_at DESC LIMIT 100"
     c.execute(sql, params)
-    return json_utf8({"orders": [{"id": r[0], "shopify_id": r[1], "customer": r[2], "phone": r[3], "wilaya": r[4], "municipality": r[5], "product": r[6], "variant": r[7], "qty": r[8], "total": r[9], "status": r[10], "delivery": r[11], "date": r[12]} for r in c.fetchall()]})
+    rows = c.fetchall()
     conn.close()
+    if rows:
+        return json_utf8({"orders": [{"id": r[0], "shopify_id": r[1], "customer": r[2], "phone": r[3], "wilaya": r[4], "municipality": r[5], "product": r[6], "variant": r[7], "qty": r[8], "total": r[9], "status": r[10], "delivery": r[11], "date": r[12]} for r in rows]})
+    # ── Demo Seed Data ──
+    _mock = [
+        {"id": 5001, "shopify_id": 900111, "customer": "Fatima Zahra", "phone": "0555 123 456", "wilaya": "Alger", "municipality": "Hydra", "product": "Sneakers Sport Rose", "variant": "38", "qty": 1, "total": 5200, "status": "Confirme", "delivery": "ZR Express", "date": "2026-08-25 14:30:00"},
+        {"id": 5002, "shopify_id": 900112, "customer": "Amina Belkacem", "phone": "0666 789 012", "wilaya": "Oran", "municipality": "Es-Senia", "product": "Sandales Plateforme Blanches", "variant": "39", "qty": 2, "total": 8400, "status": "Nouveau", "delivery": "ZR Express", "date": "2026-08-26 09:15:00"},
+        {"id": 5003, "shopify_id": 900113, "customer": "Khadija Mansouri", "phone": "0777 345 678", "wilaya": "Tlemcen", "municipality": "Imama", "product": "Bottes Chevilles Marron", "variant": "37", "qty": 1, "total": 6800, "status": "Livre", "delivery": "ZR Express", "date": "2026-08-24 16:45:00"},
+        {"id": 5004, "shopify_id": 900114, "customer": "Nadia Bouzid", "phone": "0554 901 234", "wilaya": "Constantine", "municipality": "Zouaghi", "product": "Escarpins Talon Noir", "variant": "40", "qty": 1, "total": 5900, "status": "Nouveau", "delivery": "ZR Express", "date": "2026-08-27 11:00:00"},
+        {"id": 5005, "shopify_id": 900115, "customer": "Samira Ouali", "phone": "0661 567 890", "wilaya": "Sétif", "municipality": "Hamma", "product": "Mules Tendances Beige", "variant": "36", "qty": 1, "total": 3900, "status": "Annule", "delivery": "ZR Express", "date": "2026-08-22 10:30:00"},
+        {"id": 5006, "shopify_id": 900116, "customer": "Laila Haddad", "phone": "0779 123 456", "wilaya": "Blida", "municipality": "Beni Merad", "product": "Ballerines Classiques Noir", "variant": "38", "qty": 3, "total": 10800, "status": "Confirme", "delivery": "ZR Express", "date": "2026-08-26 17:20:00"},
+        {"id": 5007, "shopify_id": 900117, "customer": "Meriem Kadi", "phone": "0557 789 012", "wilaya": "Annaba", "municipality": "El Bouni", "product": "Baskets Lifestyle Blanc", "variant": "39", "qty": 1, "total": 5400, "status": "Nouveau", "delivery": "ZR Express", "date": "2026-08-27 08:45:00"},
+        {"id": 5008, "shopify_id": 900118, "customer": "Sofia Khelil", "phone": "0663 345 678", "wilaya": "Béjaïa", "municipality": "Toudja", "product": "Sandales Compensées Doré", "variant": "37", "qty": 2, "total": 9400, "status": "Livre", "delivery": "ZR Express", "date": "2026-08-23 12:10:00"},
+        {"id": 5009, "shopify_id": 900119, "customer": "Imane Rahmouni", "phone": "0775 901 234", "wilaya": "Tizi Ouzou", "municipality": "Boghni", "product": "Sneakers Sport Rose", "variant": "41", "qty": 1, "total": 5200, "status": "Confirme", "delivery": "ZR Express", "date": "2026-08-25 19:35:00"},
+        {"id": 5010, "shopify_id": 900120, "customer": "Rania Bensalem", "phone": "0559 567 890", "wilaya": "Biskra", "municipality": "Sidi Okba", "product": "Escarpins Talon Noir", "variant": "38", "qty": 1, "total": 5500, "status": "Nouveau", "delivery": "ZR Express", "date": "2026-08-26 22:00:00"},
+        {"id": 5011, "shopify_id": 900121, "customer": "Hafida Benchikh", "phone": "0667 111 222", "wilaya": "Mostaganem", "municipality": "Hadjadj", "product": "Bottes Chevilles Marron", "variant": "39", "qty": 1, "total": 6500, "status": "Nouveau", "delivery": "ZR Express", "date": "2026-08-27 06:30:00"},
+        {"id": 5012, "shopify_id": 900122, "customer": "Nawel Djemaa", "phone": "0773 333 444", "wilaya": "Guelma", "municipality": "Bouchagouf", "product": "Mules Tendances Beige", "variant": "40", "qty": 1, "total": 3800, "status": "Confirme", "delivery": "ZR Express", "date": "2026-08-24 14:50:00"},
+    ]
+    # Filter mock data by status/search if needed
+    result = _mock
+    if sf:
+        result = [o for o in result if o["status"] == sf]
+    if q:
+        ql = q.lower()
+        result = [o for o in result if ql in o["customer"].lower() or ql in o["phone"] or ql in o["product"].lower()]
+    return json_utf8({"orders": result})
 
 
 @app.route('/api/orders/<int:oid>/status', methods=['PUT', 'POST'])
@@ -1222,9 +1247,19 @@ def api_update_status(oid):
 @app.route('/api/products')
 def api_products():
     data = shopify_api("GET", "products.json", {"limit": 50, "status": "active"})
-    if not data or "products" not in data:
-        return json_utf8({"products": []})
-    return json_utf8({"products": [{"id": p["id"], "title": p["title"], "variants": len(p.get("variants", [])), "stock": sum(int(v.get("inventory_quantity", 0)) for v in p.get("variants", [])), "price_min": min((float(v.get("price", 0)) for v in p.get("variants", [])), default=0), "price_max": max((float(v.get("price", 0)) for v in p.get("variants", [])), default=0), "image": (p.get("images") or [{}])[0].get("src", ""), "status": p.get("status")} for p in data["products"]]})
+    if data and "products" in data and data["products"]:
+        return json_utf8({"products": [{"id": p["id"], "title": p["title"], "variants": len(p.get("variants", [])), "stock": sum(int(v.get("inventory_quantity", 0)) for v in p.get("variants", [])), "price_min": min((float(v.get("price", 0)) for v in p.get("variants", [])), default=0), "price_max": max((float(v.get("price", 0)) for v in p.get("variants", [])), default=0), "image": (p.get("images") or [{}])[0].get("src", ""), "status": p.get("status")} for p in data["products"]]})
+    # ── Demo Seed Data ──
+    return json_utf8({"products": [
+        {"id": 1001, "title": "Sneakers Sport Élégantes - Rose", "variants": 6, "stock": 45, "price_min": 4500, "price_max": 5200, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/sneakers-rose.jpg", "status": "active"},
+        {"id": 1002, "title": "Sandales Plateforme Été - Blanc", "variants": 4, "stock": 28, "price_min": 3800, "price_max": 4200, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/sandales-blanches.jpg", "status": "active"},
+        {"id": 1003, "title": "Bottes Chevilles Automne - Marron", "variants": 5, "stock": 12, "price_min": 6200, "price_max": 6800, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/bottes-marron.jpg", "status": "active"},
+        {"id": 1004, "title": "Escarpins Talon Haut - Noir", "variants": 4, "stock": 8, "price_min": 5500, "price_max": 5900, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/escarpins-noir.jpg", "status": "active"},
+        {"id": 1005, "title": "Mules Tendances Été - Beige", "variants": 5, "stock": 33, "price_min": 3400, "price_max": 3900, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/mules-beige.jpg", "status": "active"},
+        {"id": 1006, "title": "Ballerines Classiques - Noir", "variants": 4, "stock": 6, "price_min": 3200, "price_max": 3600, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/ballerines-noir.jpg", "status": "active"},
+        {"id": 1007, "title": "Baskets Lifestyle - Blanc/Rose", "variants": 6, "stock": 52, "price_min": 4800, "price_max": 5400, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/baskets-rose.jpg", "status": "active"},
+        {"id": 1008, "title": "Sandales Compensées - Doré", "variants": 4, "stock": 19, "price_min": 4200, "price_max": 4700, "image": "https://cdn.shopify.com/s/files/1/0723/4567/8901/products/sandales-dore.jpg", "status": "active"},
+    ]})
 
 
 
@@ -1235,6 +1270,32 @@ def api_products():
 # POS Products API (Liste des articles) â€” handled in routes/store.py blueprint
 # ============================================================
 
+@app.route('/api/inventory')
+def api_inventory():
+    """Return product inventory with variant-level stock details"""
+    # Try Shopify first
+    data = shopify_api("GET", "products.json", {"limit": 50, "status": "active"})
+    if data and "products" in data and data["products"]:
+        def fmt_variant(v):
+            return {"id": v["id"], "title": v.get("title", ""), "price": float(v.get("price", 0)), "sku": v.get("sku", ""), "inventory": int(v.get("inventory_quantity", 0)), "requires_shipping": v.get("requires_shipping", True)}
+        return json_utf8({"inventory": [
+            {"id": p["id"], "title": p["title"], "image": (p.get("images") or [{}])[0].get("src", ""), "variants": [fmt_variant(v) for v in p.get("variants", [])], "total_stock": sum(int(v.get("inventory_quantity", 0)) for v in p.get("variants", [])), "status": p.get("status")}
+            for p in data["products"]
+        ]})
+    # ── Demo Seed Data ──
+    sizes = ["36", "37", "38", "39", "40", "41"]
+    return json_utf8({"inventory": [
+        {"id": 1001, "title": "Sneakers Sport Élégantes - Rose", "image": "", "total_stock": 45, "status": "active", "variants": [{"id": 11011, "title": s, "price": 4500 + int(s)*10, "sku": f"SNK-ROSE-{s}", "inventory": max(0, 8 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+        {"id": 1002, "title": "Sandales Plateforme Été - Blanc", "image": "", "total_stock": 28, "status": "active", "variants": [{"id": 11021, "title": s, "price": 3800 + int(s)*8, "sku": f"SAN-BLANC-{s}", "inventory": max(0, 6 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+        {"id": 1003, "title": "Bottes Chevilles Automne - Marron", "image": "", "total_stock": 12, "status": "active", "variants": [{"id": 11031, "title": s, "price": 6200 + int(s)*10, "sku": f"BOT-MARR-{s}", "inventory": max(0, 3 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+        {"id": 1004, "title": "Escarpins Talon Haut - Noir", "image": "", "total_stock": 8, "status": "active", "variants": [{"id": 11041, "title": s, "price": 5500 + int(s)*8, "sku": f"ESC-NOIR-{s}", "inventory": max(0, 2 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+        {"id": 1005, "title": "Mules Tendances Été - Beige", "image": "", "total_stock": 33, "status": "active", "variants": [{"id": 11051, "title": s, "price": 3400 + int(s)*8, "sku": f"MUL-BEIG-{s}", "inventory": max(0, 7 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+        {"id": 1006, "title": "Ballerines Classiques - Noir", "image": "", "total_stock": 6, "status": "active", "variants": [{"id": 11061, "title": s, "price": 3200 + int(s)*8, "sku": f"BAL-NOIR-{s}", "inventory": max(0, 2 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+        {"id": 1007, "title": "Baskets Lifestyle - Blanc/Rose", "image": "", "total_stock": 52, "status": "active", "variants": [{"id": 11071, "title": s, "price": 4800 + int(s)*10, "sku": f"BSK-ROSE-{s}", "inventory": max(0, 10 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+        {"id": 1008, "title": "Sandales Compensées - Doré", "image": "", "total_stock": 19, "status": "active", "variants": [{"id": 11081, "title": s, "price": 4200 + int(s)*8, "sku": f"SAN-DORE-{s}", "inventory": max(0, 5 - int(s) + 36), "requires_shipping": True} for s in sizes]},
+    ]})
+
+
 @app.route('/api/clients')
 def api_clients():
     _sd = _get_store_id_from_subdomain()
@@ -1242,8 +1303,23 @@ def api_clients():
     conn = _open_orders_db()
     c = conn.cursor()
     c.execute("SELECT id, name, phone, wilaya, municipality, total_orders, total_spent, last_order_at FROM clients WHERE store_id=? ORDER BY total_orders DESC LIMIT 100", [store_id])
-    return json_utf8({"clients": [{"id": r[0], "name": r[1], "phone": r[2], "wilaya": r[3], "municipality": r[4], "orders": r[5], "spent": r[6], "last_order": r[7] or ""} for r in c.fetchall()]})
+    rows = c.fetchall()
     conn.close()
+    if rows:
+        return json_utf8({"clients": [{"id": r[0], "name": r[1], "phone": r[2], "wilaya": r[3], "municipality": r[4], "orders": r[5], "spent": r[6], "last_order": r[7] or ""} for r in rows]})
+    # ── Demo Seed Data ──
+    return json_utf8({"clients": [
+        {"id": 1, "name": "Fatima Zahra", "phone": "0555 123 456", "wilaya": "Alger", "municipality": "Hydra", "orders": 5, "spent": 25600, "last_order": "2026-08-25 14:30:00"},
+        {"id": 2, "name": "Amina Belkacem", "phone": "0666 789 012", "wilaya": "Oran", "municipality": "Es-Senia", "orders": 3, "spent": 18400, "last_order": "2026-08-26 09:15:00"},
+        {"id": 3, "name": "Khadija Mansouri", "phone": "0777 345 678", "wilaya": "Tlemcen", "municipality": "Imama", "orders": 8, "spent": 47200, "last_order": "2026-08-24 16:45:00"},
+        {"id": 4, "name": "Nadia Bouzid", "phone": "0554 901 234", "wilaya": "Constantine", "municipality": "Zouaghi", "orders": 2, "spent": 10400, "last_order": "2026-08-27 11:00:00"},
+        {"id": 5, "name": "Samira Ouali", "phone": "0661 567 890", "wilaya": "Sétif", "municipality": "Hamma", "orders": 4, "spent": 22100, "last_order": "2026-08-22 10:30:00"},
+        {"id": 6, "name": "Laila Haddad", "phone": "0779 123 456", "wilaya": "Blida", "municipality": "Beni Merad", "orders": 6, "spent": 31500, "last_order": "2026-08-26 17:20:00"},
+        {"id": 7, "name": "Meriem Kadi", "phone": "0557 789 012", "wilaya": "Annaba", "municipality": "El Bouni", "orders": 1, "spent": 5400, "last_order": "2026-08-27 08:45:00"},
+        {"id": 8, "name": "Sofia Khelil", "phone": "0663 345 678", "wilaya": "Béjaïa", "municipality": "Toudja", "orders": 7, "spent": 38900, "last_order": "2026-08-23 12:10:00"},
+        {"id": 9, "name": "Imane Rahmouni", "phone": "0775 901 234", "wilaya": "Tizi Ouzou", "municipality": "Boghni", "orders": 3, "spent": 16800, "last_order": "2026-08-25 19:35:00"},
+        {"id": 10, "name": "Rania Bensalem", "phone": "0559 567 890", "wilaya": "Biskra", "municipality": "Sidi Okba", "orders": 2, "spent": 9500, "last_order": "2026-08-26 22:00:00"},
+    ]})
 
 
 @app.route('/api/shipments')
