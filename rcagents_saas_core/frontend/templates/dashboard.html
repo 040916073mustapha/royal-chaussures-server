@@ -180,7 +180,7 @@
                 <div class="lg:col-span-2 bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
                     <div class="flex items-center justify-between mb-4 pb-3 border-b border-rc-border/40">
                         <div class="flex items-center gap-2"><i class="fa-solid fa-receipt text-neon-purple text-xs"></i><h3 class="text-sm font-semibold text-white">Recent Orders</h3></div>
-                        <a href="/dashboard/orders" class="text-[10px] font-mono text-neon-purple hover:text-neon-cyan transition-colors flex items-center gap-1">View all <i class="fa-solid fa-arrow-right text-[9px]"></i></a>
+                        <a href="/dashboard?view=orders" class="text-[10px] font-mono text-neon-purple hover:text-neon-cyan transition-colors flex items-center gap-1">View all <i class="fa-solid fa-arrow-right text-[9px]"></i></a>
                     </div>
                     <template x-if="orders.length === 0">
                         <div class="text-center py-8 text-gray-500"><i class="fa-solid fa-inbox text-2xl mb-2 opacity-30"></i><p class="text-xs font-mono">No orders yet</p></div>
@@ -219,19 +219,19 @@
                 <div class="lg:col-span-2 bg-rc-card border border-rc-border/60 rounded-xl p-5 card-hover-glow">
                     <div class="flex items-center gap-2 mb-4 pb-3 border-b border-rc-border/40"><i class="fa-solid fa-bolt text-neon-purple text-xs"></i><h3 class="text-sm font-semibold text-white">Quick Actions</h3></div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <a href="/dashboard/products" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-purple/30 hover:shadow-[0_0_15px_-4px_rgba(168,85,247,0.15)] transition-all duration-300 group">
+                        <a href="/dashboard?view=products" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-purple/30 hover:shadow-[0_0_15px_-4px_rgba(168,85,247,0.15)] transition-all duration-300 group">
                             <div class="w-10 h-10 rounded-xl bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(168,85,247,0.3)] transition-shadow"><i class="fa-solid fa-plus text-sm"></i></div>
                             <p class="text-xs font-medium text-gray-300">Add Product</p>
                         </a>
-                        <a href="/dashboard/orders" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-cyan/30 hover:shadow-[0_0_15px_-4px_rgba(6,182,212,0.15)] transition-all duration-300 group">
+                        <a href="/dashboard?view=orders" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-cyan/30 hover:shadow-[0_0_15px_-4px_rgba(6,182,212,0.15)] transition-all duration-300 group">
                             <div class="w-10 h-10 rounded-xl bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(6,182,212,0.3)] transition-shadow"><i class="fa-solid fa-file-invoice text-sm"></i></div>
                             <p class="text-xs font-medium text-gray-300">Create Order</p>
                         </a>
-                        <a href="/dashboard/analytics" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-amber-400/30 hover:shadow-[0_0_15px_-4px_rgba(251,191,36,0.15)] transition-all duration-300 group">
+                        <a href="/dashboard?view=analytics" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-amber-400/30 hover:shadow-[0_0_15px_-4px_rgba(251,191,36,0.15)] transition-all duration-300 group">
                             <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(251,191,36,0.3)] transition-shadow"><i class="fa-solid fa-chart-bar text-sm"></i></div>
                             <p class="text-xs font-medium text-gray-300">View Reports</p>
                         </a>
-                        <a href="/dashboard/marketing" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-pink/30 hover:shadow-[0_0_15px_-4px_rgba(236,72,153,0.15)] transition-all duration-300 group">
+                        <a href="/dashboard?view=marketing" class="bg-rc-card-hover/50 border border-rc-border/40 rounded-xl p-4 text-center hover:border-neon-pink/30 hover:shadow-[0_0_15px_-4px_rgba(236,72,153,0.15)] transition-all duration-300 group">
                             <div class="w-10 h-10 rounded-xl bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center text-neon-pink mx-auto mb-2 group-hover:shadow-[0_0_12px_-4px_rgba(236,72,153,0.3)] transition-shadow"><i class="fa-solid fa-megaphone text-sm"></i></div>
                             <p class="text-xs font-medium text-gray-300">New Campaign</p>
                         </a>

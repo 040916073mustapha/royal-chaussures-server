@@ -234,30 +234,32 @@
         return {
             activeNav: 'overview',
             navItems: [
-                { id: 'overview', label: 'Overview', icon: 'fa-solid fa-chart-pie', href: '/dashboard' },
-                { id: 'orders', label: 'Orders', icon: 'fa-solid fa-box-archive', href: '/dashboard/orders' },
-                { id: 'customers', label: 'Customers', icon: 'fa-solid fa-users', href: '/dashboard/clients' },
-                { id: 'products', label: 'Products', icon: 'fa-solid fa-tag', href: '/dashboard/products' },
+                { id: 'overview', label: 'Overview', icon: 'fa-solid fa-chart-pie', href: '/dashboard?view=overview' },
+                { id: 'orders', label: 'Orders', icon: 'fa-solid fa-box-archive', href: '/dashboard?view=orders' },
+                { id: 'customers', label: 'Customers', icon: 'fa-solid fa-users', href: '/dashboard?view=clients' },
+                { id: 'products', label: 'Products', icon: 'fa-solid fa-tag', href: '/dashboard?view=products' },
                 { separator: true, label: 'INTELLIGENCE' },
-                { id: 'agents', label: 'AI Agents', icon: 'fa-solid fa-network-wired', href: '/dashboard/agents' },
-                { id: 'chat', label: 'Live Chat', icon: 'fa-solid fa-comments', href: '/dashboard/chat' },
-                { id: 'analytics', label: 'Analytics', icon: 'fa-solid fa-chart-line', href: '/dashboard/analytics' },
+                { id: 'agents', label: 'AI Agents', icon: 'fa-solid fa-network-wired', href: '/dashboard?view=agents' },
+                { id: 'chat', label: 'Live Chat', icon: 'fa-solid fa-comments', href: '/dashboard?view=chat' },
+                { id: 'analytics', label: 'Analytics', icon: 'fa-solid fa-chart-line', href: '/dashboard?view=analytics' },
                 { separator: true, label: 'OPERATIONS' },
-                { id: 'marketing', label: 'Marketing', icon: 'fa-solid fa-bullhorn', href: '/dashboard/marketing' },
-                { id: 'inventory', label: 'Inventory', icon: 'fa-solid fa-warehouse', href: '/dashboard/inventory' },
-                { id: 'shipping', label: 'Shipping', icon: 'fa-solid fa-truck', href: '/dashboard/shipments' },
-                { id: 'automations', label: 'Automations', icon: 'fa-solid fa-robot', href: '/dashboard/auto-ship' },
+                { id: 'marketing', label: 'Marketing', icon: 'fa-solid fa-bullhorn', href: '/dashboard?view=marketing' },
+                { id: 'inventory', label: 'Inventory', icon: 'fa-solid fa-warehouse', href: '/dashboard?view=inventory' },
+                { id: 'shipping', label: 'Shipping', icon: 'fa-solid fa-truck', href: '/dashboard?view=shipments' },
+                { id: 'automations', label: 'Automations', icon: 'fa-solid fa-robot', href: '/dashboard?view=auto-ship' },
                 { separator: true, label: 'SYSTEM' },
-                { id: 'integrations', label: 'Integrations', icon: 'fa-solid fa-plug', href: '/dashboard/constellation' },
-                { id: 'settings', label: 'Settings', icon: 'fa-solid fa-sliders', href: '/dashboard/settings' },
+                { id: 'integrations', label: 'Integrations', icon: 'fa-solid fa-plug', href: '/dashboard?view=constellation' },
+                { id: 'settings', label: 'Settings', icon: 'fa-solid fa-sliders', href: '/dashboard?view=settings' },
             ],
             get currentPage() {
-                const path = window.location.pathname;
-                return this.navItems.find(i => !i.separator && path.startsWith(i.href));
+                const params = new URLSearchParams(window.location.search);
+                const view = params.get('view') || 'overview';
+                return this.navItems.find(i => !i.separator && i.id === view);
             },
             init() {
-                const path = window.location.pathname;
-                const found = this.navItems.find(i => !i.separator && path.startsWith(i.href));
+                const params = new URLSearchParams(window.location.search);
+                const view = params.get('view') || 'overview';
+                const found = this.navItems.find(i => !i.separator && i.id === view);
                 if (found) this.activeNav = found.id;
             }
         };
