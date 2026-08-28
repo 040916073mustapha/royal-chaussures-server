@@ -3,361 +3,749 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل تاجر جديد - RC Agents</title>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <title>Onboarding — RC Agents</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        neon: {
+                            purple: '#A855F7',
+                            'purple-dark': '#7C3AED',
+                            cyan: '#06B6D4',
+                            'cyan-dark': '#0891B2',
+                            pink: '#EC4899',
+                        },
+                        rc: {
+                            bg: '#0B0E14',
+                            card: '#111118',
+                            'card-hover': '#1A1A25',
+                            border: '#1E1E30',
+                            'border-glow': '#2E2E50',
+                            text: '#94A3B8',
+                            'text-bright': '#E2E8F0',
+                        }
+                    },
+                    boxShadow: {
+                        'neon-purple': '0 0 15px -3px rgba(168,85,247,0.3)',
+                        'neon-cyan': '0 0 15px -3px rgba(6,182,212,0.3)',
+                        'neon-lg': '0 0 40px -8px rgba(168,85,247,0.15)',
+                    }
+                }
+            }
+        }
+        document.documentElement.classList.add("dark");
+    </script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Tajawal', sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+        @keyframes pulse-glow { 0%,100%{opacity:0.4} 50%{opacity:1} }
+        @keyframes wave-move { 0%{transform:translateY(0)} 50%{transform:translateY(-3px)} 100%{transform:translateY(0)} }
+        @keyframes slide-in { 0%{opacity:0;transform:translateY(12px)} 100%{opacity:1;transform:translateY(0)} }
+        @keyframes gradient-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .slide-in { animation: slide-in 0.4s ease-out both; }
+        .slide-in.delay-1 { animation-delay:0.1s; }
+        .slide-in.delay-2 { animation-delay:0.2s; }
+        .slide-in.delay-3 { animation-delay:0.3s; }
+        .slide-in.delay-4 { animation-delay:0.4s; }
+        .neuron-pulse { animation: pulse-glow 2s ease-in-out infinite; }
+        .wave-bar { animation: wave-move 1.5s ease-in-out infinite; }
+        .bg-grid { 
+            background-image: 
+                linear-gradient(rgba(168,85,247,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(168,85,247,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
         }
-        .container {
-            width: 100%;
-            max-width: 520px;
+        .glow-border {
+            box-shadow: 0 0 0 1px rgba(168,85,247,0.15), 0 0 20px -5px rgba(6,182,212,0.08);
         }
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        .step-enter-x {
+            animation: slide-in 0.5s ease-out both;
         }
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
+        /* Toggle Switch */
+        .toggle-track {
+            transition: all 0.3s ease;
         }
-        .logo h1 {
-            font-size: 28px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
+        .toggle-dot {
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
         }
-        .logo p {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 14px;
-            margin-top: 8px;
+        input:checked + .toggle-track {
+            background: rgba(168,85,247,0.3);
+            border-color: rgba(168,85,247,0.5);
         }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            color: rgba(255, 255, 255, 0.85);
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 6px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            color: #fff;
-            font-size: 15px;
-            font-family: 'Tajawal', sans-serif;
-            transition: all 0.3s;
-            outline: none;
-        }
-        .form-group input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .form-group input::placeholder {
-            color: rgba(255, 255, 255, 0.3);
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-        .btn-submit {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            border-radius: 12px;
-            color: #fff;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: 'Tajawal', sans-serif;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -10px rgba(102, 126, 234, 0.5);
-        }
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .btn-submit .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            margin-top: -10px;
-            display: none;
-        }
-        .btn-submit.loading .spinner { display: inline-block; }
-        .btn-submit.loading .btn-text { visibility: hidden; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .success-box, .error-box {
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-        }
-        .success-box {
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            color: #6ee7b7;
-        }
-        .error-box {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
-        }
-        .success-box.show, .error-box.show {
-            display: block;
-        }
-        .success-result {
-            margin-top: 12px;
-        }
-        .success-result .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            font-size: 13px;
-        }
-        .success-result .info-label {
-            color: rgba(255,255,255,0.5);
-        }
-        .success-result .info-value {
-            color: rgba(255,255,255,0.9);
-            font-weight: 500;
-        }
-        .btn-dashboard {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #10b981, #059669);
-            border: none;
-            border-radius: 12px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            font-family: 'Tajawal', sans-serif;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            margin-top: 16px;
-            transition: all 0.3s;
-        }
-        .btn-dashboard:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.5);
-        }
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 12px;
-        }
-        .webhooks-section {
-            margin-bottom: 20px;
-        }
-        .webhooks-section summary {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 13px;
-            cursor: pointer;
-            padding: 8px 0;
-        }
-        .webhooks-section summary:hover {
-            color: rgba(255, 255, 255, 0.8);
-        }
-        .webhook-fields {
-            margin-top: 12px;
-            padding: 16px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 12px;
-        }
-        .webhook-fields .form-group {
-            margin-bottom: 12px;
-        }
-        .webhook-fields .form-group:last-child {
-            margin-bottom: 0;
+        input:checked + .toggle-track .toggle-dot {
+            transform: translateX(16px);
+            background: #A855F7;
+            box-shadow: 0 0 10px rgba(168,85,247,0.4);
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="card">
-            <div class="logo">
-                <h1>🚀 RC Agents</h1>
-                <p>منصة الوكلاء الذكيين لمتجرك</p>
-            </div>
+<body class="bg-rc-bg text-rc-text antialiased font-sans min-h-screen flex items-center justify-center p-4" x-data="onboardWizard()" x-init="init()">
 
-            <!-- Error / Success -->
-            <div class="error-box" id="errorBox"></div>
-            <div class="success-box" id="successBox">
-                <span id="successTitle">🎉 تم التسجيل بنجاح!</span>
-                <div class="success-result" id="successResult"></div>
-                <a class="btn-dashboard" id="dashboardBtn" href="">📊 الانتقال إلى لوحة التحكم</a>
-            </div>
+    <!-- Scanline -->
+    <div class="pointer-events-none fixed inset-0 z-50 opacity-[0.015]" style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px);"></div>
 
-            <!-- Form -->
-            <form id="onboardForm" onsubmit="return handleSubmit(event)">
-                <div class="form-group">
-                    <label>اسم المتجر</label>
-                    <input type="text" id="storeName" placeholder="مثال: متجر الأزياء الفاخرة" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>البريد الإلكتروني</label>
-                        <input type="email" id="email" placeholder="store@example.com">
-                    </div>
-                    <div class="form-group">
-                        <label>رقم الهاتف</label>
-                        <input type="tel" id="phone" placeholder="+213xxxxxxxx">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>اسم المستخدم</label>
-                        <input type="text" id="username" placeholder="admin" required>
-                    </div>
-                    <div class="form-group">
-                        <label>كلمة المرور</label>
-                        <input type="password" id="password" placeholder="********" required minlength="6">
-                    </div>
-                </div>
-
-                <details class="webhooks-section">
-                    <summary>⚙️ ربط القنوات (اختياري)</summary>
-                    <div class="webhook-fields">
-                        <div class="form-group">
-                            <label>Facebook Page ID</label>
-                            <input type="text" id="fbPageId" placeholder="123456789">
-                        </div>
-                        <div class="form-group">
-                            <label>WhatsApp Phone Number ID</label>
-                            <input type="text" id="waPhoneId" placeholder="987654321">
-                        </div>
-                        <div class="form-group">
-                            <label>Instagram ID</label>
-                            <input type="text" id="igId" placeholder="instagram_business_id">
-                        </div>
-                    </div>
-                </details>
-
-                <button type="submit" class="btn-submit" id="submitBtn">
-                    <span class="spinner"></span>
-                    <span class="btn-text">✨ إنشاء المتجر</span>
-                </button>
-            </form>
-
-            <div class="footer">
-                RC Agents Platform &copy; 2026 &mdash; مدعوم بـ AI ومتعدد المتاجر
-            </div>
-        </div>
+    <!-- Animated background orbs -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-40 -left-40 w-96 h-96 bg-neon-purple/5 rounded-full blur-[120px]"></div>
+        <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-neon-cyan/5 rounded-full blur-[120px]"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-neon-purple/3 via-transparent to-neon-cyan/3 rounded-full blur-[150px]"></div>
     </div>
 
-    <script>
-        function handleSubmit(e) {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const errorBox = document.getElementById('errorBox');
-            const successBox = document.getElementById('successBox');
+    <!-- Main Container -->
+    <div class="relative w-full max-w-2xl mx-auto">
+
+        <!-- Header / Logo -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-purple/20 to-neon-cyan/20 border border-neon-purple/30 shadow-[0_0_30px_-5px_rgba(168,85,247,0.2)] mb-4">
+                <svg viewBox="0 0 100 100" class="w-10 h-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]">
+                    <defs>
+                        <linearGradient id="octoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#A855F7"/>
+                            <stop offset="100%" stop-color="#06B6D4"/>
+                        </linearGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="2" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                    </defs>
+                    <ellipse cx="50" cy="42" rx="20" ry="18" fill="url(#octoGrad)" opacity="0.9" filter="url(#glow)"/>
+                    <path d="M32 48 Q22 60 14 68 Q8 74 12 78" stroke="url(#octoGrad)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.9"/>
+                    <path d="M68 48 Q78 60 86 68 Q92 74 88 78" stroke="url(#octoGrad)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.9"/>
+                    <circle cx="12" cy="72" r="3.5" fill="none" stroke="url(#octoGrad)" stroke-width="1.5" opacity="0.5"/>
+                    <circle cx="88" cy="72" r="3.5" fill="none" stroke="url(#octoGrad)" stroke-width="1.5" opacity="0.5"/>
+                    <ellipse cx="42" cy="38" rx="5" ry="6" fill="#0A0A0F"/>
+                    <ellipse cx="58" cy="38" rx="5" ry="6" fill="#0A0A0F"/>
+                    <ellipse cx="43" cy="36" rx="1.8" ry="2" fill="#06B6D4"/>
+                    <ellipse cx="59" cy="36" rx="1.8" ry="2" fill="#06B6D4"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">
+                <span class="bg-gradient-to-r from-neon-purple to-neon-cyan bg-clip-text text-transparent">RC AGENTS</span>
+            </h1>
+            <p class="text-xs text-gray-500 mt-2 font-mono tracking-wider">ONE BRAIN . MANY HANDS</p>
+        </div>
+
+        <!-- Wizard Card -->
+        <div class="bg-rc-card border border-rc-border/60 rounded-2xl p-8 md:p-10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] glow-border relative overflow-hidden">
             
-            errorBox.classList.remove('show');
-            successBox.classList.remove('show');
-            btn.classList.add('loading');
+            <!-- Grid overlay inside card -->
+            <div class="absolute inset-0 bg-grid opacity-30 pointer-events-none"></div>
 
-            const payload = {
-                store_name: document.getElementById('storeName').value.trim(),
-                email: document.getElementById('email').value.trim(),
-                phone: document.getElementById('phone').value.trim(),
-                username: document.getElementById('username').value.trim(),
-                password: document.getElementById('password').value,
-                webhooks: {}
-            };
+            <!-- ========== PROGRESS BAR ========== -->
+            <div class="relative mb-10">
+                <div class="flex items-center justify-between">
+                    <template x-for="(s, i) in steps" :key="i">
+                        <div class="flex items-center" :class="i < steps.length - 1 ? 'flex-1' : ''">
+                            <!-- Step circle -->
+                            <div @click="goStep(i+1)"
+                                 class="relative flex items-center justify-center w-10 h-10 rounded-xl border-2 cursor-pointer transition-all duration-300 z-10"
+                                 :class="step >= i+1 
+                                   ? 'bg-neon-purple/20 border-neon-purple text-neon-purple shadow-[0_0_15px_-3px_rgba(168,85,247,0.3)]' 
+                                   : 'bg-rc-card-hover border-rc-border text-gray-600 hover:border-gray-500'">
+                                <template x-if="step > i+1">
+                                    <i class="fa-solid fa-check text-sm"></i>
+                                </template>
+                                <template x-if="step === i+1">
+                                    <i :class="s.icon" class="text-sm"></i>
+                                </template>
+                                <template x-if="step < i+1">
+                                    <span class="text-sm font-bold font-mono" x-text="i+1"></span>
+                                </template>
+                            </div>
+                            <!-- Connector line -->
+                            <template x-if="i < steps.length - 1">
+                                <div class="flex-1 h-0.5 mx-3 rounded-full transition-all duration-500"
+                                     :class="step > i+1 ? 'bg-neon-purple/40' : 'bg-rc-border'">
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+                <!-- Step labels -->
+                <div class="flex justify-between mt-2">
+                    <template x-for="(s, i) in steps" :key="'l'+i">
+                        <div class="text-[10px] font-mono transition-colors duration-300 text-center"
+                             :class="step === i+1 ? 'text-neon-cyan' : 'text-gray-600'"
+                             :style="'width:' + (100/steps.length) + '%'"
+                             x-text="s.label">
+                        </div>
+                    </template>
+                </div>
+            </div>
 
-            const fbId = document.getElementById('fbPageId').value.trim();
-            const waId = document.getElementById('waPhoneId').value.trim();
-            const igId = document.getElementById('igId').value.trim();
+            <!-- ========== ERROR / SUCCESS BOX ========== -->
+            <div x-show="errorMsg" x-transition.opacity.duration.300ms
+                 class="relative mb-6 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-mono flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
+                <span x-text="errorMsg"></span>
+                <button @click="errorMsg = ''" class="mr-auto text-rose-400/50 hover:text-rose-300"><i class="fa-solid fa-xmark"></i></button>
+            </div>
 
-            if (fbId) payload.webhooks.messenger = fbId;
-            if (waId) payload.webhooks.whatsapp = waId;
-            if (igId) payload.webhooks.instagram = igId;
+            <div x-show="successMsg && !loading" x-transition.opacity.duration.300ms
+                 class="relative mb-6 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-mono">
+                <span x-text="successMsg"></span>
+            </div>
 
-            fetch('/api/tenant/onboard', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(r => r.json())
-            .then(data => {
-                btn.classList.remove('loading');
-                if (data.success) {
-                    document.getElementById('successTitle').textContent = '🎉 تم إنشاء المتجر بنجاح!';
-                    document.getElementById('successResult').innerHTML = `
-                        <div class="info-row">
-                            <span class="info-label">🏪 اسم المتجر</span>
-                            <span class="info-value">${data.store_name}</span>
+            <!-- ========== STEP 1: STORE CONNECT ========== -->
+            <div x-show="step === 1" x-transition:enter="step-enter-x">
+                <div class="slide-in">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-purple/15 to-neon-cyan/10 border border-neon-purple/20 flex items-center justify-center text-neon-purple">
+                            <i class="fa-solid fa-store text-sm"></i>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">🆔 رقم المتجر</span>
-                            <span class="info-value">${data.store_id}</span>
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">Connect Your Store</h2>
+                            <p class="text-xs text-gray-500 font-mono mt-0.5">Enter your store details to get started</p>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">🔗 الرابط المختصر</span>
-                            <span class="info-value">${data.slug}</span>
+                    </div>
+
+                    <div class="space-y-5">
+                        <!-- Store Name -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Store Name</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-shop absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm"></i>
+                                <input type="text" x-model="form.store_name" placeholder="Royal Chaussures"
+                                       class="w-full bg-rc-bg border border-rc-border/60 rounded-xl px-4 py-3.5 pr-10 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-neon-purple/50 focus:shadow-[0_0_12px_-4px_rgba(168,85,247,0.15)] transition-all duration-200">
+                            </div>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">👤 اسم المستخدم</span>
-                            <span class="info-value">${data.username}</span>
+
+                        <!-- Shopify Domain -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Shopify Domain</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-globe absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm"></i>
+                                <input type="text" x-model="form.shopify_domain" placeholder="your-store.myshopify.com"
+                                       class="w-full bg-rc-bg border border-rc-border/60 rounded-xl px-4 py-3.5 pr-10 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-neon-purple/50 focus:shadow-[0_0_12px_-4px_rgba(168,85,247,0.15)] transition-all duration-200">
+                            </div>
                         </div>
-                    `;
-                    // Direct to main dashboard — subdomain causes Cloudflare Error 1000
-                    const dashboardUrl = '/dashboard';
-                    document.getElementById('dashboardBtn').href = dashboardUrl;
-                    successBox.classList.add('show');
-                    document.getElementById('onboardForm').style.display = 'none';
-                } else {
-                    errorBox.textContent = data.error || 'حدث خطأ غير متوقع';
-                    errorBox.classList.add('show');
+
+                        <!-- Shopify Access Token -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">API Access Token</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-key absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm"></i>
+                                <input type="password" x-model="form.shopify_token" placeholder="shpat_xxxxxxxxxxxxxxxxxxxx"
+                                       class="w-full bg-rc-bg border border-rc-border/60 rounded-xl px-4 py-3.5 pr-10 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-neon-purple/50 focus:shadow-[0_0_12px_-4px_rgba(168,85,247,0.15)] transition-all duration-200">
+                            </div>
+                        </div>
+
+                        <!-- Connection status indicator -->
+                        <div class="flex items-center gap-2 py-2 px-3 rounded-lg bg-rc-card-hover/50 border border-rc-border/30">
+                            <div class="w-2 h-2 rounded-full" :class="shopifyConnected ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'bg-gray-600'"></div>
+                            <span class="text-xs font-mono" :class="shopifyConnected ? 'text-emerald-400' : 'text-gray-500'" x-text="shopifyConnected ? 'Connected to Royal Chaussures' : 'Not connected'"></span>
+                            <button @click="testShopifyConnection" class="mr-auto text-[10px] font-mono text-neon-cyan hover:text-neon-purple transition-colors">
+                                <i class="fa-solid fa-rotate" :class="{'fa-spin': testingShopify}"></i> Test Connection
+                            </button>
+                        </div>
+
+                        <!-- Admin Credentials Row -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Username</label>
+                                <input type="text" x-model="form.username" placeholder="admin"
+                                       class="w-full bg-rc-bg border border-rc-border/60 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-neon-purple/50 focus:shadow-[0_0_12px_-4px_rgba(168,85,247,0.15)] transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Password</label>
+                                <input type="password" x-model="form.password" placeholder="••••••••" minlength="6"
+                                       class="w-full bg-rc-bg border border-rc-border/60 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-neon-purple/50 focus:shadow-[0_0_12px_-4px_rgba(168,85,247,0.15)] transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Contact Row -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Email</label>
+                                <input type="email" x-model="form.email" placeholder="store@example.com"
+                                       class="w-full bg-rc-bg border border-rc-border/60 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-neon-purple/50 focus:shadow-[0_0_12px_-4px_rgba(168,85,247,0.15)] transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Phone</label>
+                                <input type="tel" x-model="form.phone" placeholder="+213xxxxxxxx"
+                                       class="w-full bg-rc-bg border border-rc-border/60 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 font-mono focus:outline-none focus:border-neon-purple/50 focus:shadow-[0_0_12px_-4px_rgba(168,85,247,0.15)] transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div class="flex justify-end mt-8">
+                        <button @click="step = 2"
+                                class="px-6 py-3 bg-gradient-to-r from-neon-purple to-neon-purple-dark rounded-xl text-sm font-semibold text-white shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)] hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.5)] transition-all duration-300 hover:translate-y-[-1px] flex items-center gap-2">
+                            <span>Continue</span>
+                            <i class="fa-solid fa-arrow-left text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== STEP 2: AI AGENTS SETUP ========== -->
+            <div x-show="step === 2" x-transition:enter="step-enter-x">
+                <div class="slide-in">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-cyan/15 to-neon-purple/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan">
+                            <i class="fa-solid fa-microchip text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">AI Agents Setup</h2>
+                            <p class="text-xs text-gray-500 font-mono mt-0.5">Activate intelligent agents for your store</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <!-- Sales Agent -->
+                        <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-4 hover:border-neon-purple/30 transition-all duration-300 group"
+                             :class="{'border-neon-purple/30 bg-neon-purple/[0.03]': form.agents.sales}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:shadow-[0_0_12px_-4px_rgba(251,191,36,0.2)] transition-shadow">
+                                        <i class="fa-solid fa-bullseye text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">Sales Agent</h4>
+                                        <p class="text-[10px] text-gray-500 font-mono mt-0.5">Direct sales, persuasion, smart upselling</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="form.agents.sales" class="sr-only peer">
+                                    <div class="toggle-track w-10 h-6 bg-rc-card-hover border border-rc-border/50 rounded-full peer-focus:outline-none peer-focus:border-neon-purple/30 relative">
+                                        <div class="toggle-dot absolute left-1 top-1 w-4 h-4 bg-gray-600 rounded-full shadow"></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div x-show="form.agents.sales" x-transition.duration.200ms class="mt-3 pt-3 border-t border-rc-border/30">
+                                <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400">
+                                    <i class="fa-solid fa-circle text-[6px]"></i>
+                                    <span>Will handle product recommendations, pricing negotiations, and checkout assistance</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Support Agent -->
+                        <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-4 hover:border-neon-cyan/30 transition-all duration-300 group"
+                             :class="{'border-neon-cyan/30 bg-neon-cyan/[0.03]': form.agents.support}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-600/5 border border-sky-500/20 flex items-center justify-center text-sky-400 group-hover:shadow-[0_0_12px_-4px_rgba(6,182,212,0.2)] transition-shadow">
+                                        <i class="fa-solid fa-headset text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">Customer Support</h4>
+                                        <p class="text-[10px] text-gray-500 font-mono mt-0.5">General inquiries, FAQ, order assistance</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="form.agents.support" class="sr-only peer">
+                                    <div class="toggle-track w-10 h-6 bg-rc-card-hover border border-rc-border/50 rounded-full peer-focus:outline-none peer-focus:border-neon-cyan/30 relative">
+                                        <div class="toggle-dot absolute left-1 top-1 w-4 h-4 bg-gray-600 rounded-full shadow"></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div x-show="form.agents.support" x-transition.duration.200ms class="mt-3 pt-3 border-t border-rc-border/30">
+                                <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400">
+                                    <i class="fa-solid fa-circle text-[6px]"></i>
+                                    <span>24/7 customer support across all channels with intelligent responses</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Shipping Agent -->
+                        <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-4 hover:border-neon-purple/30 transition-all duration-300 group"
+                             :class="{'border-neon-purple/30 bg-neon-purple/[0.03]': form.agents.shipping}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:shadow-[0_0_12px_-4px_rgba(52,211,153,0.2)] transition-shadow">
+                                        <i class="fa-solid fa-truck-fast text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">Shipping Tracking</h4>
+                                        <p class="text-[10px] text-gray-500 font-mono mt-0.5">Real-time tracking, ZR Express integration</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="form.agents.shipping" class="sr-only peer">
+                                    <div class="toggle-track w-10 h-6 bg-rc-card-hover border border-rc-border/50 rounded-full peer-focus:outline-none peer-focus:border-neon-purple/30 relative">
+                                        <div class="toggle-dot absolute left-1 top-1 w-4 h-4 bg-gray-600 rounded-full shadow"></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div x-show="form.agents.shipping" x-transition.duration.200ms class="mt-3 pt-3 border-t border-rc-border/30">
+                                <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400">
+                                    <i class="fa-solid fa-circle text-[6px]"></i>
+                                    <span>Tracks shipments across 58 wilayas with live ZR Express status updates</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Engagement Agent -->
+                        <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-4 hover:border-pink-500/30 transition-all duration-300 group"
+                             :class="{'border-pink-500/30 bg-pink-500/[0.03]': form.agents.engagement}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/10 to-pink-600/5 border border-pink-500/20 flex items-center justify-center text-pink-400 group-hover:shadow-[0_0_12px_-4px_rgba(236,72,153,0.2)] transition-shadow">
+                                        <i class="fa-solid fa-heart text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">Engagement Agent</h4>
+                                        <p class="text-[10px] text-gray-500 font-mono mt-0.5">Loyalty, reviews, post-purchase follow-ups</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="form.agents.engagement" class="sr-only peer">
+                                    <div class="toggle-track w-10 h-6 bg-rc-card-hover border border-rc-border/50 rounded-full peer-focus:outline-none peer-focus:border-pink-500/30 relative">
+                                        <div class="toggle-dot absolute left-1 top-1 w-4 h-4 bg-gray-600 rounded-full shadow"></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div x-show="form.agents.engagement" x-transition.duration.200ms class="mt-3 pt-3 border-t border-rc-border/30">
+                                <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400">
+                                    <i class="fa-solid fa-circle text-[6px]"></i>
+                                    <span>Automated loyalty programs, review requests, and re-engagement campaigns</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div class="flex items-center justify-between mt-8">
+                        <button @click="step = 1"
+                                class="px-5 py-3 bg-transparent border border-rc-border/50 rounded-xl text-sm text-gray-400 hover:text-white hover:border-gray-500 transition-all duration-200 flex items-center gap-2">
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                            <span>Back</span>
+                        </button>
+                        <button @click="step = 3"
+                                class="px-6 py-3 bg-gradient-to-r from-neon-purple to-neon-purple-dark rounded-xl text-sm font-semibold text-white shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)] hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.5)] transition-all duration-300 hover:translate-y-[-1px] flex items-center gap-2">
+                            <span>Continue</span>
+                            <i class="fa-solid fa-arrow-left text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== STEP 3: CHANNELS INTEGRATION ========== -->
+            <div x-show="step === 3" x-transition:enter="step-enter-x">
+                <div class="slide-in">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/15 to-neon-cyan/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <i class="fa-solid fa-plug text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">Connect Channels</h2>
+                            <p class="text-xs text-gray-500 font-mono mt-0.5">Integrate your messaging platforms</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 mb-6">
+                        <!-- WhatsApp -->
+                        <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-4 hover:border-emerald-500/30 transition-all duration-300 group">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">WhatsApp Business API</h4>
+                                        <p class="text-[10px] text-gray-500 font-mono mt-0.5">Phone Number ID</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span x-show="form.channels.whatsapp"
+                                          class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                                        <i class="fa-solid fa-circle text-[6px]"></i> Connected
+                                    </span>
+                                </div>
+                            </div>
+                            <div x-show="form.channels.whatsapp" x-transition.duration.200ms class="mt-3 pt-3 border-t border-rc-border/30">
+                                <input type="text" x-model="form.wa_phone_id" placeholder="WhatsApp Phone Number ID"
+                                       class="w-full bg-rc-card-hover border border-rc-border/60 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 font-mono focus:outline-none focus:border-emerald-500/40 transition-all">
+                            </div>
+                            <button @click="form.channels.whatsapp = !form.channels.whatsapp" class="flex items-center gap-2 text-xs text-gray-500 hover:text-emerald-400 transition-colors font-mono mt-2" x-show="!form.channels.whatsapp">
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span>Connect WhatsApp</span>
+                            </button>
+                        </div>
+
+                        <!-- Facebook Messenger -->
+                        <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-4 hover:border-blue-500/30 transition-all duration-300 group">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                                        <i class="fa-brands fa-facebook-messenger text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">Facebook Messenger</h4>
+                                        <p class="text-[10px] text-gray-500 font-mono mt-0.5">Page ID</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span x-show="form.channels.messenger"
+                                          class="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20 flex items-center gap-1">
+                                        <i class="fa-solid fa-circle text-[6px]"></i> Connected
+                                    </span>
+                                </div>
+                            </div>
+                            <div x-show="form.channels.messenger" x-transition.duration.200ms class="mt-3 pt-3 border-t border-rc-border/30">
+                                <input type="text" x-model="form.fb_page_id" placeholder="Facebook Page ID"
+                                       class="w-full bg-rc-card-hover border border-rc-border/60 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 font-mono focus:outline-none focus:border-blue-500/40 transition-all">
+                            </div>
+                            <button @click="form.channels.messenger = !form.channels.messenger" class="flex items-center gap-2 text-xs text-gray-500 hover:text-blue-400 transition-colors font-mono mt-2" x-show="!form.channels.messenger">
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span>Connect Messenger</span>
+                            </button>
+                        </div>
+
+                        <!-- Instagram -->
+                        <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-4 hover:border-pink-500/30 transition-all duration-300 group">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/10 to-pink-600/5 border border-pink-500/20 flex items-center justify-center text-pink-400">
+                                        <i class="fa-brands fa-instagram text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">Instagram</h4>
+                                        <p class="text-[10px] text-gray-500 font-mono mt-0.5">Instagram Business ID</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span x-show="form.channels.instagram"
+                                          class="text-[10px] font-mono text-pink-400 bg-pink-500/10 px-2 py-1 rounded-full border border-pink-500/20 flex items-center gap-1">
+                                        <i class="fa-solid fa-circle text-[6px]"></i> Connected
+                                    </span>
+                                </div>
+                            </div>
+                            <div x-show="form.channels.instagram" x-transition.duration.200ms class="mt-3 pt-3 border-t border-rc-border/30">
+                                <input type="text" x-model="form.ig_id" placeholder="Instagram Business ID"
+                                       class="w-full bg-rc-card-hover border border-rc-border/60 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 font-mono focus:outline-none focus:border-pink-500/40 transition-all">
+                            </div>
+                            <button @click="form.channels.instagram = !form.channels.instagram" class="flex items-center gap-2 text-xs text-gray-500 hover:text-pink-400 transition-colors font-mono mt-2" x-show="!form.channels.instagram">
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span>Connect Instagram</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div class="flex items-center justify-between mt-8">
+                        <button @click="step = 2"
+                                class="px-5 py-3 bg-transparent border border-rc-border/50 rounded-xl text-sm text-gray-400 hover:text-white hover:border-gray-500 transition-all duration-200 flex items-center gap-2">
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                            <span>Back</span>
+                        </button>
+                        <button @click="submitRegistration" :disabled="loading"
+                                class="px-8 py-3.5 bg-gradient-to-r from-neon-purple via-neon-purple-dark to-neon-cyan/80 rounded-xl text-sm font-bold text-white shadow-[0_0_25px_-5px_rgba(168,85,247,0.4)] hover:shadow-[0_0_40px_-5px_rgba(168,85,247,0.6)] transition-all duration-300 hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-3">
+                            <i class="fa-solid fa-spinner" :class="{'fa-spin': loading}" x-show="loading"></i>
+                            <template x-if="!loading">
+                                <span>Enter Dashboard <i class="fa-solid fa-rocket text-xs"></i></span>
+                            </template>
+                            <template x-if="loading">
+                                <span>Creating Store...</span>
+                            </template>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== STEP 4 (SUCCESS) ========== -->
+            <div x-show="step === 4" x-transition:enter="step-enter-x">
+                <div class="text-center py-6 slide-in">
+                    <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 flex items-center justify-center">
+                        <i class="fa-solid fa-check text-3xl text-emerald-400"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">🎉 Store Created!</h2>
+                    <p class="text-sm text-gray-400 font-mono mb-6">Your RC Agents system is ready</p>
+
+                    <!-- Store Info -->
+                    <div class="bg-rc-bg border border-rc-border/50 rounded-xl p-5 max-w-sm mx-auto text-right">
+                        <template x-for="(val, key) in registrationResult" :key="key">
+                            <div class="flex items-center justify-between py-2 border-b border-rc-border/20 last:border-0">
+                                <span class="text-xs font-mono text-neon-cyan" x-text="val"></span>
+                                <span class="text-[11px] text-gray-500 uppercase tracking-wider font-mono" x-text="key"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <a href="/dashboard"
+                       class="inline-flex items-center gap-2 mt-8 px-8 py-3.5 bg-gradient-to-r from-neon-purple to-neon-purple-dark rounded-xl text-sm font-bold text-white shadow-[0_0_25px_-5px_rgba(168,85,247,0.4)] hover:shadow-[0_0_40px_-5px_rgba(168,85,247,0.6)] transition-all duration-300 hover:translate-y-[-1px]">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Go to Dashboard</span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+        <!-- End Card -->
+
+        <!-- Footer -->
+        <div class="text-center mt-6">
+            <p class="text-[11px] font-mono text-gray-600">
+                RC Agents Platform &copy; 2026 &mdash;
+                <span class="text-neon-purple/50">ONE BRAIN . MANY HANDS</span>
+            </p>
+        </div>
+
+    </div>
+    <!-- End Container -->
+
+    <script>
+    function onboardWizard() {
+        return {
+            step: 1,
+            loading: false,
+            errorMsg: '',
+            successMsg: '',
+            testingShopify: false,
+            shopifyConnected: false,
+            registrationResult: {},
+            steps: [
+                { icon: 'fa-solid fa-store', label: 'STORE' },
+                { icon: 'fa-solid fa-microchip', label: 'AGENTS' },
+                { icon: 'fa-solid fa-plug', label: 'CHANNELS' },
+            ],
+            form: {
+                store_name: '',
+                shopify_domain: '',
+                shopify_token: '',
+                username: '',
+                password: '',
+                email: '',
+                phone: '',
+                wa_phone_id: '',
+                fb_page_id: '',
+                ig_id: '',
+                agents: {
+                    sales: true,
+                    support: true,
+                    shipping: true,
+                    engagement: false,
+                },
+                channels: {
+                    whatsapp: false,
+                    messenger: false,
+                    instagram: false,
                 }
-            })
-            .catch(err => {
-                btn.classList.remove('loading');
-                errorBox.textContent = 'خطأ في الاتصال: ' + err.message;
-                errorBox.classList.add('show');
-            });
+            },
 
-            return false;
-        }
+            init() {
+                // Pre-fill demo store as example
+                this.form.store_name = 'Royal Chaussures';
+                this.form.shopify_domain = 'rwqchh-na.myshopify.com';
+                // Token entered by user for security
+            },
+
+            goStep(num) {
+                if (num < this.step) {
+                    this.step = num;
+                }
+            },
+
+            async testShopifyConnection() {
+                if (!this.form.shopify_domain || !this.form.shopify_token) {
+                    this.errorMsg = 'Please enter Shopify domain and token first';
+                    return;
+                }
+                this.testingShopify = true;
+                this.errorMsg = '';
+                try {
+                    const res = await fetch('/api/tenant/test-shopify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            shopify_domain: this.form.shopify_domain,
+                            shopify_token: this.form.shopify_token
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        this.shopifyConnected = true;
+                        this.successMsg = '✅ Connected! Found ' + (data.products || 0) + ' products';
+                    } else {
+                        this.shopifyConnected = false;
+                        this.errorMsg = data.error || 'Connection failed';
+                    }
+                } catch (e) {
+                    this.errorMsg = 'Connection error: ' + e.message;
+                } finally {
+                    this.testingShopify = false;
+                }
+            },
+
+            async submitRegistration() {
+                this.loading = true;
+                this.errorMsg = '';
+                this.successMsg = '';
+
+                // Basic validation
+                if (!this.form.store_name || !this.form.username || !this.form.password) {
+                    this.errorMsg = 'Store name, username, and password are required';
+                    this.loading = false;
+                    return;
+                }
+                if (this.form.password.length < 6) {
+                    this.errorMsg = 'Password must be at least 6 characters';
+                    this.loading = false;
+                    return;
+                }
+
+                const payload = {
+                    store_name: this.form.store_name,
+                    shopify_domain: this.form.shopify_domain,
+                    shopify_token: this.form.shopify_token,
+                    username: this.form.username,
+                    password: this.form.password,
+                    email: this.form.email,
+                    phone: this.form.phone,
+                    agents: Object.entries(this.form.agents)
+                        .filter(([k,v]) => v)
+                        .map(([k]) => k),
+                    webhooks: {}
+                };
+
+                if (this.form.channels.whatsapp && this.form.wa_phone_id) {
+                    payload.webhooks.whatsapp = this.form.wa_phone_id;
+                }
+                if (this.form.channels.messenger && this.form.fb_page_id) {
+                    payload.webhooks.messenger = this.form.fb_page_id;
+                }
+                if (this.form.channels.instagram && this.form.ig_id) {
+                    payload.webhooks.instagram = this.form.ig_id;
+                }
+
+                try {
+                    const res = await fetch('/api/tenant/onboard', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        this.registrationResult = {
+                            'Store': data.store_name,
+                            'ID': data.store_id,
+                            'Slug': data.slug || '—',
+                            'Username': data.username || this.form.username
+                        };
+                        this.step = 4;
+                    } else {
+                        this.errorMsg = data.error || 'Registration failed';
+                    }
+                } catch (e) {
+                    this.errorMsg = 'Connection error: ' + e.message;
+                } finally {
+                    this.loading = false;
+                }
+            }
+        };
+    }
     </script>
 </body>
 </html>

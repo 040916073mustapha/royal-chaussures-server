@@ -437,6 +437,42 @@ def create_app():
             logger.error(f"Tenant onboard error: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
+    @app.route("/api/tenant/test-shopify", methods=["POST"])
+    def test_shopify_connection():
+        """Test Shopify connection with provided credentials"""
+        try:
+            data = request.get_json(force=True)
+            domain = data.get("shopify_domain", "").strip()
+            token = data.get("shopify_token", "").strip()
+
+            if not domain or not token:
+                return jsonify({"success": False, "error": "Domain and token required"}), 400
+
+            import requests as _req
+            url = f"https://{domain}/admin/api/2024-10/products.json?limit=1"
+            headers = {
+                "X-Shopify-Access-Token": token,
+                "Content-Type": "application/json"
+            }
+            resp = _req.get(url, headers=headers, timeout=10)
+
+            if resp.status_code == 200:
+                data = resp.json()
+                products = data.get("products", [])
+                return jsonify({
+                    "success": True,
+                    "products": len(products),
+                    "store_name": domain.split(".")[0]
+                })
+            elif resp.status_code == 401:
+                return jsonify({"success": False, "error": "Invalid API token (401)"}), 401
+            else:
+                return jsonify({"success": False, "error": f"Shopify returned {resp.status_code}"}), resp.status_code
+
+        except Exception as e:
+            logger.error(f"Test Shopify error: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
     # â”€â”€â”€ Error Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @app.errorhandler(404)
