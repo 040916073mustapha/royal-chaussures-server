@@ -684,9 +684,25 @@
                 this.errorMsg = '';
                 this.successMsg = '';
 
+                // Debug: log form state
+                console.log('[ONBOARD] Submitting with form:', JSON.stringify({
+                    store_name: this.form.store_name,
+                    username: this.form.username,
+                    password: this.form.password ? '***' : '(empty)',
+                    shopify_domain: this.form.shopify_domain
+                }));
+
                 // Basic validation
-                if (!this.form.store_name || !this.form.username || !this.form.password) {
-                    this.errorMsg = 'Store name, username, and password are required';
+                const sName = (this.form.store_name || '').trim();
+                const uName = (this.form.username || '').trim();
+                const pWord = (this.form.password || '').trim();
+
+                if (!sName || !uName || !pWord) {
+                    let missing = [];
+                    if (!sName) missing.push('Store name');
+                    if (!uName) missing.push('Username');
+                    if (!pWord) missing.push('Password');
+                    this.errorMsg = 'Missing required fields: ' + missing.join(', ');
                     this.loading = false;
                     return;
                 }
